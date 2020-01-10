@@ -1,4 +1,4 @@
-program read_python_binary
+program sagpr_get_kernel
     use iso_c_binding
     implicit none
 
@@ -81,7 +81,7 @@ program read_python_binary
     enddo
     deallocate(keylist)
 
-    ! Check for argument that are required
+    ! Check for arguments that are required
     if (ofile.eq.'') stop 'ERROR: output file required!'
     if (psname(1).eq.'' .or. psname(2).eq.'') stop 'ERROR: power spectrum file(s) required!'
     if (scaling(1).eq.'' .or. scaling(2).eq.'') stop 'ERROR: scaling file(s) required!'
@@ -311,7 +311,7 @@ program read_python_binary
 
     endif
 
-    ! Normalize and print kernel
+    ! Print kernel
     open(42,file=ofile,access='stream',form='unformatted')
      if (lm.eq.0) then
       write(42,pos=1) ker
