@@ -2,7 +2,7 @@ program sagpr_predict
     use sagpr
     implicit none
 
-    integer nargs,numkeys,ios,nlines,nframes,frnum,natmax
+    integer nargs,numkeys,ios,nlines,nframes,frnum,natmax,reals,bytes,nsparse
     character(len=100), allocatable :: arg(:),keylist(:)
     integer lm,i,j,k,ii
     integer nmax,lmax,ncut
@@ -11,10 +11,11 @@ program sagpr_predict
     logical periodic,readnext
     integer, parameter :: nelements = 200
     logical all_species(nelements),all_centres(nelements)
-    real*8, allocatable :: xyz(:,:,:),PS(:,:,:,:)
+    real*8, allocatable :: xyz(:,:,:),PS(:,:,:,:),sparsification(:,:,:)
     character(len=4), allocatable :: atname(:,:)
     integer, allocatable :: natoms(:)
     character(len=100), allocatable :: comment(:)
+    real*8, allocatable, target :: sparse_data(:)
 
     ! Get input arguments
     nargs = iargc()
@@ -130,15 +131,45 @@ program sagpr_predict
      endif
     enddo
 
+    ! If necessary, get sparsification details
+    if (sparse.eq.'') then
+     allocate(sparsification(1,1,1))
+     sparsification(1,1,1) = -1.d0
+     nsparse = -1
+    else
+     open(unit=32,file=sparse,status='old',access='stream',form='unformatted')
+     inquire(unit=32,size=bytes)
+     reals = bytes / 8
+     allocate(sparse_data(reals))
+     read(32,pos=1) sparse_data
+     close(32)
+     nsparse = sparse_data(1)
+     if (reals.ne.(1 + (nsparse*(nsparse+1)))) then
+      write(*,*) 'With ',reals,'elements instead of ',1 + (nsparse*(nsparse+1)),':'
+      stop 'ERROR: incorrect number of elements in sparse file!'
+     endif
+     allocate(sparsification(2,nsparse,nsparse))
+     do i=1,nsparse
+      sparsification(1,i,1) = sparse_data(i+1)
+     enddo
+     do i=1,nsparse
+      do j=1,nsparse
+       sparsification(2,i,j) = sparse_data(1 + nsparse + (i-1)*nsparse + j)
+      enddo
+     enddo
+     deallocate(sparse_data)
+    endif
+
     ! Get power spectrum
-    PS = do_power_spectrum()
+    PS = do_power_spectrum(xyz,atname,natoms,comment,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
+     &     ncut,sparsification,nsparse,rs,periodic)
 
     ! Print power spectrum
-    open(unit=32,file=ofile,access='stream',form='unformatted')
-    write(32,pos=1) PS
-    close(32)
+    open(unit=33,file=ofile,access='stream',form='unformatted')
+    write(33,pos=1) PS
+    close(33)
 
     ! Array deallocation
-    deallocate(xyz,atname,natoms,comment,PS)
+    deallocate(xyz,atname,natoms,comment,PS,sparsification)
 
 end program

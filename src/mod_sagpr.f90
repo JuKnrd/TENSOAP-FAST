@@ -188,8 +188,16 @@ module sagpr
 
 !***************************************************************************************************
 
- function do_power_spectrum()
+ function do_power_spectrum(xyz,atname,natoms,comment,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres, &
+     &     all_species,ncut,sparsification,nsparse,rs,periodic)
   implicit none
+
+  integer nframes,natmax,lm,nmax,lmax,ncut,nsparse
+  real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,sparsification(2,nsparse,nsparse)
+  character(len=4) atname(nframes,natmax)
+  integer natoms(nframes)
+  character(len=100) comment(nframes)
+  logical periodic,all_centres(:),all_species(:)
 
   real*8, allocatable :: do_power_spectrum(:,:,:,:)
 
