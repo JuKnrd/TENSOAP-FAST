@@ -13,10 +13,9 @@ program sagpr_get_kernel
     real*8, pointer :: PS_1_lm(:,:,:,:),PS_2_lm(:,:,:,:)
     real*8, allocatable :: PS_1_fast_lm(:,:,:),PS_2_fast_lm(:,:,:)
 
-    integer :: bytes,reals,i,j,ii,jj,j0,mu,nu
+    integer :: bytes,reals,i,j
 
     real*8, allocatable :: ker(:,:), ker_lm(:,:,:,:)
-    real*8 k0
     logical :: hermiticity = .false.,readnext
 
     ! Get input arguments
@@ -174,35 +173,7 @@ program sagpr_get_kernel
      else
       ker_lm = do_nonlinear_spherical_kernel(PS_1_lm,PS_2_lm,PS0_1,PS0_2,nmol_1,nmol_2,nfeat_1,nfeat_2, &
      &     nfeat0_1,nfeat0_2,natmax_1,natmax_2,natoms_1,natoms_2,zeta,hermiticity,degen)
-!      ! Build kernel
-!      allocate(ker_lm(nmol_1,nmol_2,degen,degen))
-!      ker_lm(:,:,:,:) = 0.d0
-!      do i=1,nmol_1
-!       j0=1
-!       if (hermiticity) j0=i
-!       !$OMP PARALLEL DO SHARED(ker_lm,ker,PS_1_lm,PS_2_lm,PS0_1,PS0_2,natoms_1,natoms_2) PRIVATE(ii,jj,mu,nu,k0)
-!       do j=j0,nmol_2
-!        do ii=1,int(natoms_1(i))
-!         do jj=1,int(natoms_2(j))
-!          k0 = (dot_product(PS0_1(:,1,ii,i),PS0_2(:,1,jj,j)))
-!          do mu=1,degen
-!           do nu=1,degen
-!            ker_lm(i,j,mu,nu) = ker_lm(i,j,mu,nu) + dot_product(PS_1_lm(:,mu,ii,i),PS_2_lm(:,nu,jj,j)) * k0**(zeta-1)
-!           enddo
-!          enddo
-!         enddo
-!        enddo
-!        ker_lm(i,j,:,:) = ker_lm(i,j,:,:) / (natoms_1(i)*natoms_2(j))
-!        if (hermiticity) then
-!         do mu=1,degen
-!          do nu=1,degen
-!           ker_lm(j,i,nu,mu) = ker_lm(i,j,mu,nu)
-!          enddo
-!         enddo
-!        endif
-!       enddo
-!       !$OMP END PARALLEL DO
-!      enddo
+
      endif
 
         if (allocated(PS_1_fast_lm)) deallocate(PS_1_fast_lm)

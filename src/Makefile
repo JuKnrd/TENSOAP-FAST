@@ -13,8 +13,8 @@ all: mkbin sagpr_get_PS sagpr_get_kernel sagpr_predict libsagpr sagpr_apply
 mkbin:
 	@if [ ! -d ../bin ];then mkdir ../bin;fi
 
-sagpr_get_PS:
-	@echo "SAGPR_GET_PS NOT YET IMPLEMENTED"
+sagpr_get_PS: $(OBJECTS1)
+	$(FF) $(FOPTS) -o ../bin/sagpr_get_PS $(OBJECTS1) $(LD)
 
 sagpr_get_kernel: $(OBJECTS2)
 	$(FF) $(FOPTS) -o ../bin/sagpr_get_kernel $(OBJECTS2) $(LD)
