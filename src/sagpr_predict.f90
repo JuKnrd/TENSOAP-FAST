@@ -4,7 +4,6 @@ program sagpr_predict
 
     integer nargs,numkeys
     character(len=100), allocatable :: arg(:),keylist(:)
-
     integer lm,i,j,nmol,reals,bytes,degen,nenv,mu,nu,k
     character(len=100) weights,ofile,kerfile
     real*8, allocatable, target :: all_wt(:),raw_ker(:)
@@ -85,7 +84,7 @@ program sagpr_predict
     enddo
     close(33)
 
-    !TODO: deallocation
+    ! Array deallocation
     deallocate(all_wt,wt,keylist,ker,prediction_lm,raw_ker)
 
 end program

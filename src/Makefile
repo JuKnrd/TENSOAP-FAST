@@ -3,8 +3,10 @@
 FF=gfortran
 FOPTS=-O3 -g -fopenmp -Wunused
 LD=#-lblas -llapack
+OBJECTS1=mod_sagpr.o sagpr_get_PS.o
 OBJECTS2=mod_sagpr.o sagpr_get_kernel.o
 OBJECTS3=mod_sagpr.o sagpr_predict.o
+OBJECTS4=mod_sagpr.o
 
 all: mkbin sagpr_get_PS sagpr_get_kernel sagpr_predict libsagpr sagpr_apply
 
@@ -22,7 +24,7 @@ sagpr_predict: $(OBJECTS3)
 
 libsagpr:
 	@if [ ! -d ../lib ];then mkdir ../lib;fi
-	@echo "NOT YET IMPLEMENTED"
+	ar r ../lib/libsoapfast.a $(OBJECTS4)
 
 sagpr_apply:
 	@echo "NOT YET IMPLEMENTED"
@@ -31,4 +33,4 @@ sagpr_apply:
 	$(FF) $(FOPTS) -c $< 
 
 clean: 
-	rm -f *.o *.mod ../bin/*;rmdir ../bin
+	rm -rf *.o *.mod ../bin/* ../bin ../lib
