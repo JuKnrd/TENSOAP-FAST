@@ -141,6 +141,10 @@ program sagpr_get_kernel
      endif
     enddo
 
+    ! Read in scalar power spectrum file(s) if necessary
+    if (lm.gt.1) then
+    endif
+
     ! Build kernels
     if (lm.eq.0) then
      ker = do_scalar_kernel(PS_1_lm,PS_2_lm,nmol_1,nmol_2,nfeat_1,nfeat_2,natmax_1,natmax_2,natoms_1,natoms_2,zeta,hermiticity)
