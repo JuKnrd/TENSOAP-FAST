@@ -99,13 +99,57 @@ module sagpr
 
 !***************************************************************************************************
 
- function do_spherical_kernel()
+ function do_linear_spherical_kernel(PS_1,PS_2,nmol_1,nmol_2,nfeat_1, &
+     &     nfeat_2,natmax_1,natmax_2,natoms_1,natoms_2,zeta,hermiticity,degen)
   implicit none
 
-   real*8 do_spherical_kernel
+   integer nmol_1,nmol_2,nfeat_1,nfeat_2,natmax_1,natmax_2,zeta,i,j,ii,jj,j0,degen,mu,nu
+   real*8 PS_1(nfeat_1,degen,natmax_1,nmol_1),PS_2(nfeat_2,degen,natmax_2,nmol_2)
+   real*8 natoms_1(nmol_1),natoms_2(nmol_2)
+   real*8 do_linear_spherical_kernel(nmol_1,nmol_2,degen,degen)
+   real*8, allocatable :: PS_1_fast_lm(:,:,:),PS_2_fast_lm(:,:,:)
+   logical hermiticity
+
+   do_linear_spherical_kernel(:,:,:,:) = 0.d0
+   ! Fast-averaging
+    allocate(PS_1_fast_lm(nfeat_1,degen,nmol_1),PS_2_fast_lm(nfeat_2,degen,nmol_2))
+    PS_1_fast_lm(:,:,:) = 0.d0
+    PS_2_fast_lm(:,:,:) = 0.d0
+    do i=1,nmol_1
+     do ii=1,int(natoms_1(i))
+      PS_1_fast_lm(:,:,i) = PS_1_fast_lm(:,:,i) + PS_1(:,:,ii,i) / natoms_1(i)
+     enddo
+    enddo
+    do i=1,nmol_2
+     do ii=1,int(natoms_2(i))
+      PS_2_fast_lm(:,:,i) = PS_2_fast_lm(:,:,i) + PS_2(:,:,ii,i) / natoms_2(i)
+     enddo
+    enddo
+    do i=1,nmol_1
+     j0=1
+     if (hermiticity) j0=i
+     !$OMP PARALLEL DO SHARED(do_linear_spherical_kernel,PS_1_fast_lm,PS_2_fast_lm,natoms_1,natoms_2) PRIVATE(ii,jj,mu,nu)
+     do j=j0,nmol_2
+      do mu=1,degen
+       do nu=1,degen
+        do_linear_spherical_kernel(i,j,mu,nu) = (dot_product(PS_1_fast_lm(:,mu,i),PS_2_fast_lm(:,nu,j)))
+        if (hermiticity) do_linear_spherical_kernel(j,i,nu,mu) = do_linear_spherical_kernel(i,j,mu,nu)
+       enddo
+      enddo
+     enddo
+     !$OMP END PARALLEL DO
+    enddo
 
  end function
 
 !***************************************************************************************************
 
+ function do_nonlinear_spherical_kernel()
+  implicit none
+
+   real*8 do_nonlinear_spherical_kernel
+
+ end function
+
+!***************************************************************************************************
 end module
