@@ -1,4 +1,5 @@
 program sagpr_get_kernel
+    use sagpr
     use iso_c_binding
     implicit none
 

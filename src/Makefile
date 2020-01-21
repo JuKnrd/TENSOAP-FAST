@@ -1,21 +1,31 @@
 .PHONY: all clean
 
 FF=gfortran
-FOPTS=-O3 -g -fopenmp
-LD=-lblas -llapack
-OBJECTS1=sagpr_get_kernel.o
-OBJECTS2=sagpr_train.o
+FOPTS=-O3 -g -fopenmp -Wunused
+LD=#-lblas -llapack
+OBJECTS2=mod_sagpr.o sagpr_get_kernel.o
+OBJECTS3=mod_sagpr.o sagpr_predict.o
 
-all: mkbin sagpr_get_kernel sagpr_train
+all: mkbin sagpr_get_PS sagpr_get_kernel sagpr_predict libsagpr sagpr_apply
 
 mkbin:
-	if [ ! -d ../bin ];then mkdir ../bin;fi
+	@if [ ! -d ../bin ];then mkdir ../bin;fi
 
-sagpr_get_kernel: $(OBJECTS1)
-	$(FF) $(FOPTS) -o ../bin/sagpr_get_kernel $(OBJECTS1) $(LD)
+sagpr_get_PS:
+	@echo "NOT YET IMPLEMENTED"
 
-sagpr_train: $(OBJECTS2)
-	$(FF) $(FOPTS) -o ../bin/sagpr_train $(OBJECTS2) $(LD)
+sagpr_get_kernel: $(OBJECTS2)
+	$(FF) $(FOPTS) -o ../bin/sagpr_get_kernel $(OBJECTS2) $(LD)
+
+sagpr_predict: $(OBJECTS3)
+	$(FF) $(FOPTS) -o ../bin/sagpr_predict $(OBJECTS3) $(LD)
+
+libsagpr:
+	@if [ ! -d ../lib ];then mkdir ../lib;fi
+	@echo "NOT YET IMPLEMENTED"
+
+sagpr_apply:
+	@echo "NOT YET IMPLEMENTED"
 
 %.o: %.f90 
 	$(FF) $(FOPTS) -c $< 
