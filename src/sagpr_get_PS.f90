@@ -11,7 +11,7 @@ program sagpr_predict
     logical periodic,readnext
     integer, parameter :: nelements = 200
     logical all_species(nelements),all_centres(nelements)
-    real*8, allocatable :: xyz(:,:,:)
+    real*8, allocatable :: xyz(:,:,:),PS(:,:,:,:)
     character(len=4), allocatable :: atname(:,:)
     integer, allocatable :: natoms(:)
     character(len=100), allocatable :: comment(:)
@@ -131,8 +131,14 @@ program sagpr_predict
     enddo
 
     ! Get power spectrum
+    PS = do_power_spectrum()
+
+    ! Print power spectrum
+    open(unit=32,file=ofile,access='stream',form='unformatted')
+    write(32,pos=1) PS
+    close(32)
 
     ! Array deallocation
-    deallocate(xyz,atname,natoms,comment)
+    deallocate(xyz,atname,natoms,comment,PS)
 
 end program

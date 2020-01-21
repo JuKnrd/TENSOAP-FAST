@@ -187,4 +187,18 @@ module sagpr
  end function
 
 !***************************************************************************************************
+
+ function do_power_spectrum()
+  implicit none
+
+  real*8, allocatable :: do_power_spectrum(:,:,:,:)
+
+  allocate(do_power_spectrum(1,1,1,1))
+  do_power_spectrum(:,:,:,:) = 0.d0
+
+ end function
+
+!***************************************************************************************************
+
+
 end module

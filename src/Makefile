@@ -32,8 +32,10 @@ sagpr_apply:
 %.o: %.f90 
 	$(FF) $(FOPTS) -c $< 
 
-install:
-	@echo "INSTALL NOT YET IMPLEMENTED"
+install: all mkinstall
+
+mkinstall:
+	@if [ "${SAGPR_PREFIX}" != "" ];then cp ../bin/sagpr_* ${SAGPR_PREFIX}/;fi
 
 clean: 
 	rm -rf *.o *.mod ../bin/* ../bin ../lib
