@@ -144,10 +144,45 @@ module sagpr
 
 !***************************************************************************************************
 
- function do_nonlinear_spherical_kernel()
+ function do_nonlinear_spherical_kernel(PS_1,PS_2,PS0_1,PS0_2,nmol_1,nmol_2,nfeat_1,nfeat_2,nfeat0_1,nfeat0_2, &
+     &     natmax_1,natmax_2,natoms_1,natoms_2,zeta,hermiticity,degen)
   implicit none
 
-   real*8 do_nonlinear_spherical_kernel
+   integer nmol_1,nmol_2,nfeat_1,nfeat_2,natmax_1,natmax_2,zeta,i,j,ii,jj,j0,degen,mu,nu,nfeat0_1,nfeat0_2
+   real*8 PS_1(nfeat_1,degen,natmax_1,nmol_1),PS_2(nfeat_2,degen,natmax_2,nmol_2)
+   real*8 PS0_1(nfeat0_1,1,natmax_1,nmol_1),PS0_2(nfeat0_2,1,natmax_2,nmol_2)
+   real*8 natoms_1(nmol_1),natoms_2(nmol_2),k0
+   real*8 do_nonlinear_spherical_kernel(nmol_1,nmol_2,degen,degen)
+   logical hermiticity
+
+   do_nonlinear_spherical_kernel(:,:,:,:) = 0.d0
+   do i=1,nmol_1
+    j0=1
+    if (hermiticity) j0=i
+    !$OMP PARALLEL DO SHARED(do_nonlinear_spherical_kernel,PS_1,PS_2,PS0_1,PS0_2,natoms_1,natoms_2) PRIVATE(ii,jj,mu,nu,k0)
+    do j=j0,nmol_2
+     do ii=1,int(natoms_1(i))
+      do jj=1,int(natoms_2(j))
+       k0 = (dot_product(PS0_1(:,1,ii,i),PS0_2(:,1,jj,j)))
+       do mu=1,degen
+        do nu=1,degen
+         do_nonlinear_spherical_kernel(i,j,mu,nu) = do_nonlinear_spherical_kernel(i,j,mu,nu) + &
+     &      dot_product(PS_1(:,mu,ii,i),PS_2(:,nu,jj,j)) * k0**(zeta-1)
+        enddo
+       enddo
+      enddo
+     enddo
+     do_nonlinear_spherical_kernel(i,j,:,:) = do_nonlinear_spherical_kernel(i,j,:,:) / (natoms_1(i)*natoms_2(j))
+     if (hermiticity) then
+      do mu=1,degen
+       do nu=1,degen
+        do_nonlinear_spherical_kernel(j,i,nu,mu) = do_nonlinear_spherical_kernel(i,j,mu,nu)
+       enddo
+      enddo
+     endif
+    enddo
+    !$OMP END PARALLEL DO
+   enddo
 
  end function
 

@@ -14,7 +14,7 @@ mkbin:
 	@if [ ! -d ../bin ];then mkdir ../bin;fi
 
 sagpr_get_PS:
-	@echo "NOT YET IMPLEMENTED"
+	@echo "SAGPR_GET_PS NOT YET IMPLEMENTED"
 
 sagpr_get_kernel: $(OBJECTS2)
 	$(FF) $(FOPTS) -o ../bin/sagpr_get_kernel $(OBJECTS2) $(LD)
@@ -27,7 +27,7 @@ libsagpr:
 	ar r ../lib/libsoapfast.a $(OBJECTS4)
 
 sagpr_apply:
-	@echo "NOT YET IMPLEMENTED"
+	@echo "SAGPR_APPLY NOT YET IMPLEMENTED"
 
 %.o: %.f90 
 	$(FF) $(FOPTS) -c $< 
