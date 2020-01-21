@@ -21,7 +21,12 @@ module sagpr
      enddo
     enddo
    enddo
+   !$OMP PARALLEL
+   !$OMP WORKSHARE
    prediction_lm = matmul(kte,weights) + meanval
+   !$OMP END WORKSHARE
+   !$OMP END PARALLEL
+   prediction_lm = prediction_lm + meanval
    k = 0
    do i=1,nmol
     do mu=1,degen
@@ -29,6 +34,75 @@ module sagpr
      do_prediction(i,mu) = prediction_lm(k)
     enddo
    enddo
+
+ end function
+
+!***************************************************************************************************
+
+ function do_scalar_kernel(PS_1_lm,PS_2_lm,nmol_1,nmol_2,nfeat_1,nfeat_2,natmax_1,natmax_2,natoms_1,natoms_2,zeta,hermiticity)
+  implicit none
+
+   integer nmol_1,nmol_2,nfeat_1,nfeat_2,natmax_1,natmax_2,zeta,i,j,ii,jj,j0
+   real*8 PS_1_lm(nfeat_1,1,natmax_1,nmol_1),PS_2_lm(nfeat_2,1,natmax_2,nmol_2)
+   real*8 natoms_1(nmol_1),natoms_2(nmol_2)
+   real*8, allocatable :: PS_1_fast(:,:),PS_2_fast(:,:)
+   logical hermiticity
+   real*8 do_scalar_kernel(nmol_1,nmol_2)
+
+   ! Get kernels
+   if (zeta.eq.1) then
+    allocate(PS_1_fast(nfeat_1,nmol_1),PS_2_fast(nfeat_2,nmol_2))
+    PS_1_fast(:,:) = 0.d0
+    PS_2_fast(:,:) = 0.d0
+    do i=1,nmol_1
+     do ii=1,int(natoms_1(i))
+      PS_1_fast(:,i) = PS_1_fast(:,i) + PS_1_lm(:,1,ii,i) / natoms_1(i)
+     enddo
+    enddo
+    do i=1,nmol_2
+     do ii=1,int(natoms_2(i))
+      PS_2_fast(:,i) = PS_2_fast(:,i) + PS_2_lm(:,1,ii,i) / natoms_2(i)
+     enddo
+    enddo
+    do_scalar_kernel(:,:) = 0.d0
+    do i=1,nmol_1
+     j0=1
+     if (hermiticity) j0=i
+     !$OMP PARALLEL DO SHARED(do_scalar_kernel,PS_1_fast,PS_2_fast,natoms_1,natoms_2)
+     do j=j0,nmol_2
+      do_scalar_kernel(i,j) = dot_product(PS_1_fast(:,i),PS_2_fast(:,j))
+      if (hermiticity) do_scalar_kernel(j,i) = do_scalar_kernel(i,j)
+     enddo
+     !$OMP END PARALLEL DO
+    enddo
+    deallocate(PS_1_fast,PS_2_fast)
+   else
+    do_scalar_kernel(:,:) = 0.d0
+    do i=1,nmol_1
+     j0=1
+     if (hermiticity) j0=i
+     !$OMP PARALLEL DO SHARED(do_scalar_kernel,PS_1_lm,PS_2_lm,natoms_1,natoms_2) PRIVATE(ii,jj)
+     do j=j0,nmol_2
+      do ii=1,int(natoms_1(i))
+       do jj=1,int(natoms_2(j))
+        do_scalar_kernel(i,j) = do_scalar_kernel(i,j) + (dot_product(PS_1_lm(:,1,ii,i),PS_2_lm(:,1,jj,j)))**zeta
+       enddo
+      enddo
+      do_scalar_kernel(i,j) = do_scalar_kernel(i,j) / (natoms_1(i)*natoms_2(j))
+      if (hermiticity) do_scalar_kernel(j,i) = do_scalar_kernel(i,j)
+     enddo
+     !$OMP END PARALLEL DO
+    enddo
+   endif
+
+ end function
+
+!***************************************************************************************************
+
+ function do_spherical_kernel()
+  implicit none
+
+   real*8 do_spherical_kernel
 
  end function
 
