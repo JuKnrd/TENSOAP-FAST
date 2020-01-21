@@ -9,11 +9,11 @@ program sagpr_get_kernel
     integer zeta,lm,degen
     integer nunits,nmol_1,nmol_2,nfeat_1,nfeat_2,natmax_1,natmax_2,nfeat0_1,nfeat0_2
     real*8, allocatable, target :: natoms_1(:),natoms_2(:), raw_PS_1(:),raw_PS_2(:),raw_PS0_1(:),raw_PS0_2(:)
-    real*8, pointer :: PS_1(:,:,:),PS_2(:,:,:),PS0_1(:,:,:),PS0_2(:,:,:)
+    real*8, pointer :: PS0_1(:,:,:),PS0_2(:,:,:)
     real*8, pointer :: PS_1_lm(:,:,:,:),PS_2_lm(:,:,:,:)
-    real*8, allocatable :: PS_1_fast(:,:),PS_2_fast(:,:),PS_1_fast_lm(:,:,:),PS_2_fast_lm(:,:,:)
+    real*8, allocatable :: PS_1_fast_lm(:,:,:),PS_2_fast_lm(:,:,:)
 
-    integer :: bytes,reals,natmax,nmol,nfeat,i,j,ii,jj,j0,mu,nu
+    integer :: bytes,reals,i,j,ii,jj,j0,mu,nu
 
     real*8, allocatable :: ker(:,:), ker_lm(:,:,:,:)
     real*8 k0
@@ -143,150 +143,96 @@ program sagpr_get_kernel
 
     ! Build kernels
     if (lm.eq.0) then
-
      ker = do_scalar_kernel(PS_1_lm,PS_2_lm,nmol_1,nmol_2,nfeat_1,nfeat_2,natmax_1,natmax_2,natoms_1,natoms_2,zeta,hermiticity)
-
-!        ! Get kernels
-!        if (zeta.eq.1) then
-!         allocate(PS_1_fast(nfeat_1,nmol_1),PS_2_fast(nfeat_2,nmol_2))
-!         PS_1_fast(:,:) = 0.d0
-!         PS_2_fast(:,:) = 0.d0
-!         do i=1,nmol_1
-!          do ii=1,int(natoms_1(i))
-!           PS_1_fast(:,i) = PS_1_fast(:,i) + PS_1_lm(:,1,ii,i) / natoms_1(i)
-!          enddo
-!         enddo
-!         do i=1,nmol_2
-!          do ii=1,int(natoms_2(i))
-!           PS_2_fast(:,i) = PS_2_fast(:,i) + PS_2_lm(:,1,ii,i) / natoms_2(i)
-!          enddo
-!         enddo
-!         allocate(ker(nmol_1,nmol_2))
-!         ker(:,:) = 0.d0
-!         do i=1,nmol_1
-!          j0=1
-!          if (hermiticity) j0=i
-!          !$OMP PARALLEL DO SHARED(ker,PS_1_fast,PS_2_fast,natoms_1,natoms_2)
-!          do j=j0,nmol_2
-!           ker(i,j) = (dot_product(PS_1_fast(:,i),PS_2_fast(:,j)))
-!           if (hermiticity) ker(j,i) = ker(i,j)
-!          enddo
-!          !$OMP END PARALLEL DO
-!         enddo          
-!        else
-!         allocate(ker(nmol_1,nmol_2))
-!         ker(:,:) = 0.d0
-!         do i=1,nmol_1
-!          j0=1
-!          if (hermiticity) j0=i
-!          !$OMP PARALLEL DO SHARED(ker,PS_1,PS_2,natoms_1,natoms_2) PRIVATE(ii,jj)
-!          do j=j0,nmol_2
-!           do ii=1,int(natoms_1(i))
-!            do jj=1,int(natoms_2(j))
-!             ker(i,j) = ker(i,j) + (dot_product(PS_1_lm(:,1,ii,i),PS_2_lm(:,1,jj,j)))**zeta
-!            enddo
-!           enddo
-!           ker(i,j) = ker(i,j) / (natoms_1(i)*natoms_2(j))
-!           if (hermiticity) ker(j,i) = ker(i,j)
-!          enddo
-!          !$OMP END PARALLEL DO
-!         enddo
-!        endif
-
-        deallocate(arg,natoms_1,natoms_2,raw_PS_1,raw_PS_2)
-        if (allocated(PS_1_fast)) deallocate(PS_1_fast)
-        if (allocated(PS_2_fast)) deallocate(PS_2_fast)
-
     else
-!
-!        if (zeta.eq.1) then
-!         ! Build kernel
-!         allocate(ker_lm(nmol_1,nmol_2,degen,degen))
-!         ker_lm(:,:,:,:) = 0.d0
-!         ! Fast-averaging
-!         allocate(PS_1_fast_lm(nfeat_1,degen,nmol_1),PS_2_fast_lm(nfeat_2,degen,nmol_2))
-!         PS_1_fast_lm(:,:,:) = 0.d0
-!         PS_2_fast_lm(:,:,:) = 0.d0
-!         do i=1,nmol_1
-!          do ii=1,int(natoms_1(i))
-!           PS_1_fast_lm(:,:,i) = PS_1_fast_lm(:,:,i) + PS_1_lm(:,:,ii,i) / natoms_1(i)
-!          enddo
-!         enddo
-!         do i=1,nmol_2
-!          do ii=1,int(natoms_2(i))
-!           PS_2_fast_lm(:,:,i) = PS_2_fast_lm(:,:,i) + PS_2_lm(:,:,ii,i) / natoms_2(i)
-!          enddo
-!         enddo
-!         do i=1,nmol_1
-!          j0=1
-!          if (hermiticity) j0=i
-!          !$OMP PARALLEL DO SHARED(ker_lm,PS_1_fast_lm,PS_2_fast_lm,natoms_1,natoms_2) PRIVATE(ii,jj,mu,nu)
-!          do j=j0,nmol_2
-!           do mu=1,degen
-!            do nu=1,degen
-!             ker_lm(i,j,mu,nu) = (dot_product(PS_1_fast_lm(:,mu,i),PS_2_fast_lm(:,nu,j)))
-!             if (hermiticity) ker_lm(j,i,nu,mu) = ker_lm(i,j,mu,nu)
-!            enddo
-!           enddo
-!          enddo
-!          !$OMP END PARALLEL DO
-!         enddo
-!        else
-!         ! Read in scalar power spectrum file(s)
-!         if (psname0(1).eq.'' .or. psname0(2).eq.'') stop 'ERROR: scalar power spectrum file(s) required!'
-!         do i=1,2
-!          open(unit=41,file=psname0(i),status='old',access='stream',form='unformatted')
-!          inquire(unit=41,size=bytes)
-!          reals = bytes/8
-!          if (i.eq.1) then
-!           allocate(raw_PS0_1(reals))
-!           read(41,pos=1) raw_PS0_1
-!           close(41)
-!           nfeat0_1 = reals / (nmol_1*natmax_1)
-!           call C_F_POINTER(C_LOC(raw_PS0_1),PS0_1,[nfeat0_1,natmax_1,nmol_1])
-!          else
-!           allocate(raw_PS0_2(reals))
-!           read(41,pos=1) raw_PS0_2
-!           close(41)
-!           nfeat0_2 = reals / (nmol_2*natmax_2)
-!           call C_F_POINTER(C_LOC(raw_PS0_2),PS0_2,[nfeat0_2,natmax_2,nmol_2])
-!          endif
-!         enddo
-!         ! Build kernel
-!         allocate(ker_lm(nmol_1,nmol_2,degen,degen),ker(nmol_1,nmol_2))
-!         ker_lm(:,:,:,:) = 0.d0
-!         ker(:,:) = 0.d0
-!         do i=1,nmol_1
-!          j0=1
-!          if (hermiticity) j0=i
-!          !$OMP PARALLEL DO SHARED(ker_lm,ker,PS_1_lm,PS_2_lm,PS0_1,PS0_2,natoms_1,natoms_2) PRIVATE(ii,jj,mu,nu,k0)
-!          do j=j0,nmol_2
-!           do ii=1,int(natoms_1(i))
-!            do jj=1,int(natoms_2(j))
-!             k0 = (dot_product(PS0_1(:,ii,i),PS0_2(:,jj,j)))
-!             do mu=1,degen
-!              do nu=1,degen
-!               ker_lm(i,j,mu,nu) = ker_lm(i,j,mu,nu) + dot_product(PS_1_lm(:,mu,ii,i),PS_2_lm(:,nu,jj,j)) * k0**(zeta-1)
-!              enddo
-!             enddo
-!            enddo
-!           enddo
-!           ker_lm(i,j,:,:) = ker_lm(i,j,:,:) / (natoms_1(i)*natoms_2(j))
-!           if (hermiticity) then
-!            do mu=1,degen
-!             do nu=1,degen
-!              ker_lm(j,i,nu,mu) = ker_lm(i,j,mu,nu)
-!             enddo
-!            enddo
-!           endif
-!          enddo
-!          !$OMP END PARALLEL DO
-!         enddo
-!        endif
 
-!        deallocate(arg,natoms_1,natoms_2,raw_PS_1,raw_PS_2)
-!        if (allocated(PS_1_fast_lm)) deallocate(PS_1_fast_lm)
-!        if (allocated(PS_2_fast_lm)) deallocate(PS_2_fast_lm)
+        if (zeta.eq.1) then
+         ! Build kernel
+         allocate(ker_lm(nmol_1,nmol_2,degen,degen))
+         ker_lm(:,:,:,:) = 0.d0
+         ! Fast-averaging
+         allocate(PS_1_fast_lm(nfeat_1,degen,nmol_1),PS_2_fast_lm(nfeat_2,degen,nmol_2))
+         PS_1_fast_lm(:,:,:) = 0.d0
+         PS_2_fast_lm(:,:,:) = 0.d0
+         do i=1,nmol_1
+          do ii=1,int(natoms_1(i))
+           PS_1_fast_lm(:,:,i) = PS_1_fast_lm(:,:,i) + PS_1_lm(:,:,ii,i) / natoms_1(i)
+          enddo
+         enddo
+         do i=1,nmol_2
+          do ii=1,int(natoms_2(i))
+           PS_2_fast_lm(:,:,i) = PS_2_fast_lm(:,:,i) + PS_2_lm(:,:,ii,i) / natoms_2(i)
+          enddo
+         enddo
+         do i=1,nmol_1
+          j0=1
+          if (hermiticity) j0=i
+          !$OMP PARALLEL DO SHARED(ker_lm,PS_1_fast_lm,PS_2_fast_lm,natoms_1,natoms_2) PRIVATE(ii,jj,mu,nu)
+          do j=j0,nmol_2
+           do mu=1,degen
+            do nu=1,degen
+             ker_lm(i,j,mu,nu) = (dot_product(PS_1_fast_lm(:,mu,i),PS_2_fast_lm(:,nu,j)))
+             if (hermiticity) ker_lm(j,i,nu,mu) = ker_lm(i,j,mu,nu)
+            enddo
+           enddo
+          enddo
+          !$OMP END PARALLEL DO
+         enddo
+        else
+         ! Read in scalar power spectrum file(s)
+         if (psname0(1).eq.'' .or. psname0(2).eq.'') stop 'ERROR: scalar power spectrum file(s) required!'
+         do i=1,2
+          open(unit=41,file=psname0(i),status='old',access='stream',form='unformatted')
+          inquire(unit=41,size=bytes)
+          reals = bytes/8
+          if (i.eq.1) then
+           allocate(raw_PS0_1(reals))
+           read(41,pos=1) raw_PS0_1
+           close(41)
+           nfeat0_1 = reals / (nmol_1*natmax_1)
+           call C_F_POINTER(C_LOC(raw_PS0_1),PS0_1,[nfeat0_1,natmax_1,nmol_1])
+          else
+           allocate(raw_PS0_2(reals))
+           read(41,pos=1) raw_PS0_2
+           close(41)
+           nfeat0_2 = reals / (nmol_2*natmax_2)
+           call C_F_POINTER(C_LOC(raw_PS0_2),PS0_2,[nfeat0_2,natmax_2,nmol_2])
+          endif
+         enddo
+         ! Build kernel
+         allocate(ker_lm(nmol_1,nmol_2,degen,degen),ker(nmol_1,nmol_2))
+         ker_lm(:,:,:,:) = 0.d0
+         ker(:,:) = 0.d0
+         do i=1,nmol_1
+          j0=1
+          if (hermiticity) j0=i
+          !$OMP PARALLEL DO SHARED(ker_lm,ker,PS_1_lm,PS_2_lm,PS0_1,PS0_2,natoms_1,natoms_2) PRIVATE(ii,jj,mu,nu,k0)
+          do j=j0,nmol_2
+           do ii=1,int(natoms_1(i))
+            do jj=1,int(natoms_2(j))
+             k0 = (dot_product(PS0_1(:,ii,i),PS0_2(:,jj,j)))
+             do mu=1,degen
+              do nu=1,degen
+               ker_lm(i,j,mu,nu) = ker_lm(i,j,mu,nu) + dot_product(PS_1_lm(:,mu,ii,i),PS_2_lm(:,nu,jj,j)) * k0**(zeta-1)
+              enddo
+             enddo
+            enddo
+           enddo
+           ker_lm(i,j,:,:) = ker_lm(i,j,:,:) / (natoms_1(i)*natoms_2(j))
+           if (hermiticity) then
+            do mu=1,degen
+             do nu=1,degen
+              ker_lm(j,i,nu,mu) = ker_lm(i,j,mu,nu)
+             enddo
+            enddo
+           endif
+          enddo
+          !$OMP END PARALLEL DO
+         enddo
+        endif
+
+        if (allocated(PS_1_fast_lm)) deallocate(PS_1_fast_lm)
+        if (allocated(PS_2_fast_lm)) deallocate(PS_2_fast_lm)
 
     endif
 
@@ -301,5 +247,6 @@ program sagpr_get_kernel
 
     if (allocated(ker)) deallocate(ker)
     if (allocated(ker_lm)) deallocate(ker_lm)
+    deallocate(arg,natoms_1,natoms_2,raw_PS_1,raw_PS_2)
 
 end program
