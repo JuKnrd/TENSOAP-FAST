@@ -4,14 +4,11 @@ program sagpr_predict
 
     integer nargs,numkeys
     character(len=100), allocatable :: arg(:),keylist(:)
-    integer lm,i,j,nmol,reals,bytes,degen,nenv,mu,nu,k,ii
+    integer lm,i,j,k,ii
     integer nmax,lmax,ncut
     real*8 rcut,sg,rs(3)
-    character(len=100) weights,ofile,kerfile,sparse,fname
-    real*8, allocatable, target :: all_wt(:),raw_ker(:)
-    real*8, allocatable :: wt(:),prediction_lm(:,:),ker(:,:,:,:)
+    character(len=100) ofile,sparse,fname
     logical periodic,readnext
-    real*8 meanval
     integer, parameter :: nelements = 200
     logical all_species(nelements),all_centres(nelements)
 
