@@ -32,5 +32,8 @@ sagpr_apply:
 %.o: %.f90 
 	$(FF) $(FOPTS) -c $< 
 
+install:
+	@echo "INSTALL NOT YET IMPLEMENTED"
+
 clean: 
 	rm -rf *.o *.mod ../bin/* ../bin ../lib

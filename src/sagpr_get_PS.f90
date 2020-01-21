@@ -2,7 +2,7 @@ program sagpr_predict
     use sagpr
     implicit none
 
-    integer nargs,numkeys
+    integer nargs,numkeys,ios,nlines,nframes,frnum,natmax
     character(len=100), allocatable :: arg(:),keylist(:)
     integer lm,i,j,k,ii
     integer nmax,lmax,ncut
@@ -11,6 +11,10 @@ program sagpr_predict
     logical periodic,readnext
     integer, parameter :: nelements = 200
     logical all_species(nelements),all_centres(nelements)
+    real*8, allocatable :: xyz(:,:,:)
+    character(len=4), allocatable :: atname(:,:)
+    integer, allocatable :: natoms(:)
+    character(len=100), allocatable :: comment(:)
 
     ! Get input arguments
     nargs = iargc()
@@ -85,8 +89,50 @@ program sagpr_predict
     if (ofile.eq.'') stop 'ERROR: output file required!'
 
     ! Read in XYZ file
+    open(unit=31,file=fname,status='old')
+    nlines = 0
+    do
+     read(31,*,iostat=ios)
+     if (ios.ne.0) exit
+     nlines = nlines + 1
+    enddo
+    close(31)
+
+    open(unit=31,file=fname,status='old')
+    nframes = 0
+    natmax = 0
+    do i=1,nlines
+     read(31,*,iostat=ios) frnum
+     if (ios.eq.0) then
+      nframes = nframes + 1
+      natmax = max(natmax,frnum)
+     endif
+    enddo
+    close(31)
+
+    allocate(xyz(nframes,natmax,3),atname(nframes,natmax),natoms(nframes),comment(nframes))
+    xyz(:,:,:) = 0.d0
+    atname(:,:) = ''
+    open(unit=31,file=fname,status='old')
+    k = 0
+    do i=1,nframes
+     read(31,*,iostat=ios) frnum
+     if (ios.eq.0) then
+      k = k + 1
+      natoms(k) = frnum
+      read(31,*) comment(k)
+      do j=1,natoms(k)
+       read(31,*) atname(k,j),(xyz(k,j,ii),ii=1,3)
+      enddo
+     else
+      write(*,*) 'At frame ',k,':'
+      stop 'ERROR: there should be an atom number here!'
+     endif
+    enddo
+
+    ! Get power spectrum
 
     ! Array deallocation
-    !TODO: deallocation
+    deallocate(xyz,atname,natoms,comment)
 
 end program
