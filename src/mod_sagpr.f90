@@ -464,10 +464,6 @@ module sagpr
             do lval=0,lmax
              do im=0,2*lval
               mval = im-lval
-              if (iat.eq.1 .and. ispe.eq.1 .and. lval+1.eq.5 .and. im+1.eq.1 .and. n.eq.2) then
-               write(*,*) dconjg(spherical_harmonic(lval,mval,cth,ph))
-               stop
-              endif
               harmonic(iat,ispe,lval+1,im+1,n) = dconjg(spherical_harmonic(lval,mval,cth,ph))
              enddo
             enddo
@@ -548,16 +544,14 @@ module sagpr
  complex*16 function spherical_harmonic(l,m,costheta,phi)
   implicit none
 
-   integer l,m
+   integer l,m,mm
    real*8 costheta,phi
    complex*16 rawfactor
-   real*8 scalfactor
 
+   mm = abs(m)
    rawfactor = ((1.d0,0.d0)*cos(m*phi) + (0.d0,1.d0)*sin(m*phi)) * plgndr(l,abs(m),costheta)
-
-   scalfactor = (2 * l + 1) / (4.d0 * dacos(-1.d0)) * fact(l-m) / fact(l+m)
-
-   spherical_harmonic = rawfactor * sqrt(scalfactor)
+   spherical_harmonic = rawfactor * dsqrt( ((2*l + 1) / (4.d0*dacos(-1.d0)) * fact(l-mm)/fact(l+mm)))
+   if (m.lt.0) spherical_harmonic = spherical_harmonic * (-1.d0)**m
 
  end function
 
