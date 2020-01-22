@@ -9,14 +9,15 @@ program sagpr_predict
     real*8 rcut,sg,rs(3)
     character(len=100) ofile,sparse,fname
     logical periodic,readnext
-    integer, parameter :: nelements = 200
     logical all_species(nelements),all_centres(nelements)
-    real*8, allocatable :: xyz(:,:,:),PS(:,:,:,:),sparsification(:,:,:),cell(:,:,:)
+    real*8, allocatable :: xyz(:,:,:),PS(:,:,:,:),cell(:,:,:)
     character(len=4), allocatable :: atname(:,:)
     integer, allocatable :: natoms(:)
     character(len=1000), allocatable :: comment(:)
     character(len=1000) c1
-    real*8, allocatable, target :: sparse_data(:)
+    complex*16, allocatable, target :: sparse_data(:)
+    complex*16, allocatable :: sparsification(:,:,:)
+    character(len=3) symbol
 
     ! Get input arguments
     nargs = iargc()
@@ -56,8 +57,10 @@ program sagpr_predict
         readnext = readnext.and.(trim(adjustl(arg(k))).ne.trim(adjustl(keylist(j))))
        enddo
        if (readnext) then
-        read(arg(k),*) ii
-        all_centres(ii) = .true.
+        read(arg(k),*) symbol
+        do ii=1,nelements
+         if (trim(adjustl(atomic_names(ii))).eq.trim(adjustl(symbol))) all_centres(ii) = .true.
+        enddo
        endif
       enddo
      endif
@@ -68,8 +71,10 @@ program sagpr_predict
         readnext = readnext.and.(trim(adjustl(arg(k))).ne.trim(adjustl(keylist(j))))
        enddo
        if (readnext) then
-        read(arg(k),*) ii
-        all_species(ii) = .true.
+        read(arg(k),*) symbol
+        do ii=1,nelements
+         if (trim(adjustl(atomic_names(ii))).eq.trim(adjustl(symbol))) all_species(ii) = .true.
+        enddo
        endif
       enddo
      endif
@@ -156,7 +161,7 @@ program sagpr_predict
     else
      open(unit=32,file=sparse,status='old',access='stream',form='unformatted')
      inquire(unit=32,size=bytes)
-     reals = bytes / 8
+     reals = bytes / 16
      allocate(sparse_data(reals))
      read(32,pos=1) sparse_data
      close(32)

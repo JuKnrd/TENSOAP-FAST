@@ -2,7 +2,7 @@
 
 FF=gfortran
 FOPTS=-O3 -g -fopenmp -Wunused
-LD=#-lblas -llapack
+LD=-lblas -llapack
 OBJECTS1=mod_sagpr.o sagpr_get_PS.o
 OBJECTS2=mod_sagpr.o sagpr_get_kernel.o
 OBJECTS3=mod_sagpr.o sagpr_predict.o
