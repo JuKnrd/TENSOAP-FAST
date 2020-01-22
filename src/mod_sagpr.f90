@@ -188,21 +188,43 @@ module sagpr
 
 !***************************************************************************************************
 
- function do_power_spectrum(xyz,atname,natoms,comment,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres, &
-     &     all_species,ncut,sparsification,nsparse,rs,periodic)
+ function do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres, &
+     &     all_species,ncut,sparsification,rs,periodic)
   implicit none
 
-  integer nframes,natmax,lm,nmax,lmax,ncut,nsparse
-  real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,sparsification(2,nsparse,nsparse)
+  integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize
+  real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,sparsification(2,ncut,ncut),cell(nframes,3,3)
   character(len=4) atname(nframes,natmax)
   integer natoms(nframes)
-  character(len=100) comment(nframes)
   logical periodic,all_centres(:),all_species(:)
 
   real*8, allocatable :: do_power_spectrum(:,:,:,:)
 
-  allocate(do_power_spectrum(1,1,1,1))
+  ! Get maximum number of neighbours
+
+  ! List indices for atoms of the same species
+
+  ! Get list of centres
+
+  ! Get list of species and number of atoms of chosen centres
+
+  ! Set up orthogonal matrix
+
+  ! Set up arrays for time-saving in spherical power spectra
+
+  ! Allocate power spectrum array
+  degen = 2*lm + 1
+  if (ncut.ne.-1) then
+   featsize = ncut
+  else
+   featsize = 1
+  endif
+  allocate(do_power_spectrum(nframes,natmax,degen,featsize))
   do_power_spectrum(:,:,:,:) = 0.d0
+
+  ! Do the power spectrum computation
+
+  ! Normalize power spectrum
 
  end function
 
