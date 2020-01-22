@@ -211,7 +211,8 @@ module sagpr
   integer, allocatable :: all_indices(:,:,:),nneighmax(:,:),ncen(:),lvalues(:,:)
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
-  complex*16, allocatable :: omega(:,:,:,:,:)
+  complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:)
+  real*8, allocatable :: orthoradint(:,:,:,:,:)
 
   real*8, allocatable :: do_power_spectrum(:,:,:,:)
 
@@ -368,8 +369,11 @@ module sagpr
 
     ! Get omega matrix
     if (allocated(omega)) deallocate(omega)
-    allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
-    call initsoap_scalar(omega,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
+    if (allocated(harmonic)) deallocate(harmonic)
+    if (allocated(orthoradint)) deallocate(orthoradint)
+    allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nelements,lmax+1,2*lmax+1,nnmax),&
+     &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax))
+    call initsoap_scalar(omega,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
      &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,all_centres,all_species,rcut,xyz(i,:,:),sigma,orthomatrix)
 
     ! Compute power spectrum
@@ -395,12 +399,12 @@ module sagpr
 
 !***************************************************************************************************
 
- subroutine initsoap_scalar(omega,natoms,nspecies,nmax,lmax,nnmax,periodic,all_indices,nneighmax, &
+ subroutine initsoap_scalar(omega,harmonic,orthoradint,natoms,nspecies,nmax,lmax,nnmax,periodic,all_indices,nneighmax, &
      &     natmax,nsmax,cell,rs,sg,all_centres,all_species,rcut,xyz,sigma,orthomatrix)
   implicit none
 
    integer natoms,nspecies,nmax,lmax,nnmax,natmax,nsmax,iat,ncentype,icentype,icen,cen,n,ispe
-   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,j,k,nn,m
+   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,j,k,nn
    real*8 rcut2,rx,ry,rz,r2,rdist,cth,ph,normfact,sigmafact
    complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms,nelements,lmax+1,2*lmax+1,nnmax)
    real*8 radint(natoms,nspecies,nnmax,lmax+1,nmax),orthoradint(natoms,nspecies,lmax+1,nmax,nnmax)
@@ -524,23 +528,28 @@ module sagpr
     enddo
    enddo
 
-   do i=1,natoms
-    do j=1,nspecies
-     do k=1,lmax+1
-      do l=1,nmax
-       do m=1,nnmax
-        write(*,*) i,j,k,l,m,orthoradint(i,j,k,l,m)   ! THIS IS ALWAYS ZERO (EVEN WHEN IT SHOULD NOT BE) WHEN j=2
+   ! Get omega
+   do iat=1,natoms
+    k = 0
+    do j=1,nelements
+     if (all_species(j)) then
+      k = k + 1
+      do n1=1,nmax
+       do l=1,lmax+1
+        do im=1,2*lmax+1
+         omega(iat,k,n1,l,im) = dot_product(orthoradint(iat,k,l,n1,:),harmonic(iat,j,l,im,:))
+        enddo
        enddo
       enddo
-     enddo
+     endif
     enddo
    enddo
-   stop
 
-!      real*8 radint(natoms,nspecies,nnmax,lmax+1,nmax),orthoradint(natoms,nspecies,lmax+1,nmax,nnmax)
-!   real*8 efact(natoms,nelements,nnmax),length(natoms,nelements,nnmax),cell(3,3),rs(3),sg,rcut,xyz(nat
 
-   ! Get omega
+!      complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
+!    for iat in xrange(nat):
+!        for ispe in xrange(nspecies):
+!            omega[iat,ispe] = np.einsum('lnh,lmh->nlm',orthoradint[iat,ispe],harmonic[iat,ispe])
 
  end subroutine
 
