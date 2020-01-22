@@ -6,6 +6,7 @@ module sagpr
      &     'Kr','Rb','Sr','Y ','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I ','Xe','Cs','Ba', &
      &     'La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W ','Re','Os','Ir', &
      &     'Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn'/)
+ complex*16, allocatable :: PS(:,:,:,:)
 
  contains
 
@@ -200,7 +201,7 @@ module sagpr
   implicit none
 
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2
-  integer llmax
+  integer llmax,ps_shape(4)
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
   complex*16 sparsification(2,ncut,ncut)
   real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax)
@@ -210,12 +211,16 @@ module sagpr
   integer, allocatable :: all_indices(:,:,:),nneighmax(:,:),ncen(:),lvalues(:,:)
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
+  complex*16, allocatable :: omega(:,:,:,:,:)
 
-  complex*16, allocatable :: PS(:,:,:,:)
   real*8, allocatable :: do_power_spectrum(:,:,:,:)
 
   ! Get maximum number of neighbours
-  nnmax = natmax * 10
+  if (.not.periodic) then
+   nnmax = natmax
+  else
+   nnmax = natmax * 10
+  endif
 
   ! List indices for atoms of the same species
   nsmax = nelements
@@ -238,6 +243,7 @@ module sagpr
 
   ! Maximum number of nearest neighbours
   allocate(nneighmax(nframes,nsmax))
+  nneighmax(:,:) = 0
   do i=1,nframes
    do j=1,nsmax
     do k=1,natmax
@@ -342,22 +348,273 @@ module sagpr
     featsize = nspecies*nspecies*nmax**2*llmax
    endif
   endif
-!  allocate(do_power_spectrum(nframes,natmax,degen,featsize))
-  allocate(PS(nframes,natmax,degen,featsize))
+  if (.not.allocated(PS)) then
+   allocate(PS(nframes,natmax,degen,featsize))
+  else
+   ! We have already allocated the power spectrum; let's see if we need to reallocate it
+   ps_shape = shape(PS)
+   if (.not.(ps_shape(1).ge.nframes .and. ps_shape(2).ge.natmax .and. ps_shape(3).ge.degen .and. ps_shape(4).ge.featsize)) then
+    deallocate(PS)
+    allocate(PS(nframes,natmax,degen,featsize))
+   endif
+  endif
   allocate(do_power_spectrum(nframes,natmax,degen,featsize))
   PS(:,:,:,:) = (0.d0,0.d0)
-  do_power_spectrum(:,:,:,:) = 0.d0
 
   ! Do the power spectrum computation
+  if (lm.eq.0) then
+   ! Get scalar power spectrum
+   do i=1,nframes
 
+    ! Get omega matrix
+    if (allocated(omega)) deallocate(omega)
+    allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
+    call initsoap_scalar(omega,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
+     &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,all_centres,all_species,rcut,xyz(i,:,:),sigma,orthomatrix)
+
+    ! Compute power spectrum
+
+   enddo
+  else
+   ! Get spherical power spectrum
+   do i=1,nframes
+
+    stop 'NOT YET IMPLEMENTED!'
+
+   enddo
+  endif
+
+
+  do_power_spectrum(:nframes,:natmax,:degen,:featsize) = real(PS)
   ! Normalize power spectrum
 
-  deallocate(all_indices,nneighmax,ncen,PS)
+  deallocate(all_indices,nneighmax,ncen,PS,omega)
   if (allocated(lvalues)) deallocate(lvalues)
 
  end function
 
 !***************************************************************************************************
 
+ subroutine initsoap_scalar(omega,natoms,nspecies,nmax,lmax,nnmax,periodic,all_indices,nneighmax, &
+     &     natmax,nsmax,cell,rs,sg,all_centres,all_species,rcut,xyz,sigma,orthomatrix)
+  implicit none
 
+   integer natoms,nspecies,nmax,lmax,nnmax,natmax,nsmax,iat,ncentype,icentype,icen,cen,n,ispe
+   integer ineigh,neigh,lval,im,mval,i,j,k,l,m
+   real*8 rcut2,rx,ry,rz,r2,rdist,cth,ph
+   complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms,nelements,lmax+1,2*lmax+1,nnmax)
+   real*8 radint(natoms,nspecies,nnmax,lmax+1,nmax),orthoradint(natoms,nspecies,nnmax,lmax+1,nmax)
+   real*8 efact(natoms,nelements,nnmax),length(natoms,nelements,nnmax),cell(3,3),rs(3),sg,rcut,xyz(natmax,3)
+   real*8 sigma(nmax),orthomatrix(nmax,nmax),alpha,sg2,radial_c,radial_r0,radial_m
+   integer nneigh(natoms,nelements),all_indices(nsmax,natmax),nneighmax(nsmax)
+   logical periodic,all_centres(nelements),all_species(nelements)
+
+   sg2 = sg*sg
+   alpha = 1.d0 / (2.d0 * sg2)
+   radial_c = rs(1)
+   radial_r0 = rs(2)
+   radial_m = rs(3)
+   rcut2 = rcut*rcut
+
+   nneigh(:,:) = 0
+   length(:,:,:) = 0.d0
+   efact(:,:,:) = 0.d0
+   omega(:,:,:,:,:) = 0.d0
+   harmonic(:,:,:,:,:) = 0.d0
+   radint(:,:,:,:,:) = 0.d0
+   orthoradint(:,:,:,:,:) = 0.d0
+
+   if (.not.periodic) then
+
+    iat = 1
+    ncentype = count(all_centres)
+    ! Loop over species to centre on
+    do icentype=1,nelements
+     if (all_centres(icentype)) then
+      ! Loop over centres of that species
+      do icen=1,nneighmax(icentype)
+       cen = all_indices(icentype,icen)
+       ! Loop over all the species to use as neighbours
+       do ispe=1,nelements
+        if (all_species(ispe)) then
+         ! Loop over neighbours of that species
+         n = 1
+         do ineigh=1,nneighmax(ispe)
+          neigh = all_indices(ispe,ineigh)
+          ! Compute distance vector
+          rx = xyz(neigh,1) - xyz(cen,1)
+          ry = xyz(neigh,2) - xyz(cen,2)
+          rz = xyz(neigh,3) - xyz(cen,3)
+          r2 = rx*rx + ry*ry + rz*rz
+          ! Within cutoff?
+          if (r2 .le. rcut2) then
+           ! Central atom?
+           if (neigh.eq.cen) then
+            length(iat,ispe,n) = 0.d0
+            efact(iat,ispe,n) = 1.d0
+            harmonic(iat,ispe,0+1,0+1,n) = spherical_harmonic(0,0,0.d0,0.d0)
+            nneigh(iat,ispe) = nneigh(iat,ispe) + 1
+            n = n + 1
+           else
+            rdist = dsqrt(r2)
+            length(iat,ispe,n) = rdist
+            cth = rz/rdist
+            ph = datan2(ry,rx)
+            efact(iat,ispe,n) = dexp(-alpha*r2) !* radial_scaling(rdist,radial_c,radial_r0,radial_m)
+            do lval=0,lmax
+             do im=0,2*lval
+              mval = im-lval
+              if (iat.eq.1 .and. ispe.eq.1 .and. lval+1.eq.5 .and. im+1.eq.1 .and. n.eq.2) then
+               write(*,*) dconjg(spherical_harmonic(lval,mval,cth,ph))
+               stop
+              endif
+              harmonic(iat,ispe,lval+1,im+1,n) = dconjg(spherical_harmonic(lval,mval,cth,ph))
+             enddo
+            enddo
+            nneigh(iat,ispe) = nneigh(iat,ispe) + 1
+            n = n + 1
+           endif
+          endif
+         enddo
+        endif
+       enddo
+       iat = iat + 1
+      enddo
+     endif
+    enddo
+
+   else
+   endif 
+
+!   do i=1,natoms
+!    do j=1,nelements
+!     if (j.eq.1 .or. j.eq.8) then
+!      do k=1,nnmax
+!       write(*,*) i,j,k,length(i,j,k)
+!      enddo
+!     endif
+!    enddo
+!   enddo
+!   stop
+
+
+   do i=1,natoms
+    do j=1,nelements
+     if (j.eq.1 .or. j.eq.8) then
+      do k=1,lmax+1
+       do l=1,2*lmax+1
+        do m=1,nnmax
+         write(*,*) i,j,k,l,m,real(harmonic(i,j,k,l,m)),imag(harmonic(i,j,k,l,m))
+        enddo
+       enddo
+      enddo
+     endif
+    enddo
+   enddo
+   stop
+
+ end subroutine
+
+!***************************************************************************************************
+
+ subroutine initsoap_spherical()
+  implicit none
+
+   
+
+ end subroutine
+
+!***************************************************************************************************
+
+ real*8 function radial_scaling(r,c,r0,m)
+  implicit none
+
+   real*8 r,c,r0,m
+
+   if (m.lt.1.d-10) then
+    radial_scaling = 1.d0
+    return
+   endif
+   if (c.eq.0.d0) then
+    radial_scaling = 1.d0 / (r/r0)**m
+   else
+    radial_scaling = c / (c + (r/r0)**m)
+   endif
+
+ end function
+
+!***************************************************************************************************
+
+ complex*16 function spherical_harmonic(l,m,costheta,phi)
+  implicit none
+
+   integer l,m
+   real*8 costheta,phi
+   complex*16 rawfactor
+   real*8 scalfactor
+
+   rawfactor = ((1.d0,0.d0)*cos(m*phi) + (0.d0,1.d0)*sin(m*phi)) * plgndr(l,abs(m),costheta)
+
+   scalfactor = (2 * l + 1) / (4.d0 * dacos(-1.d0)) * fact(l-m) / fact(l+m)
+
+   spherical_harmonic = rawfactor * sqrt(scalfactor)
+
+ end function
+
+!***************************************************************************************************
+
+ real*8 function plgndr(l,m,x)
+  implicit none
+
+   ! Subroutine from Numerical Recipes in Fortran
+
+   integer l,m
+   real*8 x
+   integer i,ll
+   real*8 fact,pll,pmm,pmmp1,somx2
+   if (m.lt.0.or.m.gt.l.or.abs(x).gt.1) stop 'ERROR: bad arguments in plgndr!'
+   pmm = 1.d0
+   if (m.gt.0) then
+    somx2 = sqrt((1.d0-x)*(1.d0+x))
+    fact = 1.d0
+    do i=1,m
+     pmm = -pmm*fact*somx2
+     fact = fact + 2.d0
+    enddo
+   endif
+   if (l.eq.m) then
+    plgndr=pmm
+   else
+    pmmp1 = x*(2*m+1)*pmm
+    if (l.eq.m+1) then
+     plgndr = pmmp1
+    else
+     do ll=m+2,l 
+      pll=(x*(2*ll-1)*pmmp1-(ll+m-1)*pmm)/(ll-m)
+      pmm = pmmp1
+      pmmp1 = pll
+     enddo
+     plgndr = pll
+    endif
+   endif
+
+   return
+ end function
+
+!***************************************************************************************************
+
+ real*8 function fact(n)
+  implicit none
+
+   integer n,i
+
+   if (n.lt.0) stop 'ERROR: positive number required for factorial!'
+   fact = 1.d0
+   do i=2,n
+    fact = fact * i
+   enddo
+
+ end function
+
+!***************************************************************************************************
 end module
