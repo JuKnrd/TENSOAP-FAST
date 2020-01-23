@@ -404,7 +404,7 @@ module sagpr
   implicit none
 
    integer natoms,nspecies,nmax,lmax,nnmax,natmax,nsmax,iat,ncentype,icentype,icen,cen,n,ispe
-   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,j,k,nn
+   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,j,k,nn,m
    real*8 rcut2,rx,ry,rz,r2,rdist,cth,ph,normfact,sigmafact
    complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms,nelements,lmax+1,2*lmax+1,nnmax)
    real*8 radint(natoms,nspecies,nnmax,lmax+1,nmax),orthoradint(natoms,nspecies,lmax+1,nmax,nnmax)
@@ -544,6 +544,19 @@ module sagpr
      endif
     enddo
    enddo
+
+   do i=1,natoms
+    do j=1,nspecies
+     do k=1,nmax
+      do l=1,lmax+1
+       do m=1,2*lmax+1
+        write(*,*) real(omega(i,j,k,l,m)),imag(omega(i,j,k,l,m))
+       enddo
+      enddo
+     enddo
+    enddo
+   enddo
+   stop
 
 
 !      complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
