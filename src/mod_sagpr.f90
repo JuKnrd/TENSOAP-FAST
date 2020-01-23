@@ -213,8 +213,9 @@ module sagpr
   integer, allocatable :: all_indices(:,:,:),nneighmax(:,:),ncen(:),lvalues(:,:)
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
-  complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),omegaconj(:,:,:,:,:)
+  complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),omegaconj(:,:,:,:,:),ps_row(:,:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:)
+  integer, allocatable :: index_list(:)
 
   ! Get maximum number of neighbours
   if (.not.periodic) then
@@ -445,6 +446,27 @@ module sagpr
    ! Spherical
    stop 'NOT YET IMPLEMENTED!'
   endif
+
+  ! Reorder the power spectrum so that the ordering of atoms matches their positions in the frame
+  allocate(ps_row(natmax,degen,featsize),index_list(natmax))
+  do i=1,nframes
+   ps_row(:,:,:) = 0.d0
+   index_list(:) = 0
+   l = 0
+   do j=1,nelements
+    do k=1,natmax
+     if (all_indices(i,j,k).gt.0) then
+      l = l + 1
+      index_list(l) = all_indices(i,j,k)
+     endif
+    enddo
+   enddo
+   do j=1,natoms(i)
+    ps_row(index_list(j),:,:) = PS(i,j,:,:)
+   enddo
+   PS(i,:,:,:) = ps_row(:,:,:)
+  enddo
+  deallocate(ps_row,index_list)
 
   deallocate(all_indices,nneighmax,ncen)
   if (allocated(lvalues)) deallocate(lvalues)
