@@ -387,6 +387,9 @@ module sagpr
   endif
 
   ! Do the power spectrum computation
+  !$OMP PARALLEL DO SHARED(PS,natoms,nspecies,nmax,lmax,nnmax,periodic,all_indices,nneighmax,natmax,nsmax,cell, &
+  !$OMP&     rs,sg,all_centres,all_species,rcut,xyz,sigma,orthomatrix) PRIVATE(omega,harmonic,orthoradint, &
+  !$OMP&     omegatrue,omegaconj)
   do i=1,nframes
 
    ! Get omega, harmonic and radint matrices
@@ -424,6 +427,7 @@ module sagpr
    deallocate(omega,harmonic,orthoradint)
 
   enddo
+  !$OMP END PARALLEL DO
 
   ! Multiply by A matrix
   do i=1,nframes
@@ -563,6 +567,38 @@ module sagpr
     enddo
 
    else
+
+    iat = 1
+    ncentype = count(all_centres)
+    ! Loop over species to centre on
+    do icentype=1,nelements
+     if (all_centres(icentype)) then
+      ! Loop over centres of that species
+      do icen=1,nneighmax(icentype)
+       cen = all_indices(icentype,icen)
+       ! Loop over all the species to use as neighbours
+       k = 0
+       do ispe=1,nelements
+        if (all_species(ispe)) then
+         k = k + 1
+         ! Loop over neighbours of that species
+         n = 1
+         do ineigh=1,nneighmax(ispe)
+          neigh = all_indices(ispe,ineigh)
+          ! Compute distance vector
+          rx = xyz(neigh,1) - xyz(cen,1)
+          ry = xyz(neigh,2) - xyz(cen,2)
+          rz = xyz(neigh,3) - xyz(cen,3)
+          ! Apply periodic boundary conditions
+
+          ! Loop over periodic images
+         enddo
+        endif
+       enddo
+       iat = iat + 1
+      enddo
+     endif
+    enddo
 
     stop 'Periodic code not yet set up!'
 
