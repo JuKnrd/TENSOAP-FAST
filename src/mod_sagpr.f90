@@ -368,15 +368,15 @@ module sagpr
    do i=1,nframes
 
     ! Get omega matrix
-    if (allocated(omega)) deallocate(omega)
-    if (allocated(harmonic)) deallocate(harmonic)
-    if (allocated(orthoradint)) deallocate(orthoradint)
-    allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nelements,lmax+1,2*lmax+1,nnmax),&
+    allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nspecies,lmax+1,2*lmax+1,nnmax),&
      &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax))
     call initsoap_scalar(omega,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
      &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,all_centres,all_species,rcut,xyz(i,:,:),sigma,orthomatrix)
 
     ! Compute power spectrum
+
+    ! Deallocate
+    deallocate(omega,harmonic,orthoradint)
 
    enddo
   else
@@ -392,7 +392,7 @@ module sagpr
   do_power_spectrum(:nframes,:natmax,:degen,:featsize) = real(PS)
   ! Normalize power spectrum
 
-  deallocate(all_indices,nneighmax,ncen,PS,omega)
+  deallocate(all_indices,nneighmax,ncen,PS)
   if (allocated(lvalues)) deallocate(lvalues)
 
  end function
@@ -404,13 +404,13 @@ module sagpr
   implicit none
 
    integer natoms,nspecies,nmax,lmax,nnmax,natmax,nsmax,iat,ncentype,icentype,icen,cen,n,ispe
-   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,j,k,nn,m
+   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,k,nn
    real*8 rcut2,rx,ry,rz,r2,rdist,cth,ph,normfact,sigmafact
-   complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms,nelements,lmax+1,2*lmax+1,nnmax)
+   complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms,nspecies,lmax+1,2*lmax+1,nnmax)
    real*8 radint(natoms,nspecies,nnmax,lmax+1,nmax),orthoradint(natoms,nspecies,lmax+1,nmax,nnmax)
-   real*8 efact(natoms,nelements,nnmax),length(natoms,nelements,nnmax),cell(3,3),rs(3),sg,rcut,xyz(natmax,3)
+   real*8 efact(natoms,nspecies,nnmax),length(natoms,nspecies,nnmax),cell(3,3),rs(3),sg,rcut,xyz(natmax,3)
    real*8 sigma(nmax),orthomatrix(nmax,nmax),alpha,sg2,radial_c,radial_r0,radial_m
-   integer nneigh(natoms,nelements),all_indices(nsmax,natmax),nneighmax(nsmax)
+   integer nneigh(natoms,nspecies),all_indices(nsmax,natmax),nneighmax(nsmax)
    logical periodic,all_centres(nelements),all_species(nelements)
 
    sg2 = sg*sg
@@ -439,8 +439,10 @@ module sagpr
       do icen=1,nneighmax(icentype)
        cen = all_indices(icentype,icen)
        ! Loop over all the species to use as neighbours
+       k = 0
        do ispe=1,nelements
         if (all_species(ispe)) then
+         k = k + 1
          ! Loop over neighbours of that species
          n = 1
          do ineigh=1,nneighmax(ispe)
@@ -454,24 +456,24 @@ module sagpr
           if (r2 .le. rcut2) then
            ! Central atom?
            if (neigh.eq.cen) then
-            length(iat,ispe,n) = 0.d0
-            efact(iat,ispe,n) = 1.d0
-            harmonic(iat,ispe,0+1,0+1,n) = spherical_harmonic(0,0,0.d0,0.d0)
-            nneigh(iat,ispe) = nneigh(iat,ispe) + 1
+            length(iat,k,n) = 0.d0
+            efact(iat,k,n) = 1.d0
+            harmonic(iat,k,0+1,0+1,n) = spherical_harmonic(0,0,0.d0,0.d0)
+            nneigh(iat,k) = nneigh(iat,k) + 1
             n = n + 1
            else
             rdist = dsqrt(r2)
-            length(iat,ispe,n) = rdist
+            length(iat,k,n) = rdist
             cth = rz/rdist
             ph = datan2(ry,rx)
-            efact(iat,ispe,n) = dexp(-alpha*r2) * radial_scaling(rdist,radial_c,radial_r0,radial_m)
+            efact(iat,k,n) = dexp(-alpha*r2) * radial_scaling(rdist,radial_c,radial_r0,radial_m)
             do lval=0,lmax
              do im=0,2*lval
               mval = im-lval
-              harmonic(iat,ispe,lval+1,im+1,n) = dconjg(spherical_harmonic(lval,mval,cth,ph))
+              harmonic(iat,k,lval+1,im+1,n) = dconjg(spherical_harmonic(lval,mval,cth,ph))
              enddo
             enddo
-            nneigh(iat,ispe) = nneigh(iat,ispe) + 1
+            nneigh(iat,k) = nneigh(iat,k) + 1
             n = n + 1
            endif
           endif
@@ -495,19 +497,20 @@ module sagpr
     normfact = dsqrt(2.d0 / (gamma(1.5d0 + n2)*sigma(n1)**(3.d0 + 2.d0*n2)))
     sigmafact = (sg2**2 + sg2*sigma(n1)**2)/sigma(n1)**2
     do i=1,natoms
-     k = 0
-     do j=1,nelements
-      if (all_species(j)) then
-       k = k + 1
+!     k = 0
+!     do j=1,nelements
+!      if (all_species(j)) then
+!       k = k + 1
+     do k=1,nspecies
        do nn=1,nnmax
         do l=0,lmax
-        radint(i,k,nn,l+1,n1) = efact(i,j,nn) * 2.d0**(-0.5d0*(1.d0 + l-n2)) * &
+        radint(i,k,nn,l+1,n1) = efact(i,k,nn) * 2.d0**(-0.5d0*(1.d0 + l-n2)) * &
      &     (1.d0/sg2 + 1.d0/sigma(n1)**2)**(-0.5d0*(3.d0 + l+n2)) * &
-     &     (gamma(0.5d0*(3.d0+l+n2))/gamma(1.5d0+l)) * (length(i,j,nn)/sg2)**l * &
-     &     hg(0.5d0*(3.d0+l+n2),1.5d0 + l,0.5d0 * length(i,j,nn)**2/sigmafact) 
+     &     (gamma(0.5d0*(3.d0+l+n2))/gamma(1.5d0+l)) * (length(i,k,nn)/sg2)**l * &
+     &     hg(0.5d0*(3.d0+l+n2),1.5d0 + l,0.5d0 * length(i,k,nn)**2/sigmafact) 
         enddo
        enddo
-      endif
+!      endif
      enddo
     enddo
     radint(:,:,:,:,n1) = radint(:,:,:,:,n1) * normfact
@@ -515,48 +518,50 @@ module sagpr
 
    ! Get orthoradint
    do iat=1,natoms
-    k = 0
-    do j=1,nelements
-     if (all_species(j)) then
-      k = k + 1
-      do neigh=1,nneigh(iat,j)
+!    k = 0
+!    do j=1,nelements
+!     if (all_species(j)) then
+!      k = k + 1
+    do k=1,nspecies
+      do neigh=1,nneigh(iat,k)
        do l=1,lmax+1
         orthoradint(iat,k,l,:,neigh) = matmul(orthomatrix,radint(iat,k,neigh,l,:))
        enddo
       enddo
-     endif
+!     endif
     enddo
    enddo
 
    ! Get omega
    do iat=1,natoms
-    k = 0
-    do j=1,nelements
-     if (all_species(j)) then
-      k = k + 1
+!    k = 0
+!    do j=1,nelements
+!     if (all_species(j)) then
+!      k = k + 1
+    do k=1,nspecies
       do n1=1,nmax
        do l=1,lmax+1
         do im=1,2*lmax+1
-         omega(iat,k,n1,l,im) = dot_product(orthoradint(iat,k,l,n1,:),harmonic(iat,j,l,im,:))
+         omega(iat,k,n1,l,im) = dot_product(orthoradint(iat,k,l,n1,:),harmonic(iat,k,l,im,:))
         enddo
        enddo
       enddo
-     endif
+!     endif
     enddo
    enddo
 
-   do i=1,natoms
-    do j=1,nspecies
-     do k=1,nmax
-      do l=1,lmax+1
-       do m=1,2*lmax+1
-        write(*,*) real(omega(i,j,k,l,m)),imag(omega(i,j,k,l,m))
-       enddo
-      enddo
-     enddo
-    enddo
-   enddo
-   stop
+!   do i=1,natoms
+!    do j=1,nspecies
+!     do k=1,nmax
+!      do l=1,lmax+1
+!       do m=1,2*lmax+1
+!        write(*,*) real(omega(i,j,k,l,m)),imag(omega(i,j,k,l,m))
+!       enddo
+!      enddo
+!     enddo
+!    enddo
+!   enddo
+!   stop
 
 
 !      complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
