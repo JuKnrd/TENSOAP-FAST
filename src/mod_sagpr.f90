@@ -497,10 +497,6 @@ module sagpr
     normfact = dsqrt(2.d0 / (gamma(1.5d0 + n2)*sigma(n1)**(3.d0 + 2.d0*n2)))
     sigmafact = (sg2**2 + sg2*sigma(n1)**2)/sigma(n1)**2
     do i=1,natoms
-!     k = 0
-!     do j=1,nelements
-!      if (all_species(j)) then
-!       k = k + 1
      do k=1,nspecies
        do nn=1,nnmax
         do l=0,lmax
@@ -510,7 +506,6 @@ module sagpr
      &     hg(0.5d0*(3.d0+l+n2),1.5d0 + l,0.5d0 * length(i,k,nn)**2/sigmafact) 
         enddo
        enddo
-!      endif
      enddo
     enddo
     radint(:,:,:,:,n1) = radint(:,:,:,:,n1) * normfact
@@ -518,26 +513,17 @@ module sagpr
 
    ! Get orthoradint
    do iat=1,natoms
-!    k = 0
-!    do j=1,nelements
-!     if (all_species(j)) then
-!      k = k + 1
     do k=1,nspecies
       do neigh=1,nneigh(iat,k)
        do l=1,lmax+1
         orthoradint(iat,k,l,:,neigh) = matmul(orthomatrix,radint(iat,k,neigh,l,:))
        enddo
       enddo
-!     endif
     enddo
    enddo
 
    ! Get omega
    do iat=1,natoms
-!    k = 0
-!    do j=1,nelements
-!     if (all_species(j)) then
-!      k = k + 1
     do k=1,nspecies
       do n1=1,nmax
        do l=1,lmax+1
@@ -546,28 +532,8 @@ module sagpr
         enddo
        enddo
       enddo
-!     endif
     enddo
    enddo
-
-!   do i=1,natoms
-!    do j=1,nspecies
-!     do k=1,nmax
-!      do l=1,lmax+1
-!       do m=1,2*lmax+1
-!        write(*,*) real(omega(i,j,k,l,m)),imag(omega(i,j,k,l,m))
-!       enddo
-!      enddo
-!     enddo
-!    enddo
-!   enddo
-!   stop
-
-
-!      complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
-!    for iat in xrange(nat):
-!        for ispe in xrange(nspecies):
-!            omega[iat,ispe] = np.einsum('lnh,lmh->nlm',orthoradint[iat,ispe],harmonic[iat,ispe])
 
  end subroutine
 
