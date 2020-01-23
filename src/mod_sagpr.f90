@@ -1,11 +1,12 @@
 module sagpr
 
- integer, parameter :: nelements = 86
+ integer, parameter :: nelements = 118
  character(len=2), parameter :: atomic_names(nelements) = (/'H ','He','Li','Be','B ','C ','N ','O ','F ','Ne','Na','Mg','Al','Si', &
      &     'P ','S ','Cl','Ar','K ','Ca','Sc','Ti','V ','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br', &
      &     'Kr','Rb','Sr','Y ','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I ','Xe','Cs','Ba', &
      &     'La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W ','Re','Os','Ir', &
-     &     'Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn'/)
+     &     'Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th','Pa','U ','Np','Pu','Am','Cm','Bk','Cf', &
+     &     'Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'/)
  complex*16, allocatable :: PS(:,:,:,:)
  integer, allocatable :: components(:,:)
 
@@ -204,7 +205,7 @@ module sagpr
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l
   integer llmax,ps_shape(4),m,n,nn
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
-  complex*16 sparsification(2,ncut,ncut)
+  complex*16 sparsification(2,ncut,ncut),tmp
   real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax),inner
   character(len=4) atname(nframes,natmax)
   integer natoms(nframes),ipiv(nmax)
@@ -423,12 +424,39 @@ module sagpr
 
   enddo
 
+!  tmp = (0.d0,0.d0)
+!  do k=1,ncut
+!   write(*,*) k,PS(1,1,1,k),sparsification(2,k,1),PS(1,1,1,k)*sparsification(2,k,1)
+!   tmp = tmp + PS(1,1,1,k) * sparsification(2,k,1)
+!  enddo
+!  write(*,*) tmp
+!  write(*,*)
+
+!  write(*,*) sparsification(2,1,:)
+!  write(*,*) dot_product(PS(1,1,1,:),sparsification(2,:,1))
+!  stop
+
+  do k=1,ncut
+   write(*,*) real(PS(1,1,1,k)),imag(PS(1,1,1,k))
+  enddo
+  write(*,*)
+  stop
+
   ! Multiply by A matrix
   do i=1,nframes
    do j=1,natmax
     PS(i,j,1,:) = matmul(PS(i,j,1,:),sparsification(2,:,:))
    enddo
   enddo
+
+!  write(*,*) shape(sparsification(2,:,:))
+  write(*,*)
+
+  do k=1,ncut
+   write(*,*) real(PS(1,1,1,k)),imag(PS(1,1,1,k))
+  enddo
+  write(*,*)
+  stop
 
   do i=1,nframes
    do j=1,natmax
