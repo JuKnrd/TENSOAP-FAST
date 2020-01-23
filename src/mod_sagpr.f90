@@ -197,7 +197,7 @@ module sagpr
 
 !***************************************************************************************************
 
- function do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres, &
+ subroutine do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres, &
      &     all_species,ncut,sparsification,rs,periodic)
   implicit none
 
@@ -205,7 +205,7 @@ module sagpr
   integer llmax,ps_shape(4),m,n,nn
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
   complex*16 sparsification(2,ncut,ncut)
-  real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax)
+  real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax),inner
   character(len=4) atname(nframes,natmax)
   integer natoms(nframes),ipiv(nmax)
   logical periodic,all_centres(:),all_species(:)
@@ -214,8 +214,6 @@ module sagpr
   integer info,lwork,work(lwmax)
   complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),omegaconj(:,:,:,:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:)
-
-  real*8, allocatable :: do_power_spectrum(:,:,:,:)
 
   ! Get maximum number of neighbours
   if (.not.periodic) then
@@ -360,7 +358,6 @@ module sagpr
     allocate(PS(nframes,natmax,degen,featsize))
    endif
   endif
-  allocate(do_power_spectrum(nframes,natmax,degen,featsize))
   PS(:,:,:,:) = (0.d0,0.d0)
 
   ! Get list of components
@@ -426,15 +423,26 @@ module sagpr
 
   enddo
 
-
-  do_power_spectrum(:nframes,:natmax,:degen,:featsize) = real(PS)
-  ! Normalize power spectrum
+  ! Make power spectrum real and normalize it
+  if (lm.eq.0) then
+   ! Scalar
+   PS(:,:,:,:) = real(PS(:,:,:,:))
+   do i=1,nframes
+    do j=1,natoms(i)
+     inner = dot_product(PS(i,j,1,:),PS(i,j,1,:))
+     PS(i,j,1,:) = PS(i,j,1,:) / dsqrt(inner)
+    enddo
+   enddo
+  else
+   ! Spherical
+   stop 'NOT YET IMPLEMENTED!'
+  endif
 
   deallocate(all_indices,nneighmax,ncen,PS)
   if (allocated(lvalues)) deallocate(lvalues)
   if (allocated(components)) deallocate(components)
 
- end function
+ end subroutine
 
 !***************************************************************************************************
 
