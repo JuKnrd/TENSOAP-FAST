@@ -407,7 +407,7 @@ module sagpr
     if (ncut.gt.0) then
      do j=1,ncut
       do k=1,natoms(i)
-       PS(i,k,1,ncut) = dot_product(omegatrue(k,components(j,1),components(j,3),components(j,5),:), &
+       PS(i,k,1,j) = dot_product(omegatrue(k,components(j,1),components(j,3),components(j,5),:), &
      &     omegaconj(k,components(j,2),components(j,4),components(j,5),:))
       enddo
      enddo
@@ -415,6 +415,13 @@ module sagpr
      stop 'ERROR: no sparsification information given; this is not recommended!'
     endif
     deallocate(omegatrue,omegaconj)
+
+    do l=1,ncut
+     do k=1,natoms(i)
+      write(*,*) int(sparsification(1,l,1)),real(PS(i,k,1,l)),imag(PS(i,k,1,l))
+     enddo
+    enddo
+    stop
    else
      ! Spherical
      stop 'NOT YET IMPLEMENTED!'
