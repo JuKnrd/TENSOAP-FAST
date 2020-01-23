@@ -189,7 +189,6 @@ program sagpr_get_PS
 
     ! Print power spectrum
     open(unit=33,file=ofile,access='stream',form='unformatted')
-    write(*,*) ofile
     write(33,pos=1) real(PS)
     close(33)
 

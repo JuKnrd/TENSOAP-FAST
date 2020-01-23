@@ -205,7 +205,7 @@ module sagpr
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l
   integer llmax,ps_shape(4),m,n,nn
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
-  complex*16 sparsification(2,ncut,ncut),tmp
+  complex*16 sparsification(2,ncut,ncut)
   real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax),inner
   character(len=4) atname(nframes,natmax)
   integer natoms(nframes),ipiv(nmax)
@@ -406,7 +406,7 @@ module sagpr
      do k=1,natoms(i)
       do j=1,ncut
        PS(i,k,1,j) = dot_product(omegatrue(k,components(j,1),components(j,3),components(j,5),:), &
-     &     omegaconj(k,components(j,2),components(j,4),components(j,5),:))
+     &     omegatrue(k,components(j,2),components(j,4),components(j,5),:))
       enddo
      enddo
     else
@@ -424,53 +424,12 @@ module sagpr
 
   enddo
 
-!  tmp = (0.d0,0.d0)
-!  do k=1,ncut
-!   write(*,*) k,PS(1,1,1,k),sparsification(2,k,1),PS(1,1,1,k)*sparsification(2,k,1)
-!   tmp = tmp + PS(1,1,1,k) * sparsification(2,k,1)
-!  enddo
-!  write(*,*) tmp
-!  write(*,*)
-
-!  write(*,*) sparsification(2,1,:)
-!  write(*,*) dot_product(PS(1,1,1,:),sparsification(2,:,1))
-!  stop
-
-  do k=1,ncut
-   write(*,*) real(PS(1,1,1,k)),imag(PS(1,1,1,k))
-  enddo
-  write(*,*)
-  stop
-
   ! Multiply by A matrix
   do i=1,nframes
    do j=1,natmax
     PS(i,j,1,:) = matmul(PS(i,j,1,:),sparsification(2,:,:))
    enddo
   enddo
-
-!  write(*,*) shape(sparsification(2,:,:))
-  write(*,*)
-
-  do k=1,ncut
-   write(*,*) real(PS(1,1,1,k)),imag(PS(1,1,1,k))
-  enddo
-  write(*,*)
-  stop
-
-  do i=1,nframes
-   do j=1,natmax
-    do k=1,ncut
-     write(*,*) i,j,k,real(PS(i,j,1,k)),imag(PS(i,j,1,k))
-    enddo
-   enddo
-  enddo
-
-!  do i=1,ncut
-!   do j=1,ncut
-!    write(*,*) real(sparsification(2,i,j)),imag(sparsification(2,i,j))
-!   enddo
-!  enddo
 
   ! Make power spectrum real and normalize it
   if (lm.eq.0) then
@@ -486,14 +445,6 @@ module sagpr
    ! Spherical
    stop 'NOT YET IMPLEMENTED!'
   endif
-
-!  do i=1,nframes
-!   do j=1,natmax
-!    do k=1,ncut
-!     write(*,*) i,j,k,real(PS(i,j,1,k)),imag(PS(i,j,1,k))
-!    enddo
-!   enddo
-!  enddo
 
   deallocate(all_indices,nneighmax,ncen)
   if (allocated(lvalues)) deallocate(lvalues)
