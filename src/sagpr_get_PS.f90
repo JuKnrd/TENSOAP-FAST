@@ -189,10 +189,11 @@ program sagpr_get_PS
 
     ! Print power spectrum
     open(unit=33,file=ofile,access='stream',form='unformatted')
-    write(33,pos=1) PS
+    write(*,*) ofile
+    write(33,pos=1) real(PS)
     close(33)
 
     ! Array deallocation
-    deallocate(xyz,atname,natoms,comment,sparsification,cell)
+    deallocate(xyz,atname,natoms,comment,sparsification,cell,PS)
 
 end program

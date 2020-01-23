@@ -402,8 +402,8 @@ module sagpr
     enddo
     omegaconj(:,:,:,:,:) = dconjg(omegatrue)
     if (ncut.gt.0) then
-     do j=1,ncut
-      do k=1,natoms(i)
+     do k=1,natoms(i)
+      do j=1,ncut
        PS(i,k,1,j) = dot_product(omegatrue(k,components(j,1),components(j,3),components(j,5),:), &
      &     omegaconj(k,components(j,2),components(j,4),components(j,5),:))
       enddo
@@ -423,6 +423,27 @@ module sagpr
 
   enddo
 
+  ! Multiply by A matrix
+  do i=1,nframes
+   do j=1,natmax
+    PS(i,j,1,:) = matmul(PS(i,j,1,:),sparsification(2,:,:))
+   enddo
+  enddo
+
+  do i=1,nframes
+   do j=1,natmax
+    do k=1,ncut
+     write(*,*) i,j,k,real(PS(i,j,1,k)),imag(PS(i,j,1,k))
+    enddo
+   enddo
+  enddo
+
+!  do i=1,ncut
+!   do j=1,ncut
+!    write(*,*) real(sparsification(2,i,j)),imag(sparsification(2,i,j))
+!   enddo
+!  enddo
+
   ! Make power spectrum real and normalize it
   if (lm.eq.0) then
    ! Scalar
@@ -438,7 +459,15 @@ module sagpr
    stop 'NOT YET IMPLEMENTED!'
   endif
 
-  deallocate(all_indices,nneighmax,ncen,PS)
+!  do i=1,nframes
+!   do j=1,natmax
+!    do k=1,ncut
+!     write(*,*) i,j,k,real(PS(i,j,1,k)),imag(PS(i,j,1,k))
+!    enddo
+!   enddo
+!  enddo
+
+  deallocate(all_indices,nneighmax,ncen)
   if (allocated(lvalues)) deallocate(lvalues)
   if (allocated(components)) deallocate(components)
 
