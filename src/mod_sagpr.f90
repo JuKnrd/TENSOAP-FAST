@@ -417,9 +417,10 @@ module sagpr
     deallocate(omegatrue,omegaconj)
 
     do l=1,ncut
-     do k=1,natoms(i)
-      write(*,*) int(sparsification(1,l,1)),real(PS(i,k,1,l)),imag(PS(i,k,1,l))
-     enddo
+!     do k=1,natoms(i)
+!      write(*,*) int(sparsification(1,l,1)),real(PS(i,k,1,l)),imag(PS(i,k,1,l))
+     write(*,*) int(sparsification(1,l,1)),components(l,:)
+!     enddo
     enddo
     stop
    else
