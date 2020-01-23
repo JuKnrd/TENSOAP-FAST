@@ -485,13 +485,13 @@ module sagpr
   implicit none
 
    integer natoms,nspecies,nmax,lmax,nnmax,natmax,nsmax,iat,ncentype,icentype,icen,cen,n,ispe
-   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,k,nn
-   real*8 rcut2,rx,ry,rz,r2,rdist,cth,ph,normfact,sigmafact
+   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,k,nn,ncell,ia,ib,ic
+   real*8 rcut2,rx,ry,rz,r2,rdist,cth,ph,normfact,sigmafact,rv(3),sv(3),rcv(3)
    complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms,nspecies,lmax+1,2*lmax+1,nnmax)
    real*8 radint(natoms,nspecies,nnmax,lmax+1,nmax),orthoradint(natoms,nspecies,lmax+1,nmax,nnmax)
    real*8 efact(natoms,nspecies,nnmax),length(natoms,nspecies,nnmax),cell(3,3),rs(3),sg,rcut,xyz(natmax,3)
-   real*8 sigma(nmax),orthomatrix(nmax,nmax),alpha,sg2,radial_c,radial_r0,radial_m
-   integer nneigh(natoms,nspecies),all_indices(nsmax,natmax),nneighmax(nsmax)
+   real*8 sigma(nmax),orthomatrix(nmax,nmax),alpha,sg2,radial_c,radial_r0,radial_m,invcell(3,3)
+   integer nneigh(natoms,nspecies),all_indices(nsmax,natmax),nneighmax(nsmax),ipiv(3),info,lwork,work(1000)
    logical periodic,all_centres(nelements),all_species(nelements)
 
    sg2 = sg*sg
@@ -500,6 +500,7 @@ module sagpr
    radial_r0 = rs(2)
    radial_m = rs(3)
    rcut2 = rcut*rcut
+   ncell = 2
 
    nneigh(:,:) = 0
    length(:,:,:) = 0.d0
@@ -568,6 +569,12 @@ module sagpr
 
    else
 
+    ! Invert unit cell
+    invcell(:,:) = cell(:,:)
+    lwork = 1000
+    call DGETRF(3,3,invcell,3,ipiv,info)
+    call DGETRI(3,invcell,3,ipiv,work,lwork,info)
+
     iat = 1
     ncentype = count(all_centres)
     ! Loop over species to centre on
@@ -586,12 +593,51 @@ module sagpr
          do ineigh=1,nneighmax(ispe)
           neigh = all_indices(ispe,ineigh)
           ! Compute distance vector
-          rx = xyz(neigh,1) - xyz(cen,1)
-          ry = xyz(neigh,2) - xyz(cen,2)
-          rz = xyz(neigh,3) - xyz(cen,3)
+          rv(1) = xyz(neigh,1) - xyz(cen,1)
+          rv(2) = xyz(neigh,2) - xyz(cen,2)
+          rv(3) = xyz(neigh,3) - xyz(cen,3)
           ! Apply periodic boundary conditions
-
+          sv = matmul(invcell,rv)
+          sv(1) = sv(1) - nint(sv(1))
+          sv(2) = sv(2) - nint(sv(2))
+          sv(3) = sv(3) - nint(sv(3))
+          rcv = matmul(cell,sv)
           ! Loop over periodic images
+          do ia=-ncell,ncell
+           do ib=-ncell,ncell
+            do ic=-ncell,ncell
+             rx = rcv(1) + cell(1,1)*ia + cell(1,2)*ib + cell(1,3)*ic
+             ry = rcv(2) + cell(2,1)*ia + cell(2,2)*ib + cell(2,3)*ic
+             rz = rcv(3) + cell(3,1)*ia + cell(3,2)*ib + cell(3,3)*ic
+             r2 = rx*rx + ry*ry + rz*rz
+             ! Within cutoff?
+             if (r2 .le. rcut2) then
+              ! Central atom?
+              if (neigh.eq.cen) then
+               length(iat,k,n) = 0.d0
+               efact(iat,k,n) = 1.d0
+               harmonic(iat,k,0+1,0+1,n) = spherical_harmonic(0,0,0.d0,0.d0)
+               nneigh(iat,k) = nneigh(iat,k) + 1
+               n = n + 1
+              else
+               rdist = dsqrt(r2)
+               length(iat,k,n) = rdist
+               cth = rz/rdist
+               ph = datan2(ry,rx)
+               efact(iat,k,n) = dexp(-alpha*r2) * radial_scaling(rdist,radial_c,radial_r0,radial_m)
+               do lval=0,lmax
+                do im=0,2*lval
+                 mval = im-lval
+                 harmonic(iat,k,lval+1,im+1,n) = dconjg(spherical_harmonic(lval,mval,cth,ph))
+                enddo
+               enddo
+               nneigh(iat,k) = nneigh(iat,k) + 1
+               n = n + 1
+              endif
+             endif
+            enddo
+           enddo
+          enddo
          enddo
         endif
        enddo
@@ -600,8 +646,6 @@ module sagpr
      endif
     enddo
 
-    stop 'Periodic code not yet set up!'
-
    endif
 
    ! Get radial integral
@@ -609,6 +653,7 @@ module sagpr
     n2 = n1-1
     normfact = dsqrt(2.d0 / (gamma(1.5d0 + n2)*sigma(n1)**(3.d0 + 2.d0*n2)))
     sigmafact = (sg2**2 + sg2*sigma(n1)**2)/sigma(n1)**2
+    !$OMP PARALLEL DO SHARED(radint,efact,length,sg2) PRIVATE(i,k,nn,l)
     do i=1,natoms
      do k=1,nspecies
        do nn=1,nnmax
@@ -621,10 +666,12 @@ module sagpr
        enddo
      enddo
     enddo
+    !$OMP END PARALLEL DO
     radint(:,:,:,:,n1) = radint(:,:,:,:,n1) * normfact
    enddo
 
    ! Get orthoradint
+   !$OMP PARALLEL DO SHARED(orthoradint,radint,orthomatrix) PRIVATE(iat,k,neigh)
    do iat=1,natoms
     do k=1,nspecies
       do neigh=1,nneigh(iat,k)
@@ -634,8 +681,10 @@ module sagpr
       enddo
     enddo
    enddo
+   !$OMP END PARALLEL DO
 
    ! Get omega
+   !$OMP PARALLEL DO SHARED(omega,orthoradint,harmonic) PRIVATE(iat,k,n1,l,im)
    do iat=1,natoms
     do k=1,nspecies
       do n1=1,nmax
@@ -647,6 +696,7 @@ module sagpr
       enddo
     enddo
    enddo
+   !$OMP END PARALLEL DO
 
  end subroutine
 
