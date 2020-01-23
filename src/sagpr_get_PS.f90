@@ -1,4 +1,4 @@
-program sagpr_predict
+program sagpr_get_PS
     use sagpr
     implicit none
 
@@ -10,7 +10,7 @@ program sagpr_predict
     character(len=100) ofile,sparse,fname
     logical periodic,readnext
     logical all_species(nelements),all_centres(nelements)
-    real*8, allocatable :: xyz(:,:,:),PS(:,:,:,:),cell(:,:,:)
+    real*8, allocatable :: xyz(:,:,:),out_PS(:,:,:,:),cell(:,:,:)
     character(len=4), allocatable :: atname(:,:)
     integer, allocatable :: natoms(:)
     character(len=1000), allocatable :: comment(:)
@@ -92,6 +92,7 @@ program sagpr_predict
     ! Check for arguments that are required
     if (fname.eq.'') stop 'ERROR: filename required!'
     if (ofile.eq.'') stop 'ERROR: output file required!'
+    if (sparse.eq.'') stop 'ERROR: sparsification file required!'
 
     ! Read in XYZ file
     open(unit=31,file=fname,status='old')
@@ -183,7 +184,7 @@ program sagpr_predict
     endif
 
     ! Get power spectrum
-    PS = do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
+    out_PS = do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
      &     ncut,sparsification,rs,periodic)
 
     ! Print power spectrum
@@ -192,6 +193,6 @@ program sagpr_predict
     close(33)
 
     ! Array deallocation
-    deallocate(xyz,atname,natoms,comment,PS,sparsification,cell)
+    deallocate(xyz,atname,natoms,comment,out_PS,sparsification,cell)
 
 end program

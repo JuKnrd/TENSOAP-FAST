@@ -7,6 +7,7 @@ module sagpr
      &     'La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W ','Re','Os','Ir', &
      &     'Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn'/)
  complex*16, allocatable :: PS(:,:,:,:)
+ integer, allocatable :: components(:,:)
 
  contains
 
@@ -200,8 +201,8 @@ module sagpr
      &     all_species,ncut,sparsification,rs,periodic)
   implicit none
 
-  integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2
-  integer llmax,ps_shape(4)
+  integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l
+  integer llmax,ps_shape(4),m,n,nn
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
   complex*16 sparsification(2,ncut,ncut)
   real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax)
@@ -211,7 +212,7 @@ module sagpr
   integer, allocatable :: all_indices(:,:,:),nneighmax(:,:),ncen(:),lvalues(:,:)
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
-  complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:)
+  complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),omegaconj(:,:,:,:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:)
 
   real*8, allocatable :: do_power_spectrum(:,:,:,:)
@@ -362,31 +363,67 @@ module sagpr
   allocate(do_power_spectrum(nframes,natmax,degen,featsize))
   PS(:,:,:,:) = (0.d0,0.d0)
 
-  ! Do the power spectrum computation
-  if (lm.eq.0) then
-   ! Get scalar power spectrum
-   do i=1,nframes
-
-    ! Get omega matrix
-    allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nspecies,lmax+1,2*lmax+1,nnmax),&
-     &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax))
-    call initsoap_scalar(omega,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
-     &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,all_centres,all_species,rcut,xyz(i,:,:),sigma,orthomatrix)
-
-    ! Compute power spectrum
-
-    ! Deallocate
-    deallocate(omega,harmonic,orthoradint)
-
-   enddo
-  else
-   ! Get spherical power spectrum
-   do i=1,nframes
-
-    stop 'NOT YET IMPLEMENTED!'
-
+  ! Get list of components
+  if (.not. allocated(components) .and. ncut.gt.0) then
+   allocate(components(ncut,5))
+   n = 0
+   do i=1,nspecies
+    do j=1,nspecies
+     do k=1,nmax
+      do l=1,nmax
+       do m=1,lmax+1
+        n = n + 1
+        ! Check if this component is required
+        do nn=1,ncut
+         ! Remember we have to add 1 because we're dealing with python arrays
+         if (sparsification(1,nn,1)+1.eq.n) then
+          components(nn,:) = (/i,j,k,l,m/)
+         endif
+        enddo
+       enddo
+      enddo
+     enddo
+    enddo
    enddo
   endif
+
+  ! Do the power spectrum computation
+  do i=1,nframes
+
+   ! Get omega, harmonic and radint matrices
+   allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nspecies,lmax+1,2*lmax+1,nnmax),&
+     &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax))
+   call initsoap(omega,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
+     &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,all_centres,all_species,rcut,xyz(i,:,:),sigma,orthomatrix)
+
+   ! Compute power spectrum
+   if (lm.eq.0) then
+    ! Scalar
+    allocate(omegatrue(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),omegaconj(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
+    do l=1,lmax+1
+     omegatrue(:,:,:,l,:) = omega(:,:,:,l,:) / dsqrt(dsqrt(2.d0*l+1.d0))
+    enddo
+    omegaconj(:,:,:,:,:) = dconjg(omegatrue)
+    if (ncut.gt.0) then
+     do j=1,ncut
+      do k=1,natoms(i)
+       PS(i,k,1,ncut) = dot_product(omegatrue(k,components(j,1),components(j,3),components(j,5),:), &
+     &     omegaconj(k,components(j,2),components(j,4),components(j,5),:))
+      enddo
+     enddo
+    else
+     stop 'ERROR: no sparsification information given; this is not recommended!'
+    endif
+    deallocate(omegatrue,omegaconj)
+   else
+     ! Spherical
+     stop 'NOT YET IMPLEMENTED!'
+   endif
+
+   ! Deallocate
+   deallocate(omega,harmonic,orthoradint)
+
+  enddo
 
 
   do_power_spectrum(:nframes,:natmax,:degen,:featsize) = real(PS)
@@ -394,12 +431,13 @@ module sagpr
 
   deallocate(all_indices,nneighmax,ncen,PS)
   if (allocated(lvalues)) deallocate(lvalues)
+  if (allocated(components)) deallocate(components)
 
  end function
 
 !***************************************************************************************************
 
- subroutine initsoap_scalar(omega,harmonic,orthoradint,natoms,nspecies,nmax,lmax,nnmax,periodic,all_indices,nneighmax, &
+ subroutine initsoap(omega,harmonic,orthoradint,natoms,nspecies,nmax,lmax,nnmax,periodic,all_indices,nneighmax, &
      &     natmax,nsmax,cell,rs,sg,all_centres,all_species,rcut,xyz,sigma,orthomatrix)
   implicit none
 
@@ -534,15 +572,6 @@ module sagpr
       enddo
     enddo
    enddo
-
- end subroutine
-
-!***************************************************************************************************
-
- subroutine initsoap_spherical()
-  implicit none
-
-   
 
  end subroutine
 
