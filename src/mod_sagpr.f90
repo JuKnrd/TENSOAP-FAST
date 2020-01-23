@@ -400,8 +400,8 @@ module sagpr
    if (lm.eq.0) then
     ! Scalar
     allocate(omegatrue(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),omegaconj(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
-    do l=1,lmax+1
-     omegatrue(:,:,:,l,:) = omega(:,:,:,l,:) / dsqrt(dsqrt(2.d0*l+1.d0))
+    do l=0,lmax
+     omegatrue(:,:,:,l+1,:) = omega(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
     enddo
     omegaconj(:,:,:,:,:) = dconjg(omegatrue)
     if (ncut.gt.0) then
@@ -416,13 +416,6 @@ module sagpr
     endif
     deallocate(omegatrue,omegaconj)
 
-    do l=1,ncut
-!     do k=1,natoms(i)
-!      write(*,*) int(sparsification(1,l,1)),real(PS(i,k,1,l)),imag(PS(i,k,1,l))
-     write(*,*) int(sparsification(1,l,1)),components(l,:)
-!     enddo
-    enddo
-    stop
    else
      ! Spherical
      stop 'NOT YET IMPLEMENTED!'
