@@ -7,7 +7,7 @@ OBJECTS1=mod_sagpr.o sagpr_get_PS.o
 OBJECTS2=mod_sagpr.o sagpr_get_kernel.o
 OBJECTS3=mod_sagpr.o sagpr_predict.o
 OBJECTS4=mod_sagpr.o
-OBJECTS5=sagpr_apply.o
+OBJECTS5=mod_apply.o sagpr_apply.o
 
 all: mkbin sagpr_get_PS sagpr_get_kernel sagpr_predict libsoapfast sagpr_apply
 

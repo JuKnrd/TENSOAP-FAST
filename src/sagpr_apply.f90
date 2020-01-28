@@ -1,8 +1,9 @@
 program sagpr_apply
     use sagpr
+    use apply
     implicit none
 
-    integer nargs,numkeys,ios,nlines,nframes,frnum,natmax,reals,bytes
+    integer nargs,numkeys,reals,bytes
     character(len=100), allocatable :: arg(:),keylist(:),keys1(:),keys2(:)
     integer lm,i,j,k,l,ii,nfeat,degen,nmol
     integer nmax,lmax,ncut,zeta,nfeat0,ncut0
@@ -10,11 +11,6 @@ program sagpr_apply
     character(len=100) ofile,trainmodel,fname,model,args
     logical periodic,readnext
     logical all_species(nelements),all_centres(nelements)
-    real*8, allocatable :: xyz(:,:,:),cell(:,:,:)
-    character(len=4), allocatable :: atname(:,:)
-    integer, allocatable :: natoms(:)
-    character(len=1000), allocatable :: comment(:)
-    character(len=1000) c1
     real*8, allocatable, target :: raw_model(:)
     real*8, allocatable :: PS_tr_lam(:,:,:),PS_tr_0(:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
     real*8, allocatable :: prediction_lm(:,:)
@@ -198,7 +194,7 @@ program sagpr_apply
       do k=1,ncut0
        i = i + 1
        a1 = raw_model(i)
-       i = i + 2
+       i = i + 1
        a2 = raw_model(i)
        sparsification0(2,j,k) = dcmplx(a1,a2)
       enddo
@@ -219,65 +215,7 @@ program sagpr_apply
 ! READ IN DATA
 !************************************************************************************
 
-    ! Read in XYZ file
-    open(unit=31,file=fname,status='old')
-    nlines = 0
-    do
-     read(31,*,iostat=ios)
-     if (ios.ne.0) exit
-     nlines = nlines + 1
-    enddo
-    close(31)
-
-    open(unit=31,file=fname,status='old')
-    nframes = 0
-    natmax = 0
-    do i=1,nlines
-     read(31,*,iostat=ios) frnum
-     if (ios.eq.0) then
-      nframes = nframes + 1
-      natmax = max(natmax,frnum)
-     endif
-    enddo
-    close(31)
-
-    allocate(xyz(nframes,natmax,3),atname(nframes,natmax),natoms(nframes),comment(nframes))
-    xyz(:,:,:) = 0.d0
-    atname(:,:) = ''
-    open(unit=31,file=fname,status='old')
-    k = 0
-    do i=1,nframes
-     read(31,*,iostat=ios) frnum
-     if (ios.eq.0) then
-      k = k + 1
-      natoms(k) = frnum
-      read(31,'(A)') comment(k)
-      do j=1,natoms(k)
-       read(31,*) atname(k,j),(xyz(k,j,ii),ii=1,3)
-      enddo
-     else
-      write(*,*) 'At frame ',k,':'
-      stop 'ERROR: there should be an atom number here!'
-     endif
-    enddo
-
-    ! Get cell data
-    allocate(cell(nframes,3,3))
-    if (.not.periodic) then
-     cell(:,:,:) = 0.d0
-    else
-     do i=1,nframes
-      ios = index(comment(i),'Lattice')
-      if (ios.eq.0) stop 'ERROR: input file is not periodic!'
-      c1 = comment(i)
-      c1 = c1(ios:len(c1))
-      ios = index(c1,'"')
-      c1 = c1(ios+1:len(c1))
-      ios = index(c1,'"')
-      c1 = c1(1:ios-1)
-      read(c1,*) cell(i,1,1),cell(i,1,2),cell(i,1,3),cell(i,2,1),cell(i,2,2),cell(i,2,3),cell(i,3,1),cell(i,3,2),cell(i,3,3)
-     enddo
-    endif
+    call get_xyz(fname,periodic)
 
 !************************************************************************************
 ! USE THE MODEL AND THE DATA TO MAKE A PREDICTION
