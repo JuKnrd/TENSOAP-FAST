@@ -7,8 +7,9 @@ OBJECTS1=mod_sagpr.o sagpr_get_PS.o
 OBJECTS2=mod_sagpr.o sagpr_get_kernel.o
 OBJECTS3=mod_sagpr.o sagpr_predict.o
 OBJECTS4=mod_sagpr.o
+OBJECTS5=sagpr_apply.o
 
-all: mkbin sagpr_get_PS sagpr_get_kernel sagpr_predict libsagpr sagpr_apply
+all: mkbin sagpr_get_PS sagpr_get_kernel sagpr_predict libsoapfast sagpr_apply
 
 mkbin:
 	@if [ ! -d ../bin ];then mkdir ../bin;fi
@@ -22,12 +23,12 @@ sagpr_get_kernel: $(OBJECTS2)
 sagpr_predict: $(OBJECTS3)
 	$(FF) $(FOPTS) -o ../bin/sagpr_predict $(OBJECTS3) $(LD)
 
-libsagpr:
+libsoapfast:
 	@if [ ! -d ../lib ];then mkdir ../lib;fi
 	ar r ../lib/libsoapfast.a $(OBJECTS4)
 
-sagpr_apply:
-	@echo "SAGPR_APPLY NOT YET IMPLEMENTED"
+sagpr_apply: $(OBJECTS5)
+	$(FF) $(FOPTS) -o ../bin/sagpr_apply $(OBJECTS5) -L../lib -lsoapfast $(LD)
 
 %.o: %.f90 
 	$(FF) $(FOPTS) -c $< 
