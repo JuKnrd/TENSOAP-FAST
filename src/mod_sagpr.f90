@@ -683,17 +683,18 @@ module sagpr
    !$OMP END PARALLEL DO
 
    ! Get omega
+   omega(:,:,:,:,:) = 0.d0
    !$OMP PARALLEL DO SHARED(omega,orthoradint,harmonic) PRIVATE(l,im,n1,k,iat,i)
-   do i=1,nnmax
-    do im=1,2*lmax+1
+   do im=1,2*lmax+1
+    do i=1,nnmax
      do n1=1,nmax
       do l=1,lmax+1
        do k=1,nspecies
         do iat=1,natoms
          omega(iat,k,n1,l,im) = omega(iat,k,n1,l,im) + (orthoradint(iat,k,l,n1,i) * harmonic(iat,k,l,im,i))
-         enddo
         enddo
        enddo
+      enddo
      enddo
     enddo
    enddo
