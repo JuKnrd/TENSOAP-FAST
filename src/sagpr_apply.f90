@@ -291,7 +291,7 @@ program sagpr_apply
     ! Get power spectrum
     if (.not.do_scalar) then
      call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
-     &     ncut,sparsification,rs,periodic)
+     &     ncut,sparsification,rs,periodic,.true.)
     else
      stop 'NOT YET SET UP FOR DOING ZETA>1'
     endif

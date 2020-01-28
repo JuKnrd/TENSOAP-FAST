@@ -185,7 +185,7 @@ program sagpr_get_PS
 
     ! Get power spectrum
     call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
-     &     ncut,sparsification,rs,periodic)
+     &     ncut,sparsification,rs,periodic,.true.)
 
     ! Print power spectrum
     open(unit=33,file=ofile,access='stream',form='unformatted')

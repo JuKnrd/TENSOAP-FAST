@@ -351,7 +351,7 @@ module sagpr
 !***************************************************************************************************
 
  subroutine do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres, &
-     &     all_species,ncut,sparsification,rs,periodic)
+     &     all_species,ncut,sparsification,rs,periodic,mult_by_A)
   implicit none
 
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l
@@ -361,7 +361,7 @@ module sagpr
   real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax),inner
   character(len=4) atname(nframes,natmax)
   integer natoms(nframes),ipiv(nmax)
-  logical periodic,all_centres(:),all_species(:)
+  logical periodic,all_centres(:),all_species(:),mult_by_A
   integer, allocatable :: all_indices(:,:,:),nneighmax(:,:),ncen(:),lvalues(:,:)
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
@@ -578,11 +578,13 @@ module sagpr
   enddo
 
   ! Multiply by A matrix
-  do i=1,nframes
-   do j=1,natmax
-    PS(i,j,1,:) = matmul(PS(i,j,1,:),sparsification(2,:,:))
+  if (mult_by_A) then
+   do i=1,nframes
+    do j=1,natmax
+     PS(i,j,1,:) = matmul(PS(i,j,1,:),sparsification(2,:,:))
+    enddo
    enddo
-  enddo
+  endif
 
   ! Make power spectrum real and normalize it
   if (lm.eq.0) then
