@@ -4,20 +4,23 @@ program sagpr_apply
 
     integer nargs,numkeys,ios,nlines,nframes,frnum,natmax,reals,bytes
     character(len=100), allocatable :: arg(:),keylist(:)
-    integer lm,i,j,k,ii
-    integer nmax,lmax,ncut,zeta
+    integer lm,i,j,k,l,ii,nfeat,degen,nmol
+    integer nmax,lmax,ncut,zeta,nfeat0,ncut0
     real*8 rcut,sg,rs(3)
     character(len=100) ofile,sparse,fname,weights,ptrain
     logical periodic,readnext
     logical all_species(nelements),all_centres(nelements)
     real*8, allocatable :: xyz(:,:,:),cell(:,:,:)
+    real*8, allocatable :: PS_tr_lam(:,:,:),PS_tr_0(:,:,:)
     character(len=4), allocatable :: atname(:,:)
     integer, allocatable :: natoms(:)
     character(len=1000), allocatable :: comment(:)
     character(len=1000) c1
+    real*8, allocatable, target :: raw_PS(:)
     complex*16, allocatable, target :: sparse_data(:)
-    complex*16, allocatable :: sparsification(:,:,:)
+    complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
     character(len=3) symbol
+    logical do_scalar
 
     ! Get input arguments
     nargs = iargc()
@@ -55,6 +58,7 @@ program sagpr_apply
      if (arg(i).eq.'-sg') read(arg(i+1),*) sg
      if (arg(i).eq.'-z') read(arg(i+1),*) zeta
      if (arg(i).eq.'-w') read(arg(i+1),*) weights
+     if (arg(i).eq.'-pt') read(arg(i+1),*) ptrain
      if (arg(i).eq.'-c') then
       readnext = .true.
       do k=i+1,nargs
@@ -98,34 +102,83 @@ program sagpr_apply
     if (fname.eq.'') stop 'ERROR: filename required!'
     if (weights.eq.'') stop 'ERROR: weights file required!'
     if (sparse.eq.'') stop 'ERROR: sparsification file required!'
+    if (ptrain.eq.'') stop 'ERROR: training power spectra required!'
 
-    ! Get sparsification details
-    if (sparse.eq.'') then
-     allocate(sparsification(1,1,1))
-     sparsification(1,1,1) = -1.d0
-     ncut = -1
-    else
-     open(unit=32,file=sparse,status='old',access='stream',form='unformatted')
-     inquire(unit=32,size=bytes)
-     reals = bytes / 16
-     allocate(sparse_data(reals))
-     read(32,pos=1) sparse_data
-     close(32)
-     ncut = sparse_data(1)
-     if (reals.ne.(1 + (ncut*(ncut+1)))) then
-      write(*,*) 'With ',reals,'elements instead of ',1 + (ncut*(ncut+1)),':'
-      stop 'ERROR: incorrect number of elements in sparse file!'
-     endif
-     allocate(sparsification(2,ncut,ncut))
-     do i=1,ncut
-      sparsification(1,i,1) = sparse_data(i+1)
-     enddo
-     do i=1,ncut
-      do j=1,ncut
-       sparsification(2,i,j) = sparse_data(1 + ncut + (i-1)*ncut + j)
+    ! Read in power spectrum file(s)
+    degen = 2*lm + 1
+    open(unit=41,file=ptrain,status='old',access='stream',form='unformatted')
+    inquire(unit=41,size=bytes)
+    reals = bytes/8
+    allocate(raw_PS(reals))
+    read(41,pos=1) raw_PS
+    do_scalar = (raw_PS(1).ne.0.d0)
+    nmol = int(raw_PS(2))
+    nfeat = int(raw_PS(3))
+    i = 3
+    if (do_scalar) then
+     nfeat0 = int(raw_PS(4))
+     i = 4
+    endif
+    allocate(PS_tr_lam(nmol,degen,nfeat))
+    do j=1,nmol
+     do k=1,degen
+      do l=1,nfeat
+       i = i + 1
+       PS_tr_lam(j,k,l) = raw_PS(i)
       enddo
      enddo
-     deallocate(sparse_data)
+    enddo
+    if (do_scalar) then
+     allocate(PS_tr_0(nmol,1,nfeat))
+     do j=1,nmol
+      do k=1,nfeat0
+       PS_tr_0(j,1,k) = raw_PS(i)
+      enddo
+     enddo
+    endif
+    if (i.ne.reals) stop 'ERROR: different file size to that expected for power spectrum!'
+
+    ! Get sparsification details
+    open(unit=32,file=sparse,status='old',access='stream',form='unformatted')
+    inquire(unit=32,size=bytes)
+    reals = bytes / 16
+    allocate(sparse_data(reals))
+    read(32,pos=1) sparse_data
+    close(32)
+    ncut = int(sparse_data(1))
+    allocate(sparsification(2,ncut,ncut))
+    i = 1
+    do j=1,ncut
+     i = i + 1
+     sparsification(1,j,1) = sparse_data(i)
+    enddo
+    do j=1,ncut
+     do k=1,ncut
+      i = i + 1
+      sparsification(2,j,k) = sparse_data(i)
+     enddo
+    enddo
+    if (do_scalar) then
+     i = i + 1
+     ncut0 = int(sparse_data(i))
+     allocate(sparsification0(2,ncut0,ncut0))
+     do j=1,ncut0
+      i = i + 1
+      sparsification0(1,j,1) = sparse_data(i)
+     enddo
+     do j=1,ncut0
+      do k=1,ncut0
+       i = i + 1
+       sparsification0(2,j,k) = sparse_data(i)
+      enddo
+     enddo
+    endif
+    if (i.ne.reals) stop 'ERROR: different file size to that expected for sparsification!'
+    deallocate(sparse_data)
+
+    if (ncut.ne.nfeat) stop 'ERROR: ncut .ne. nfeat!'
+    if (do_scalar) then
+     if (ncut0.ne.nfeat0) stop 'ERROR: ncut0 .ne. nfeat0!'
     endif
 
     ! Read in XYZ file
@@ -189,15 +242,24 @@ program sagpr_apply
     endif
 
     ! Get power spectrum
-    call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
+    if (.not.do_scalar) then
+     call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
      &     ncut,sparsification,rs,periodic)
+    else
+     stop 'NOT YET SET UP FOR DOING ZETA>1'
+    endif
 
-!    ! Print power spectrum
-!    open(unit=33,file=ofile,access='stream',form='unformatted')
-!    write(33,pos=1) real(PS)
-!    close(33)
+    write(*,*) 'SOME DIAGNOSTICS:'
+    write(*,*) PS(1,2,1,12),PS(100,1,1,190),PS(198,2,1,304),PS(27,3,1,1)
+
+    ! Get kernel
+
+    ! Get predictions
+
+    ! Print predictions
 
     ! Array deallocation
-    deallocate(xyz,atname,natoms,comment,sparsification,cell,PS)
+    deallocate(xyz,atname,natoms,comment,sparsification,cell,PS,PS_tr_lam)
+    if (allocated(PS_tr_0)) deallocate(PS_tr_0)
 
 end program
