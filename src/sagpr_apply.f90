@@ -3,11 +3,11 @@ program sagpr_apply
     implicit none
 
     integer nargs,numkeys,ios,nlines,nframes,frnum,natmax,reals,bytes
-    character(len=100), allocatable :: arg(:),keylist(:)
+    character(len=100), allocatable :: arg(:),keylist(:),keys1(:),keys2(:)
     integer lm,i,j,k,l,ii,nfeat,degen,nmol,nenv
     integer nmax,lmax,ncut,zeta,nfeat0,ncut0
     real*8 rcut,sg,rs(3),meanval
-    character(len=100) ofile,sparse,fname,weights,ptrain
+    character(len=100) ofile,sparse,fname,weights,ptrain,model,args
     logical periodic,readnext
     logical all_species(nelements),all_centres(nelements)
     real*8, allocatable :: xyz(:,:,:),cell(:,:,:)
@@ -21,7 +21,7 @@ program sagpr_apply
     complex*16, allocatable, target :: sparse_data(:)
     complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
     character(len=3) symbol
-    logical do_scalar
+    logical do_scalar,new_arg
 
     ! Get input arguments
     nargs = iargc()
@@ -32,6 +32,51 @@ program sagpr_apply
     arg(nargs+1) = 'NULL'
 
     ! Parse these arguments
+    allocate(keys1(6))
+    sparse = ''
+    fname = ''
+    weights = ''
+    ptrain = ''
+    model = ''
+    keys1 = (/'-sf ','-f  ','-w  ','-pt ','-m  ','NULL'/)
+    do i=1,nargs
+     arg(i) = trim(adjustl(arg(i)))
+     if (arg(i).eq.'-w') read(arg(i+1),*) weights
+     if (arg(i).eq.'-pt') read(arg(i+1),*) ptrain
+     if (arg(i).eq.'-sf') read(arg(i+1),*) sparse
+     if (arg(i).eq.'-f') read(arg(i+1),*) fname
+     if (arg(i).eq.'-m') read(arg(i+1),*) model
+    enddo
+
+    ! Check for arguments that are required
+    if (fname.eq.'') stop 'ERROR: filename required!'
+    if (weights.eq.'') stop 'ERROR: weights file required!'
+    if (sparse.eq.'') stop 'ERROR: sparsification file required!'
+    if (ptrain.eq.'') stop 'ERROR: training power spectra required!'
+    if (model.eq.'') stop 'ERROR: model file required!'
+
+    ! Read in hyperparameters
+    open(unit=21,file=model,status='old')
+    read(21,'(A)') args
+    nargs = 0
+    new_arg = .false.
+    do i=1,len(trim(adjustl(args)))
+     if (args(i:i).ne.' ') then
+      if (.not.new_arg) then
+       new_arg = .true.
+       nargs = nargs + 1
+      endif
+     else
+      ! We have reached the end of an argument
+      new_arg = .false.
+     endif
+    enddo
+    deallocate(arg)
+    allocate(arg(nargs+1))
+    read(args,*) (arg(i),i=1,nargs)
+    arg(nargs+1) = 'NULL'
+
+    ! Get hyperparameters from model file
     lm = 0
     nmax = 8
     lmax = 6
@@ -39,17 +84,19 @@ program sagpr_apply
     sg = 0.3d0
     all_centres(:) = .false.
     all_species(:) = .false.
-    sparse = ''
-    fname = ''
-    weights = ''
+!    sparse = ''
+!    fname = ''
+!    weights = ''
     rs = (/0.d0,0.d0,0.d0/)
     ofile = 'prediction.out'
     periodic = .false.
     zeta = 1
-    ptrain = ''
-    numkeys = 16
-    allocate(keylist(numkeys))
-    keylist = (/'-lm ','-n  ','-l  ','-rc ','-sg ','-c  ','-s  ','-sf ','-f  ','-rs ','-o  ','-p  ','-z  ','-w  ','-pt ','NULL'/)
+!    ptrain = ''
+!    numkeys = 16
+!    allocate(keylist(numkeys))
+!    keylist = (/'-lm ','-n  ','-l  ','-rc ','-sg ','-c  ','-s  ','-sf ','-f  ','-rs ','-o  ','-p  ','-z  ','-w  ','-pt ','NULL'/)
+    allocate(keys2(12))
+    keys2 = (/'-lm ','-n  ','-l  ','-rc ','-sg ','-c  ','-s  ','-rs ','-p  ','-o  ','-z  ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-lm') read(arg(i+1),*) lm
@@ -58,8 +105,8 @@ program sagpr_apply
      if (arg(i).eq.'-rc') read(arg(i+1),*) rcut
      if (arg(i).eq.'-sg') read(arg(i+1),*) sg
      if (arg(i).eq.'-z') read(arg(i+1),*) zeta
-     if (arg(i).eq.'-w') read(arg(i+1),*) weights
-     if (arg(i).eq.'-pt') read(arg(i+1),*) ptrain
+!     if (arg(i).eq.'-w') read(arg(i+1),*) weights
+!     if (arg(i).eq.'-pt') read(arg(i+1),*) ptrain
      if (arg(i).eq.'-c') then
       readnext = .true.
       do k=i+1,nargs
@@ -88,8 +135,8 @@ program sagpr_apply
        endif
       enddo
      endif
-     if (arg(i).eq.'-sf') read(arg(i+1),*) sparse
-     if (arg(i).eq.'-f') read(arg(i+1),*) fname
+!     if (arg(i).eq.'-sf') read(arg(i+1),*) sparse
+!     if (arg(i).eq.'-f') read(arg(i+1),*) fname
      if (arg(i).eq.'-rs') then
       read(arg(i+1),*) rs(1)
       read(arg(i+2),*) rs(2)
@@ -99,11 +146,11 @@ program sagpr_apply
      if (arg(i).eq.'-p') periodic=.true.
     enddo
 
-    ! Check for arguments that are required
-    if (fname.eq.'') stop 'ERROR: filename required!'
-    if (weights.eq.'') stop 'ERROR: weights file required!'
-    if (sparse.eq.'') stop 'ERROR: sparsification file required!'
-    if (ptrain.eq.'') stop 'ERROR: training power spectra required!'
+!    ! Check for arguments that are required
+!    if (fname.eq.'') stop 'ERROR: filename required!'
+!    if (weights.eq.'') stop 'ERROR: weights file required!'
+!    if (sparse.eq.'') stop 'ERROR: sparsification file required!'
+!    if (ptrain.eq.'') stop 'ERROR: training power spectra required!'
 
     ! Read in power spectrum file(s)
     degen = 2*lm + 1
