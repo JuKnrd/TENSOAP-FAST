@@ -6,7 +6,7 @@ program sagpr_apply
     character(len=100), allocatable :: arg(:),keylist(:),keys1(:),keys2(:)
     integer lm,i,j,k,l,ii,nfeat,degen,nmol,nenv
     integer nmax,lmax,ncut,zeta,nfeat0,ncut0
-    real*8 rcut,sg,rs(3),meanval
+    real*8 rcut,sg,rs(3),meanval,a1,a2
     character(len=100) ofile,sparse,fname,weights,ptrain,model,args
     logical periodic,readnext
     logical all_species(nelements),all_centres(nelements)
@@ -15,13 +15,16 @@ program sagpr_apply
     integer, allocatable :: natoms(:)
     character(len=1000), allocatable :: comment(:)
     character(len=1000) c1
-    real*8, allocatable, target :: raw_PS(:),all_wt(:)
+    real*8, allocatable, target :: raw_PS(:),all_wt(:),sparse_data(:)
     real*8, allocatable :: PS_tr_lam(:,:,:),PS_tr_0(:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
     real*8, allocatable :: prediction_lm(:,:),wt(:)
-    complex*16, allocatable, target :: sparse_data(:)
     complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
     character(len=3) symbol
     logical do_scalar,new_arg
+
+!************************************************************************************
+! GET COMMAND-LINE ARGUMENTS
+!************************************************************************************
 
     ! Get input arguments
     nargs = iargc()
@@ -76,6 +79,10 @@ program sagpr_apply
     read(args,*) (arg(i),i=1,nargs)
     arg(nargs+1) = 'NULL'
 
+!************************************************************************************
+! GET INFORMATION ABOUT THE MODEL
+!************************************************************************************
+
     ! Get hyperparameters from model file
     lm = 0
     nmax = 8
@@ -84,17 +91,10 @@ program sagpr_apply
     sg = 0.3d0
     all_centres(:) = .false.
     all_species(:) = .false.
-!    sparse = ''
-!    fname = ''
-!    weights = ''
     rs = (/0.d0,0.d0,0.d0/)
     ofile = 'prediction.out'
     periodic = .false.
     zeta = 1
-!    ptrain = ''
-!    numkeys = 16
-!    allocate(keylist(numkeys))
-!    keylist = (/'-lm ','-n  ','-l  ','-rc ','-sg ','-c  ','-s  ','-sf ','-f  ','-rs ','-o  ','-p  ','-z  ','-w  ','-pt ','NULL'/)
     allocate(keys2(12))
     keys2 = (/'-lm ','-n  ','-l  ','-rc ','-sg ','-c  ','-s  ','-rs ','-p  ','-o  ','-z  ','NULL'/)
     do i=1,nargs
@@ -105,8 +105,6 @@ program sagpr_apply
      if (arg(i).eq.'-rc') read(arg(i+1),*) rcut
      if (arg(i).eq.'-sg') read(arg(i+1),*) sg
      if (arg(i).eq.'-z') read(arg(i+1),*) zeta
-!     if (arg(i).eq.'-w') read(arg(i+1),*) weights
-!     if (arg(i).eq.'-pt') read(arg(i+1),*) ptrain
      if (arg(i).eq.'-c') then
       readnext = .true.
       do k=i+1,nargs
@@ -135,8 +133,6 @@ program sagpr_apply
        endif
       enddo
      endif
-!     if (arg(i).eq.'-sf') read(arg(i+1),*) sparse
-!     if (arg(i).eq.'-f') read(arg(i+1),*) fname
      if (arg(i).eq.'-rs') then
       read(arg(i+1),*) rs(1)
       read(arg(i+2),*) rs(2)
@@ -145,12 +141,6 @@ program sagpr_apply
      if (arg(i).eq.'-o') read(arg(i+1),*) ofile
      if (arg(i).eq.'-p') periodic=.true.
     enddo
-
-!    ! Check for arguments that are required
-!    if (fname.eq.'') stop 'ERROR: filename required!'
-!    if (weights.eq.'') stop 'ERROR: weights file required!'
-!    if (sparse.eq.'') stop 'ERROR: sparsification file required!'
-!    if (ptrain.eq.'') stop 'ERROR: training power spectra required!'
 
     ! Read in power spectrum file(s)
     degen = 2*lm + 1
@@ -189,7 +179,7 @@ program sagpr_apply
     ! Get sparsification details
     open(unit=32,file=sparse,status='old',access='stream',form='unformatted')
     inquire(unit=32,size=bytes)
-    reals = bytes / 16
+    reals = bytes / 8
     allocate(sparse_data(reals))
     read(32,pos=1) sparse_data
     close(32)
@@ -203,7 +193,10 @@ program sagpr_apply
     do j=1,ncut
      do k=1,ncut
       i = i + 1
-      sparsification(2,j,k) = sparse_data(i)
+      a1 = sparse_data(i)
+      i = i + 1
+      a2 = sparse_data(i)
+      sparsification(2,j,k) = dcmplx(a1,a2)
      enddo
     enddo
     if (do_scalar) then
@@ -217,12 +210,18 @@ program sagpr_apply
      do j=1,ncut0
       do k=1,ncut0
        i = i + 1
-       sparsification0(2,j,k) = sparse_data(i)
+       a1 = sparse_data(i)
+       i = i + 2
+       a2 = sparse_data(i)
+       sparsification0(2,j,k) = dcmplx(a1,a2)
       enddo
      enddo
     endif
     if (i.ne.reals) stop 'ERROR: different file size to that expected for sparsification!'
     deallocate(sparse_data)
+
+    write(*,*) 'DIAGNOSTICS:'
+    write(*,*) sparsification(1,3,1),sparsification(1,400,1)
 
     if (ncut.ne.nfeat) stop 'ERROR: ncut .ne. nfeat!'
     if (do_scalar) then
@@ -242,6 +241,10 @@ program sagpr_apply
     nenv = (reals-1) / degen
     if (nenv .ne. nmol) stop 'ERROR: size of weight vector does not match number of environments!'
     close(31)
+
+!************************************************************************************
+! READ IN DATA
+!************************************************************************************
 
     ! Read in XYZ file
     open(unit=31,file=fname,status='old')
@@ -302,6 +305,10 @@ program sagpr_apply
       read(c1,*) cell(i,1,1),cell(i,1,2),cell(i,1,3),cell(i,2,1),cell(i,2,2),cell(i,2,3),cell(i,3,1),cell(i,3,2),cell(i,3,3)
      enddo
     endif
+
+!************************************************************************************
+! USE THE MODEL AND THE DATA TO MAKE A PREDICTION
+!************************************************************************************
 
     ! Get power spectrum
     if (.not.do_scalar) then
