@@ -647,10 +647,6 @@ module sagpr
 
    endif
 
-   call cpu_time(finish)
-   write(*,*) 'timing',finish-start
-   start = finish
-
    ! Get radial integral
    !$OMP PARALLEL DO SHARED(radint,efact,length,sg2) PRIVATE(n1,n2,normfact,sigmafact,i,k,nn,l)
    do n1=1,nmax
@@ -673,10 +669,6 @@ module sagpr
    enddo
    !$OMP END PARALLEL DO
    
-   call cpu_time(finish)
-   write(*,*) 'timing',finish-start
-   start = finish
-
    ! Get orthoradint
    !$OMP PARALLEL DO SHARED(orthoradint,radint,orthomatrix) PRIVATE(iat,k,neigh)
    do l=1,lmax+1
@@ -690,27 +682,22 @@ module sagpr
    enddo
    !$OMP END PARALLEL DO
 
-   call cpu_time(finish)
-   write(*,*) 'timing',finish-start
-   start = finish
-
    ! Get omega
    !$OMP PARALLEL DO SHARED(omega,orthoradint,harmonic) PRIVATE(l,im,n1,k,iat,i)
-   do im=1,2*lmax+1
-    do n1=1,nmax
-     do l=1,lmax+1
-      do k=1,nspecies
-       do iat=1,natoms
-         omega(iat,k,n1,l,im) = dot_product(orthoradint(iat,k,l,n1,:),harmonic(iat,k,l,im,:))
+   do i=1,nnmax
+    do im=1,2*lmax+1
+     do n1=1,nmax
+      do l=1,lmax+1
+       do k=1,nspecies
+        do iat=1,natoms
+         omega(iat,k,n1,l,im) = omega(iat,k,n1,l,im) + (orthoradint(iat,k,l,n1,i) * harmonic(iat,k,l,im,i))
+         enddo
         enddo
        enddo
-      enddo
+     enddo
     enddo
    enddo
    !$OMP END PARALLEL DO
-
-   call cpu_time(finish)
-   write(*,*) 'timing',finish-start
 
  end subroutine
 
