@@ -5,9 +5,9 @@ program sagpr_apply
     integer nargs,numkeys,ios,nlines,nframes,frnum,natmax,reals,bytes
     character(len=100), allocatable :: arg(:),keylist(:)
     integer lm,i,j,k,ii
-    integer nmax,lmax,ncut
+    integer nmax,lmax,ncut,zeta
     real*8 rcut,sg,rs(3)
-    character(len=100) ofile,sparse,fname
+    character(len=100) ofile,sparse,fname,weights,ptrain
     logical periodic,readnext
     logical all_species(nelements),all_centres(nelements)
     real*8, allocatable :: xyz(:,:,:),cell(:,:,:)
@@ -37,12 +37,15 @@ program sagpr_apply
     all_species(:) = .false.
     sparse = ''
     fname = ''
+    weights = ''
     rs = (/0.d0,0.d0,0.d0/)
-    ofile = ''
+    ofile = 'prediction.out'
     periodic = .false.
-    numkeys = 13
+    zeta = 1
+    ptrain = ''
+    numkeys = 16
     allocate(keylist(numkeys))
-    keylist = (/'-lm ','-n  ','-l  ','-rc ','-sg ','-c  ','-s  ','-sf ','-f  ','-rs ','-o  ','-p  ','NULL'/)
+    keylist = (/'-lm ','-n  ','-l  ','-rc ','-sg ','-c  ','-s  ','-sf ','-f  ','-rs ','-o  ','-p  ','-z  ','-w  ','-pt ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-lm') read(arg(i+1),*) lm
@@ -50,6 +53,8 @@ program sagpr_apply
      if (arg(i).eq.'-l') read(arg(i+1),*) lmax
      if (arg(i).eq.'-rc') read(arg(i+1),*) rcut
      if (arg(i).eq.'-sg') read(arg(i+1),*) sg
+     if (arg(i).eq.'-z') read(arg(i+1),*) zeta
+     if (arg(i).eq.'-w') read(arg(i+1),*) weights
      if (arg(i).eq.'-c') then
       readnext = .true.
       do k=i+1,nargs
@@ -91,8 +96,37 @@ program sagpr_apply
 
     ! Check for arguments that are required
     if (fname.eq.'') stop 'ERROR: filename required!'
-    if (ofile.eq.'') stop 'ERROR: output file required!'
+    if (weights.eq.'') stop 'ERROR: weights file required!'
     if (sparse.eq.'') stop 'ERROR: sparsification file required!'
+
+    ! Get sparsification details
+    if (sparse.eq.'') then
+     allocate(sparsification(1,1,1))
+     sparsification(1,1,1) = -1.d0
+     ncut = -1
+    else
+     open(unit=32,file=sparse,status='old',access='stream',form='unformatted')
+     inquire(unit=32,size=bytes)
+     reals = bytes / 16
+     allocate(sparse_data(reals))
+     read(32,pos=1) sparse_data
+     close(32)
+     ncut = sparse_data(1)
+     if (reals.ne.(1 + (ncut*(ncut+1)))) then
+      write(*,*) 'With ',reals,'elements instead of ',1 + (ncut*(ncut+1)),':'
+      stop 'ERROR: incorrect number of elements in sparse file!'
+     endif
+     allocate(sparsification(2,ncut,ncut))
+     do i=1,ncut
+      sparsification(1,i,1) = sparse_data(i+1)
+     enddo
+     do i=1,ncut
+      do j=1,ncut
+       sparsification(2,i,j) = sparse_data(1 + ncut + (i-1)*ncut + j)
+      enddo
+     enddo
+     deallocate(sparse_data)
+    endif
 
     ! Read in XYZ file
     open(unit=31,file=fname,status='old')
@@ -154,38 +188,9 @@ program sagpr_apply
      enddo
     endif
 
-    ! If necessary, get sparsification details
-    if (sparse.eq.'') then
-     allocate(sparsification(1,1,1))
-     sparsification(1,1,1) = -1.d0
-     ncut = -1
-    else
-     open(unit=32,file=sparse,status='old',access='stream',form='unformatted')
-     inquire(unit=32,size=bytes)
-     reals = bytes / 16
-     allocate(sparse_data(reals))
-     read(32,pos=1) sparse_data
-     close(32)
-     ncut = sparse_data(1)
-     if (reals.ne.(1 + (ncut*(ncut+1)))) then
-      write(*,*) 'With ',reals,'elements instead of ',1 + (ncut*(ncut+1)),':'
-      stop 'ERROR: incorrect number of elements in sparse file!'
-     endif
-     allocate(sparsification(2,ncut,ncut))
-     do i=1,ncut
-      sparsification(1,i,1) = sparse_data(i+1)
-     enddo
-     do i=1,ncut
-      do j=1,ncut
-       sparsification(2,i,j) = sparse_data(1 + ncut + (i-1)*ncut + j)
-      enddo
-     enddo
-     deallocate(sparse_data)
-    endif
-
-!    ! Get power spectrum
-!    call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
-!     &     ncut,sparsification,rs,periodic)
+    ! Get power spectrum
+    call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
+     &     ncut,sparsification,rs,periodic)
 
 !    ! Print power spectrum
 !    open(unit=33,file=ofile,access='stream',form='unformatted')

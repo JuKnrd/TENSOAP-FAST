@@ -154,7 +154,7 @@ program sagpr_get_PS
      enddo
     endif
 
-    ! If necessary, get sparsification details
+    ! Get sparsification details
     if (sparse.eq.'') then
      allocate(sparsification(1,1,1))
      sparsification(1,1,1) = -1.d0
