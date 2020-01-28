@@ -4,9 +4,9 @@ program sagpr_apply
 
     integer nargs,numkeys,ios,nlines,nframes,frnum,natmax,reals,bytes
     character(len=100), allocatable :: arg(:),keylist(:)
-    integer lm,i,j,k,l,ii,nfeat,degen,nmol
+    integer lm,i,j,k,l,ii,nfeat,degen,nmol,nenv
     integer nmax,lmax,ncut,zeta,nfeat0,ncut0
-    real*8 rcut,sg,rs(3)
+    real*8 rcut,sg,rs(3),meanval
     character(len=100) ofile,sparse,fname,weights,ptrain
     logical periodic,readnext
     logical all_species(nelements),all_centres(nelements)
@@ -15,9 +15,9 @@ program sagpr_apply
     integer, allocatable :: natoms(:)
     character(len=1000), allocatable :: comment(:)
     character(len=1000) c1
-    real*8, allocatable, target :: raw_PS(:)
+    real*8, allocatable, target :: raw_PS(:),all_wt(:)
     real*8, allocatable :: PS_tr_lam(:,:,:),PS_tr_0(:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
-    real*8, allocatable :: prediction_lm(:,:)
+    real*8, allocatable :: prediction_lm(:,:),wt(:)
     complex*16, allocatable, target :: sparse_data(:)
     complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
     character(len=3) symbol
@@ -182,6 +182,20 @@ program sagpr_apply
      if (ncut0.ne.nfeat0) stop 'ERROR: ncut0 .ne. nfeat0!'
     endif
 
+    ! Get weights
+    open(unit=31,file=weights,status='old',access='stream',form='unformatted')
+    inquire(unit=31,size=bytes)
+    reals = bytes/8
+    allocate(all_wt(reals),wt(reals-1))
+    read(31,pos=1) all_wt
+    meanval = all_wt(1)
+    do i=2,reals
+     wt(i-1) = all_wt(i)
+    enddo
+    nenv = (reals-1) / degen
+    if (nenv .ne. nmol) stop 'ERROR: size of weight vector does not match number of environments!'
+    close(31)
+
     ! Read in XYZ file
     open(unit=31,file=fname,status='old')
     nlines = 0
@@ -267,8 +281,7 @@ program sagpr_apply
 
     ! Get predictions
     allocate(prediction_lm(nmol,degen))
-    prediction_lm(:,:) = 0.d0
-!    prediction_lm = do_prediction(ker,wt,meanval,degen,nmol,nenv)
+    prediction_lm = do_prediction(ker,wt,meanval,degen,nframes,nmol)
 
     ! Print predictions
     open(unit=33,file=ofile)

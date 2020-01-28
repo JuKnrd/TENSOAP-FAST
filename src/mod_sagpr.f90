@@ -37,7 +37,6 @@ module sagpr
    prediction_lm = matmul(kte,weights) + meanval
    !$OMP END WORKSHARE
    !$OMP END PARALLEL
-   prediction_lm = prediction_lm + meanval
    k = 0
    do i=1,nmol
     do mu=1,degen
