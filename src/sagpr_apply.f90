@@ -17,7 +17,7 @@ program sagpr_apply
     character(len=1000) c1
     real*8, allocatable, target :: raw_model(:)
     real*8, allocatable :: PS_tr_lam(:,:,:),PS_tr_0(:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
-    real*8, allocatable :: prediction_lm(:,:),wt(:)
+    real*8, allocatable :: prediction_lm(:,:)
     complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
     character(len=3) symbol
     logical do_scalar,new_arg
@@ -211,14 +211,8 @@ program sagpr_apply
     endif
 
     ! Get weights
-    allocate(wt(nmol))
     i = i + 1
     meanval = raw_model(i)
-    wt(:) = 1.d0
-!    do j=1,nmol
-!     i = i + 1
-!     wt(j) = raw_model(i)
-!    enddo
     if (i.ne.reals) stop 'ERROR: diferent file size to that expected for model!'
 
 !************************************************************************************
@@ -314,8 +308,7 @@ program sagpr_apply
 
     ! Get predictions
     allocate(prediction_lm(nmol,degen))
-    prediction_lm = do_prediction(ker,wt,meanval,degen,nframes,nmol)
-    write(*,*) shape(ker)
+    prediction_lm = do_prediction_no_wt(ker,meanval,degen,nframes,nmol)
 
     ! Print predictions
     open(unit=33,file=ofile)

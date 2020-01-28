@@ -49,6 +49,24 @@ module sagpr
 
 !***************************************************************************************************
 
+ function do_prediction_no_wt(kernel,meanval,degen,nmol,nenv)
+  implicit none
+
+   integer degen,nmol,nenv,i,mu
+   real*8 kernel(nmol,nenv,degen,degen),meanval,do_prediction_no_wt(nmol,degen)
+
+   do mu=1,degen
+    !$OMP PARALLEL DO SHARED(kernel,meanval,do_prediction_no_wt) PRIVATE(i)
+    do i=1,nmol
+     do_prediction_no_wt(i,mu) = sum(kernel(i,:,mu,:)) + meanval
+    enddo
+    !$OMP END PARALLEL DO
+   enddo
+
+ end function
+
+!***************************************************************************************************
+
  function do_scalar_kernel(PS_1,PS_2,nmol_1,nmol_2,nfeat_1,nfeat_2,natmax_1,natmax_2,natoms_1,natoms_2,zeta,hermiticity)
   implicit none
 
