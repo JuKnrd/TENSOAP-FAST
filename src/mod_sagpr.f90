@@ -9,6 +9,7 @@ module sagpr
      &     'Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'/)
  complex*16, allocatable :: PS(:,:,:,:)
  integer, allocatable :: components(:,:)
+ real*8 start,finish
 
  contains
 
@@ -391,12 +392,15 @@ module sagpr
   !$OMP&     rs,sg,all_centres,all_species,rcut,xyz,sigma,orthomatrix) PRIVATE(omega,harmonic,orthoradint, &
   !$OMP&     omegatrue,omegaconj)
   do i=1,nframes
-
+   call cpu_time(start)
    ! Get omega, harmonic and radint matrices
    allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nspecies,lmax+1,2*lmax+1,nnmax),&
      &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax))
    call initsoap(omega,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
      &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,all_centres,all_species,rcut,xyz(i,:,:),sigma,orthomatrix)
+   call cpu_time(finish)
+   write(*,*) 'timing',finish-start
+   start = finish
 
    ! Compute power spectrum
    if (lm.eq.0) then
@@ -417,6 +421,9 @@ module sagpr
      stop 'ERROR: no sparsification information given; this is not recommended!'
     endif
     deallocate(omegatrue,omegaconj)
+
+    call cpu_time(finish)
+    write(*,*) 'timing',finish-start
 
    else
      ! Spherical
