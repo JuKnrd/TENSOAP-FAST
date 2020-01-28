@@ -392,15 +392,12 @@ module sagpr
   !$OMP&     rs,sg,all_centres,all_species,rcut,xyz,sigma,orthomatrix) PRIVATE(omega,harmonic,orthoradint, &
   !$OMP&     omegatrue,omegaconj)
   do i=1,nframes
-   call cpu_time(start)
+
    ! Get omega, harmonic and radint matrices
    allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nspecies,lmax+1,2*lmax+1,nnmax),&
      &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax))
    call initsoap(omega,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
      &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,all_centres,all_species,rcut,xyz(i,:,:),sigma,orthomatrix)
-   call cpu_time(finish)
-   write(*,*) 'timing',finish-start
-   start = finish
 
    ! Compute power spectrum
    if (lm.eq.0) then
@@ -421,9 +418,6 @@ module sagpr
      stop 'ERROR: no sparsification information given; this is not recommended!'
     endif
     deallocate(omegatrue,omegaconj)
-
-    call cpu_time(finish)
-    write(*,*) 'timing',finish-start
 
    else
      ! Spherical
@@ -516,6 +510,8 @@ module sagpr
    harmonic(:,:,:,:,:) = 0.d0
    radint(:,:,:,:,:) = 0.d0
    orthoradint(:,:,:,:,:) = 0.d0
+
+   call cpu_time(start)
 
    if (.not.periodic) then
 
@@ -655,6 +651,10 @@ module sagpr
 
    endif
 
+   call cpu_time(finish)
+   write(*,*) 'timing',finish-start
+   start = finish
+
    ! Get radial integral
    do n1=1,nmax
     n2 = n1-1
@@ -676,6 +676,10 @@ module sagpr
     !$OMP END PARALLEL DO
     radint(:,:,:,:,n1) = radint(:,:,:,:,n1) * normfact
    enddo
+   
+   call cpu_time(finish)
+   write(*,*) 'timing',finish-start
+   start = finish
 
    ! Get orthoradint
    !$OMP PARALLEL DO SHARED(orthoradint,radint,orthomatrix) PRIVATE(iat,k,neigh)
@@ -689,6 +693,10 @@ module sagpr
     enddo
    enddo
    !$OMP END PARALLEL DO
+
+   call cpu_time(finish)
+   write(*,*) 'timing',finish-start
+   start = finish
 
    ! Get omega
    !$OMP PARALLEL DO SHARED(omega,orthoradint,harmonic) PRIVATE(iat,k,n1,l,im)
@@ -704,6 +712,9 @@ module sagpr
     enddo
    enddo
    !$OMP END PARALLEL DO
+
+   call cpu_time(finish)
+   write(*,*) 'timing',finish-start
 
  end subroutine
 
