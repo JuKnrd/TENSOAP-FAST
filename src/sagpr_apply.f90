@@ -174,28 +174,29 @@ program sagpr_apply
       enddo
      enddo
     endif
-    if (i.ne.reals) stop 'ERROR: different file size to that expected for power spectrum!'
+!    if (i.ne.reals) stop 'ERROR: different file size to that expected for power spectrum!'
 
     ! Get sparsification details
-    open(unit=32,file=sparse,status='old',access='stream',form='unformatted')
-    inquire(unit=32,size=bytes)
-    reals = bytes / 8
-    allocate(sparse_data(reals))
-    read(32,pos=1) sparse_data
-    close(32)
-    ncut = int(sparse_data(1))
+!    open(unit=32,file=sparse,status='old',access='stream',form='unformatted')
+!    inquire(unit=32,size=bytes)
+!    reals = bytes / 8
+!    allocate(sparse_data(reals))
+!    read(32,pos=1) sparse_data
+!    close(32)
+    i = i + 1
+    ncut = int(raw_PS(i))
     allocate(sparsification(2,ncut,ncut))
-    i = 1
+!    i = 1
     do j=1,ncut
      i = i + 1
-     sparsification(1,j,1) = sparse_data(i)
+     sparsification(1,j,1) = raw_PS(i)
     enddo
     do j=1,ncut
      do k=1,ncut
       i = i + 1
-      a1 = sparse_data(i)
+      a1 = raw_PS(i)
       i = i + 1
-      a2 = sparse_data(i)
+      a2 = raw_PS(i)
       sparsification(2,j,k) = dcmplx(a1,a2)
      enddo
     enddo
@@ -205,23 +206,20 @@ program sagpr_apply
      allocate(sparsification0(2,ncut0,ncut0))
      do j=1,ncut0
       i = i + 1
-      sparsification0(1,j,1) = sparse_data(i)
+      sparsification0(1,j,1) = raw_PS(i)
      enddo
      do j=1,ncut0
       do k=1,ncut0
        i = i + 1
-       a1 = sparse_data(i)
+       a1 = raw_PS(i)
        i = i + 2
-       a2 = sparse_data(i)
+       a2 = raw_PS(i)
        sparsification0(2,j,k) = dcmplx(a1,a2)
       enddo
      enddo
     endif
-    if (i.ne.reals) stop 'ERROR: different file size to that expected for sparsification!'
-    deallocate(sparse_data)
-
-    write(*,*) 'DIAGNOSTICS:'
-    write(*,*) sparsification(1,3,1),sparsification(1,400,1)
+!    if (i.ne.reals) stop 'ERROR: different file size to that expected for sparsification!'
+!    deallocate(sparse_data)
 
     if (ncut.ne.nfeat) stop 'ERROR: ncut .ne. nfeat!'
     if (do_scalar) then
@@ -229,18 +227,26 @@ program sagpr_apply
     endif
 
     ! Get weights
-    open(unit=31,file=weights,status='old',access='stream',form='unformatted')
-    inquire(unit=31,size=bytes)
-    reals = bytes/8
-    allocate(all_wt(reals),wt(reals-1))
-    read(31,pos=1) all_wt
-    meanval = all_wt(1)
-    do i=2,reals
-     wt(i-1) = all_wt(i)
+!    open(unit=31,file=weights,status='old',access='stream',form='unformatted')
+!    inquire(unit=31,size=bytes)
+!    reals = bytes/8
+!    allocate(all_wt(reals),wt(reals-1))
+!    allocate(all_wt(nmol+1),
+    allocate(wt(nmol))
+!    read(31,pos=1) all_wt
+    i = i + 1
+    meanval = raw_PS(i)
+    do j=1,nmol
+     i = i + 1
+     wt(j) = raw_PS(i)
     enddo
-    nenv = (reals-1) / degen
-    if (nenv .ne. nmol) stop 'ERROR: size of weight vector does not match number of environments!'
-    close(31)
+!    do i=2,reals
+!     wt(i-1) = all_wt(i)
+!    enddo
+!    nenv = (reals-1) / degen
+!    if (nenv .ne. nmol) stop 'ERROR: size of weight vector does not match number of environments!'
+!    close(31)
+    if (i.ne.reals) stop 'ERROR: diferent file size to that expected for model!'
 
 !************************************************************************************
 ! READ IN DATA
