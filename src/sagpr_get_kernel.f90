@@ -165,13 +165,13 @@ program sagpr_get_kernel
 
     ! Build kernels
     if (lm.eq.0) then
-     ker = do_scalar_kernel(PS_1_lm,PS_2_lm,nmol_1,nmol_2,nfeat_1,nfeat_2,natmax_1,natmax_2,natoms_1,natoms_2,zeta,hermiticity)
+     ker = do_scalar_kernel_rev(PS_1_lm,PS_2_lm,nmol_1,nmol_2,nfeat_1,nfeat_2,natmax_1,natmax_2,natoms_1,natoms_2,zeta,hermiticity)
     else
      if (zeta.eq.1) then
-      ker_lm = do_linear_spherical_kernel(PS_1_lm,PS_2_lm,nmol_1,nmol_2,nfeat_1, &
+      ker_lm = do_linear_spherical_kernel_rev(PS_1_lm,PS_2_lm,nmol_1,nmol_2,nfeat_1, &
      &     nfeat_2,natmax_1,natmax_2,natoms_1,natoms_2,zeta,hermiticity,degen)
      else
-      ker_lm = do_nonlinear_spherical_kernel(PS_1_lm,PS_2_lm,PS0_1,PS0_2,nmol_1,nmol_2,nfeat_1,nfeat_2, &
+      ker_lm = do_nonlinear_spherical_kernel_rev(PS_1_lm,PS_2_lm,PS0_1,PS0_2,nmol_1,nmol_2,nfeat_1,nfeat_2, &
      &     nfeat0_1,nfeat0_2,natmax_1,natmax_2,natoms_1,natoms_2,zeta,hermiticity,degen)
 
      endif

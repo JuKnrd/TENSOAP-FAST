@@ -11,12 +11,13 @@ program sagpr_apply
     logical periodic,readnext
     logical all_species(nelements),all_centres(nelements)
     real*8, allocatable :: xyz(:,:,:),cell(:,:,:)
-    real*8, allocatable :: PS_tr_lam(:,:,:),PS_tr_0(:,:,:)
     character(len=4), allocatable :: atname(:,:)
     integer, allocatable :: natoms(:)
     character(len=1000), allocatable :: comment(:)
     character(len=1000) c1
     real*8, allocatable, target :: raw_PS(:)
+    real*8, allocatable :: PS_tr_lam(:,:,:),PS_tr_0(:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
+    real*8, allocatable :: prediction_lm(:,:)
     complex*16, allocatable, target :: sparse_data(:)
     complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
     character(len=3) symbol
@@ -249,17 +250,37 @@ program sagpr_apply
      stop 'NOT YET SET UP FOR DOING ZETA>1'
     endif
 
-    write(*,*) 'SOME DIAGNOSTICS:'
-    write(*,*) PS(1,2,1,12),PS(100,1,1,190),PS(198,2,1,304),PS(27,3,1,1)
-
     ! Get kernel
+    allocate(natoms_tr(nmol))
+    natoms_tr(:) = 1.d0
+    if (.not.do_scalar) then
+     if (lm.eq.0) then
+      ker = do_scalar_kernel(real(PS),PS_tr_lam,nframes,nmol,nfeat,nfeat,natmax,1,dfloat(natoms),natoms_tr,zeta,.false.)
+     else
+      if (zeta.gt.1) stop 'ERROR: zeta>1 has been selected but no scalar power spectrum given!'
+      ker_lm = do_linear_spherical_kernel(real(PS),PS_tr_lam,nframes,nmol,nfeat,nfeat, &
+     &     natmax,1,dfloat(natoms),natoms_tr,zeta,.false.,degen)
+     endif
+    else
+     stop 'NOT YET SET UP FOR DOING ZETA>1'
+    endif
 
     ! Get predictions
+    allocate(prediction_lm(nmol,degen))
+    prediction_lm(:,:) = 0.d0
+!    prediction_lm = do_prediction(ker,wt,meanval,degen,nmol,nenv)
 
     ! Print predictions
+    open(unit=33,file=ofile)
+    do i=1,nframes
+     write(33,*) (prediction_lm(i,j),j=1,degen)
+    enddo
+    close(33)
 
     ! Array deallocation
-    deallocate(xyz,atname,natoms,comment,sparsification,cell,PS,PS_tr_lam)
+    deallocate(xyz,atname,natoms,comment,sparsification,cell,PS,PS_tr_lam,natoms_tr)
     if (allocated(PS_tr_0)) deallocate(PS_tr_0)
+    if (allocated(ker)) deallocate(ker)
+    if (allocated(ker_lm)) deallocate(ker_lm)
 
 end program
