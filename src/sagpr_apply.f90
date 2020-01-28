@@ -4,10 +4,10 @@ program sagpr_apply
 
     integer nargs,numkeys,ios,nlines,nframes,frnum,natmax,reals,bytes
     character(len=100), allocatable :: arg(:),keylist(:),keys1(:),keys2(:)
-    integer lm,i,j,k,l,ii,nfeat,degen,nmol,nenv
+    integer lm,i,j,k,l,ii,nfeat,degen,nmol
     integer nmax,lmax,ncut,zeta,nfeat0,ncut0
     real*8 rcut,sg,rs(3),meanval,a1,a2
-    character(len=100) ofile,sparse,fname,weights,ptrain,model,args
+    character(len=100) ofile,trainmodel,fname,model,args
     logical periodic,readnext
     logical all_species(nelements),all_centres(nelements)
     real*8, allocatable :: xyz(:,:,:),cell(:,:,:)
@@ -15,7 +15,7 @@ program sagpr_apply
     integer, allocatable :: natoms(:)
     character(len=1000), allocatable :: comment(:)
     character(len=1000) c1
-    real*8, allocatable, target :: raw_PS(:),all_wt(:),sparse_data(:)
+    real*8, allocatable, target :: raw_model(:)
     real*8, allocatable :: PS_tr_lam(:,:,:),PS_tr_0(:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
     real*8, allocatable :: prediction_lm(:,:),wt(:)
     complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
@@ -35,28 +35,22 @@ program sagpr_apply
     arg(nargs+1) = 'NULL'
 
     ! Parse these arguments
-    allocate(keys1(6))
-    sparse = ''
+    allocate(keys1(3))
     fname = ''
-    weights = ''
-    ptrain = ''
     model = ''
-    keys1 = (/'-sf ','-f  ','-w  ','-pt ','-m  ','NULL'/)
+    trainmodel = ''
+    keys1 = (/'-f  ','-m  ','-tm ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
-     if (arg(i).eq.'-w') read(arg(i+1),*) weights
-     if (arg(i).eq.'-pt') read(arg(i+1),*) ptrain
-     if (arg(i).eq.'-sf') read(arg(i+1),*) sparse
      if (arg(i).eq.'-f') read(arg(i+1),*) fname
      if (arg(i).eq.'-m') read(arg(i+1),*) model
+     if (arg(i).eq.'-tm') read(arg(i+1),*) trainmodel
     enddo
 
     ! Check for arguments that are required
     if (fname.eq.'') stop 'ERROR: filename required!'
-    if (weights.eq.'') stop 'ERROR: weights file required!'
-    if (sparse.eq.'') stop 'ERROR: sparsification file required!'
-    if (ptrain.eq.'') stop 'ERROR: training power spectra required!'
     if (model.eq.'') stop 'ERROR: model file required!'
+    if (trainmodel.eq.'') stop 'ERROR: model binary file required!'
 
     ! Read in hyperparameters
     open(unit=21,file=model,status='old')
@@ -144,17 +138,17 @@ program sagpr_apply
 
     ! Read in power spectrum file(s)
     degen = 2*lm + 1
-    open(unit=41,file=ptrain,status='old',access='stream',form='unformatted')
+    open(unit=41,file=trainmodel,status='old',access='stream',form='unformatted')
     inquire(unit=41,size=bytes)
     reals = bytes/8
-    allocate(raw_PS(reals))
-    read(41,pos=1) raw_PS
-    do_scalar = (raw_PS(1).ne.0.d0)
-    nmol = int(raw_PS(2))
-    nfeat = int(raw_PS(3))
+    allocate(raw_model(reals))
+    read(41,pos=1) raw_model
+    do_scalar = (raw_model(1).ne.0.d0)
+    nmol = int(raw_model(2))
+    nfeat = int(raw_model(3))
     i = 3
     if (do_scalar) then
-     nfeat0 = int(raw_PS(4))
+     nfeat0 = int(raw_model(4))
      i = 4
     endif
     allocate(PS_tr_lam(nmol,degen,nfeat))
@@ -162,7 +156,7 @@ program sagpr_apply
      do k=1,degen
       do l=1,nfeat
        i = i + 1
-       PS_tr_lam(j,k,l) = raw_PS(i)
+       PS_tr_lam(j,k,l) = raw_model(i)
       enddo
      enddo
     enddo
@@ -170,56 +164,46 @@ program sagpr_apply
      allocate(PS_tr_0(nmol,1,nfeat))
      do j=1,nmol
       do k=1,nfeat0
-       PS_tr_0(j,1,k) = raw_PS(i)
+       PS_tr_0(j,1,k) = raw_model(i)
       enddo
      enddo
     endif
-!    if (i.ne.reals) stop 'ERROR: different file size to that expected for power spectrum!'
 
     ! Get sparsification details
-!    open(unit=32,file=sparse,status='old',access='stream',form='unformatted')
-!    inquire(unit=32,size=bytes)
-!    reals = bytes / 8
-!    allocate(sparse_data(reals))
-!    read(32,pos=1) sparse_data
-!    close(32)
     i = i + 1
-    ncut = int(raw_PS(i))
+    ncut = int(raw_model(i))
     allocate(sparsification(2,ncut,ncut))
-!    i = 1
     do j=1,ncut
      i = i + 1
-     sparsification(1,j,1) = raw_PS(i)
+     sparsification(1,j,1) = raw_model(i)
     enddo
     do j=1,ncut
      do k=1,ncut
       i = i + 1
-      a1 = raw_PS(i)
+      a1 = raw_model(i)
       i = i + 1
-      a2 = raw_PS(i)
+      a2 = raw_model(i)
       sparsification(2,j,k) = dcmplx(a1,a2)
      enddo
     enddo
     if (do_scalar) then
      i = i + 1
-     ncut0 = int(sparse_data(i))
+     ncut0 = int(raw_model(i))
      allocate(sparsification0(2,ncut0,ncut0))
      do j=1,ncut0
       i = i + 1
-      sparsification0(1,j,1) = raw_PS(i)
+      sparsification0(1,j,1) = raw_model(i)
      enddo
      do j=1,ncut0
       do k=1,ncut0
        i = i + 1
-       a1 = raw_PS(i)
+       a1 = raw_model(i)
        i = i + 2
-       a2 = raw_PS(i)
+       a2 = raw_model(i)
        sparsification0(2,j,k) = dcmplx(a1,a2)
       enddo
      enddo
     endif
-!    if (i.ne.reals) stop 'ERROR: different file size to that expected for sparsification!'
-!    deallocate(sparse_data)
 
     if (ncut.ne.nfeat) stop 'ERROR: ncut .ne. nfeat!'
     if (do_scalar) then
@@ -227,25 +211,13 @@ program sagpr_apply
     endif
 
     ! Get weights
-!    open(unit=31,file=weights,status='old',access='stream',form='unformatted')
-!    inquire(unit=31,size=bytes)
-!    reals = bytes/8
-!    allocate(all_wt(reals),wt(reals-1))
-!    allocate(all_wt(nmol+1),
     allocate(wt(nmol))
-!    read(31,pos=1) all_wt
     i = i + 1
-    meanval = raw_PS(i)
+    meanval = raw_model(i)
     do j=1,nmol
      i = i + 1
-     wt(j) = raw_PS(i)
+     wt(j) = raw_model(i)
     enddo
-!    do i=2,reals
-!     wt(i-1) = all_wt(i)
-!    enddo
-!    nenv = (reals-1) / degen
-!    if (nenv .ne. nmol) stop 'ERROR: size of weight vector does not match number of environments!'
-!    close(31)
     if (i.ne.reals) stop 'ERROR: diferent file size to that expected for model!'
 
 !************************************************************************************
