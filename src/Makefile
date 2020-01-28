@@ -1,7 +1,7 @@
 .PHONY: all clean
 
 FF=gfortran
-FOPTS=-O3 -g -fopenmp -Wunused
+FOPTS=-O3 -g -fopenmp -Wunused -funroll-loops
 LD=-lblas -llapack
 OBJECTS1=mod_sagpr.o sagpr_get_PS.o
 OBJECTS2=mod_sagpr.o sagpr_get_kernel.o

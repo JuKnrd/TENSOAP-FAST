@@ -388,9 +388,6 @@ module sagpr
   endif
 
   ! Do the power spectrum computation
-  !$OMP PARALLEL DO SHARED(PS,natoms,nspecies,nmax,lmax,nnmax,periodic,all_indices,nneighmax,natmax,nsmax,cell, &
-  !$OMP&     rs,sg,all_centres,all_species,rcut,xyz,sigma,orthomatrix) PRIVATE(omega,harmonic,orthoradint, &
-  !$OMP&     omegatrue,omegaconj)
   do i=1,nframes
 
    ! Get omega, harmonic and radint matrices
@@ -428,7 +425,6 @@ module sagpr
    deallocate(omega,harmonic,orthoradint)
 
   enddo
-  !$OMP END PARALLEL DO
 
   ! Multiply by A matrix
   do i=1,nframes
@@ -656,15 +652,15 @@ module sagpr
    start = finish
 
    ! Get radial integral
+   !$OMP PARALLEL DO SHARED(radint,efact,length,sg2) PRIVATE(n1,n2,normfact,sigmafact,i,k,nn,l)
    do n1=1,nmax
     n2 = n1-1
     normfact = dsqrt(2.d0 / (gamma(1.5d0 + n2)*sigma(n1)**(3.d0 + 2.d0*n2)))
     sigmafact = (sg2**2 + sg2*sigma(n1)**2)/sigma(n1)**2
-    !$OMP PARALLEL DO SHARED(radint,efact,length,sg2) PRIVATE(i,k,nn,l)
-    do i=1,natoms
-     do k=1,nspecies
-       do nn=1,nnmax
-        do l=0,lmax
+    do l=0,lmax
+     do nn=1,nnmax
+      do k=1,nspecies
+       do i=1,natoms
         radint(i,k,nn,l+1,n1) = efact(i,k,nn) * 2.d0**(-0.5d0*(1.d0 + l-n2)) * &
      &     (1.d0/sg2 + 1.d0/sigma(n1)**2)**(-0.5d0*(3.d0 + l+n2)) * &
      &     (gamma(0.5d0*(3.d0+l+n2))/gamma(1.5d0+l)) * (length(i,k,nn)/sg2)**l * &
@@ -673,9 +669,9 @@ module sagpr
        enddo
      enddo
     enddo
-    !$OMP END PARALLEL DO
     radint(:,:,:,:,n1) = radint(:,:,:,:,n1) * normfact
    enddo
+   !$OMP END PARALLEL DO
    
    call cpu_time(finish)
    write(*,*) 'timing',finish-start
@@ -683,10 +679,10 @@ module sagpr
 
    ! Get orthoradint
    !$OMP PARALLEL DO SHARED(orthoradint,radint,orthomatrix) PRIVATE(iat,k,neigh)
-   do iat=1,natoms
+   do l=1,lmax+1
     do k=1,nspecies
+     do iat=1,natoms
       do neigh=1,nneigh(iat,k)
-       do l=1,lmax+1
         orthoradint(iat,k,l,:,neigh) = matmul(orthomatrix,radint(iat,k,neigh,l,:))
        enddo
       enddo
@@ -699,12 +695,12 @@ module sagpr
    start = finish
 
    ! Get omega
-   !$OMP PARALLEL DO SHARED(omega,orthoradint,harmonic) PRIVATE(iat,k,n1,l,im)
-   do iat=1,natoms
-    do k=1,nspecies
-      do n1=1,nmax
-       do l=1,lmax+1
-        do im=1,2*lmax+1
+   !$OMP PARALLEL DO SHARED(omega,orthoradint,harmonic) PRIVATE(l,im,n1,k,iat,i)
+   do im=1,2*lmax+1
+    do n1=1,nmax
+     do l=1,lmax+1
+      do k=1,nspecies
+       do iat=1,natoms
          omega(iat,k,n1,l,im) = dot_product(orthoradint(iat,k,l,n1,:),harmonic(iat,k,l,im,:))
         enddo
        enddo
