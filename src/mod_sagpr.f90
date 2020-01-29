@@ -385,6 +385,7 @@ module sagpr
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
   complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),omegaconj(:,:,:,:,:),ps_row(:,:,:)
+  complex*16, allocatable :: harmconj(:,:,:,:,:,:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:),w3j(:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
 
@@ -535,26 +536,50 @@ module sagpr
 
   ! Get list of components
   if (.not. allocated(components) .and. ncut.gt.0) then
-   allocate(components(ncut,5))
-   n = 0
-   do i=1,nspecies
-    do j=1,nspecies
-     do k=1,nmax
-      do l=1,nmax
-       do m=1,lmax+1
-        n = n + 1
-        ! Check if this component is required
-        do nn=1,ncut
-         ! Remember we have to add 1 because we're dealing with python arrays
-         if (sparsification(1,nn,1)+1.eq.n) then
-          components(nn,:) = (/i,j,k,l,m/)
-         endif
+   if (lm.eq.0) then
+    allocate(components(ncut,5))
+    n = 0
+    do i=1,nspecies
+     do j=1,nspecies
+      do k=1,nmax
+       do l=1,nmax
+        do m=1,lmax+1
+         n = n + 1
+         ! Check if this component is required
+         do nn=1,ncut
+          ! Remember we have to add 1 because we're dealing with python arrays
+          if (sparsification(1,nn,1)+1.eq.n) then
+           components(nn,:) = (/i,j,k,l,m/)
+          endif
+         enddo
         enddo
        enddo
       enddo
      enddo
     enddo
-   enddo
+   else
+    write(*,*) 'COMPONENT LIST NEEDS TO BE TESTED FOR LM>0'
+    allocate(components(ncut,6))
+    n = 0
+    do i=1,nspecies
+     do j=1,nspecies
+      do k=1,nmax
+       do l=1,nmax
+        do m=1,llmax
+         n = n + 1
+         ! Check if this component is required
+         do nn=1,ncut
+          ! Remember we have to add 1 because we're dealing with python arrays
+          if (sparsification(1,nn,1)+1.eq.n) then
+           components(nn,:) = (/i,j,k,l,lvalues(m,1),lvalues(m,2)/)
+          endif
+         enddo
+        enddo
+       enddo
+      enddo
+     enddo
+    enddo
+   endif
   endif
 
   ! If necessary, pre-compute the Wigner 3j symbols
@@ -609,7 +634,9 @@ module sagpr
 
    else
      ! Spherical
+     allocate(harmconj(natoms(i),nspecies,lmax+1,lmax+1,2*lmax+1,2*lmax+1,nnmax))
      stop 'NOT YET IMPLEMENTED!'
+     deallocate(harmconj)
    endif
 
    ! Deallocate
