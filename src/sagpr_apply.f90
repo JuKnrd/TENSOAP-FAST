@@ -39,7 +39,7 @@ program sagpr_apply
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-f') read(arg(i+1),*) fname
-     if (arg(i).eq.'-m') read(arg(i+1),*) model
+     if (arg(i).eq.'-m') read(arg(i+1),'(A)') model
     enddo
 
     ! Check for arguments that are required

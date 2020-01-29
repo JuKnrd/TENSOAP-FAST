@@ -3,6 +3,8 @@
 FF=gfortran
 FOPTS=-O3 -g -fopenmp -funroll-loops
 LD=-lblas -llapack
+SAGPR_PREFIX=
+
 OBJECTS1=mod_sagpr.o sagpr_get_PS.o
 OBJECTS2=mod_sagpr.o sagpr_get_kernel.o
 OBJECTS3=mod_sagpr.o sagpr_predict.o
@@ -37,7 +39,16 @@ sagpr_apply: $(OBJECTS5)
 install: all mkinstall
 
 mkinstall:
-	@if [ "${SAGPR_PREFIX}" != "" ];then cp ../bin/sagpr_* ${SAGPR_PREFIX}/;fi
+	@if [ "$(SAGPR_PREFIX)" != "" ];then mkdir -p $(SAGPR_PREFIX);cp ../bin/sagpr_* $(SAGPR_PREFIX)/;fi
+	@echo "INSTALLED SOAPFAST"
+
+check: all mkcheck
+
+mkcheck:
+	@echo "NOT YET SET UP TO RUN TESTS!"
+
+config:
+	@echo "NOT YET SET UP TO MAKE CONFIG!"
 
 clean: 
 	rm -rf *.o *.mod ../bin/* ../bin ../lib
