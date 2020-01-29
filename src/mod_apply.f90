@@ -6,12 +6,14 @@ module apply
  character(len=4), allocatable :: atname(:,:)
  character(len=1000), allocatable :: comment(:)
  integer, allocatable :: natoms(:)
- integer nframes,nlines,natmax
+ integer nframes,nlines,natmax,nmol
  ! Variables for getting models
- integer nargs,ncut,nfeat,ncut0,nfeat0
+ integer nargs,ncut,nfeat,ncut0,nfeat0,reals,bytes
  real*8, allocatable :: PS_tr_lam(:,:,:,:),PS_tr_0(:,:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
  real*8, allocatable :: prediction_lm(:,:),wt(:)
  complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
+ real*8 meanval
+ logical do_scalar
  ! Parameters for PS and kernel building
  integer lm,nmax,lmax,zeta,degen
  real*8 rcut,sg,rs(3)
@@ -73,6 +75,9 @@ subroutine get_model(model)
  implicit none
 
   character(len=100) model
+  real*8, allocatable, target :: raw_model(:)
+  real*8 a1,a2
+  integer i,j,k,l
 
    ! Read in power spectrum file(s)
    open(unit=41,file=trim(adjustl(model))//'.mdl',status='old',access='stream',form='unformatted')

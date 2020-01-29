@@ -384,7 +384,7 @@ module sagpr
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
   complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),omegaconj(:,:,:,:,:),ps_row(:,:,:)
-  real*8, allocatable :: orthoradint(:,:,:,:,:)
+  real*8, allocatable :: orthoradint(:,:,:,:,:),w3j(:,:,:,:)
   integer, allocatable :: index_list(:)
 
   ! Get maximum number of neighbours
@@ -556,6 +556,14 @@ module sagpr
    enddo
   endif
 
+  ! If necessary, pre-compute the Wigner 3j symbols
+  if (lm.gt.0) then
+   if (.not. allocated(w3j)) then
+    allocate(w3j(2*lm+1,lmax+1,lmax+1,2*lmax+1))
+    w3j(:,:,:,:) = 0.d0
+   endif
+  endif
+
   ! Do the power spectrum computation
   do i=1,nframes
 
@@ -587,6 +595,7 @@ module sagpr
 
    else
      ! Spherical
+
      stop 'NOT YET IMPLEMENTED!'
    endif
 
