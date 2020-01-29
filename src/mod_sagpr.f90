@@ -974,6 +974,26 @@ module sagpr
 
 !***************************************************************************************************
 
+ real*8 function cgcoeff(j1,j2,m1,m2,J,M)
+  implicit none
+
+   integer j1,j2,m1,m2,J,M
+   real*8 prefac
+
+   if (M.ne.(m1+m2)) then
+    cgcoeff = 0.d0
+   else
+    prefac = (2.d0*J + 1.d0) * (fact(J+j1-j2) * fact(J-j1+j2) * fact(j1+j2-J) / fact(j1+j2+J+1)) * &
+     &     fact(J+M) * fact(J-M) * fact(j1-m1) * fact(j1+m1) + fact(j2-m2) * fact(j2+m2)
+    prefac = dsqrt(prefac)
+    cgcoeff = 0.d0
+    cgcoeff = cgcoeff * prefac
+   endif
+
+ end function
+
+!***************************************************************************************************
+
  real*8 function hg ( a, b, x)
 
 !*****************************************************************************80
