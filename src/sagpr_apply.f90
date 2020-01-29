@@ -98,13 +98,14 @@ program sagpr_apply
      endif
      if (arg(i).eq.'-p') periodic=.true.
     enddo
+    ! Set degeneracy
+    degen = 2*lm + 1
 
 !************************************************************************************
 ! GET WEIGHTS FROM FILE
 !************************************************************************************
 
     ! Read in power spectrum file(s)
-    degen = 2*lm + 1
     open(unit=41,file=trim(adjustl(model))//'.mdl',status='old',access='stream',form='unformatted')
     inquire(unit=41,size=bytes)
     reals = bytes/8

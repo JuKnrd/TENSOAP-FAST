@@ -8,12 +8,12 @@ module apply
  integer, allocatable :: natoms(:)
  integer nframes,nlines,natmax
  ! Variables for getting models
- integer nargs
+ integer nargs,ncut,nfeat,ncut0,nfeat0
  real*8, allocatable :: PS_tr_lam(:,:,:,:),PS_tr_0(:,:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
  real*8, allocatable :: prediction_lm(:,:),wt(:)
  complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
  ! Parameters for PS and kernel building
- integer lm,nmax,lmax,zeta
+ integer lm,nmax,lmax,zeta,degen
  real*8 rcut,sg,rs(3)
  logical periodic
  logical all_species(nelements),all_centres(nelements)
@@ -67,6 +67,97 @@ function process_hyperparameters(model)
     process_hyperparameters(nargs+1) = 'NULL'
 
 end function
+
+!****************************************************************************************************************
+subroutine get_model(model)
+ implicit none
+
+  character(len=100) model
+
+   ! Read in power spectrum file(s)
+   open(unit=41,file=trim(adjustl(model))//'.mdl',status='old',access='stream',form='unformatted')
+   inquire(unit=41,size=bytes)
+   reals = bytes/8
+   allocate(raw_model(reals))
+   read(41,pos=1) raw_model
+   do_scalar = (raw_model(1).ne.0.d0)
+   nmol = int(raw_model(2))
+   nfeat = int(raw_model(3))
+   i = 3
+   if (do_scalar) then
+    nfeat0 = int(raw_model(4))
+    i = 4
+   endif
+   allocate(PS_tr_lam(nmol,1,degen,nfeat))
+   do j=1,nmol
+    do k=1,degen
+     do l=1,nfeat
+      i = i + 1
+      PS_tr_lam(j,1,k,l) = raw_model(i)
+     enddo
+    enddo
+   enddo
+   if (do_scalar) then
+    allocate(PS_tr_0(nmol,1,1,nfeat))
+    do j=1,nmol
+     do k=1,nfeat0
+      PS_tr_0(j,1,1,k) = raw_model(i)
+     enddo
+    enddo
+   endif
+
+   ! Get sparsification details
+   i = i + 1
+   ncut = int(raw_model(i))
+   allocate(sparsification(2,ncut,ncut))
+   do j=1,ncut
+    i = i + 1
+    sparsification(1,j,1) = raw_model(i)
+   enddo
+   do j=1,ncut
+    do k=1,ncut
+     i = i + 1
+     a1 = raw_model(i)
+     i = i + 1
+     a2 = raw_model(i)
+     sparsification(2,j,k) = dcmplx(a1,a2)
+    enddo
+   enddo
+   if (do_scalar) then
+    i = i + 1
+    ncut0 = int(raw_model(i))
+    allocate(sparsification0(2,ncut0,ncut0))
+    do j=1,ncut0
+     i = i + 1
+     sparsification0(1,j,1) = raw_model(i)
+    enddo
+    do j=1,ncut0
+     do k=1,ncut0
+      i = i + 1
+      a1 = raw_model(i)
+      i = i + 1
+      a2 = raw_model(i)
+      sparsification0(2,j,k) = dcmplx(a1,a2)
+     enddo
+    enddo
+   endif
+
+   if (ncut.ne.nfeat) stop 'ERROR: ncut .ne. nfeat!'
+   if (do_scalar) then
+    if (ncut0.ne.nfeat0) stop 'ERROR: ncut0 .ne. nfeat0!'
+   endif
+
+   ! Get weights
+   i = i + 1
+   meanval = raw_model(i)
+   allocate(wt(nmol))
+   do j=1,nmol
+    i = i + 1
+    wt(j) = raw_model(i)
+   enddo
+   if (i.ne.reals) stop 'ERROR: diferent file size to that expected for model!'
+
+end subroutine
 
 !****************************************************************************************************************
 subroutine read_xyz(fname,periodic)
