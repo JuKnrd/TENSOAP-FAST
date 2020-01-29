@@ -5,12 +5,11 @@ program sagpr_apply
 
     integer numkeys,reals,bytes
     character(len=100), allocatable :: arg(:),keylist(:),keys1(:),keys2(:)
-    integer lm,i,j,k,l,ii,nfeat,degen,nmol
-    integer nmax,lmax,ncut,zeta,nfeat0,ncut0
-    real*8 rcut,sg,rs(3),meanval,a1,a2
+    integer i,j,k,l,ii,nfeat,degen,nmol
+    integer ncut,nfeat0,ncut0
+    real*8 meanval,a1,a2
     character(len=100) ofile,fname,model
-    logical periodic,readnext
-    logical all_species(nelements),all_centres(nelements)
+    logical readnext
     real*8, allocatable, target :: raw_model(:)
     character(len=3) symbol
     logical do_scalar
@@ -39,33 +38,14 @@ program sagpr_apply
      if (arg(i).eq.'-m') read(arg(i+1),'(A)') model
      if (arg(i).eq.'-o') read(arg(i+1),'(A)') ofile
     enddo
+    deallocate(arg)
 
     ! Check for arguments that are required
     if (fname.eq.'') stop 'ERROR: filename required!'
     if (model.eq.'') stop 'ERROR: model file required!'
 
     ! Read in hyperparameters
-!    open(unit=21,file=trim(adjustl(model))//'.hyp',status='old')
-!    read(21,'(A)') args
-!    nargs = 0
-!    new_arg = .false.
-!    do i=1,len(trim(adjustl(args)))
-!     if (args(i:i).ne.' ') then
-!      if (.not.new_arg) then
-!       new_arg = .true.
-!       nargs = nargs + 1
-!      endif
-!     else
-!      ! We have reached the end of an argument
-!      new_arg = .false.
-!     endif
-!    enddo
-!    deallocate(arg)
-!    allocate(arg(nargs+1))
-!    read(args,*) (arg(i),i=1,nargs)
-!    arg(nargs+1) = 'NULL'
-
-    deallocate(arg)
+    call set_defaults()
     arg = process_hyperparameters(model)
 
 !************************************************************************************
@@ -73,16 +53,6 @@ program sagpr_apply
 !************************************************************************************
 
     ! Get hyperparameters from model file
-    lm = 0
-    nmax = 8
-    lmax = 6
-    rcut = 4.d0
-    sg = 0.3d0
-    all_centres(:) = .false.
-    all_species(:) = .false.
-    rs = (/0.d0,0.d0,0.d0/)
-    periodic = .false.
-    zeta = 1
     allocate(keys2(11))
     keys2 = (/'-lm ','-n  ','-l  ','-rc ','-sg ','-c  ','-s  ','-rs ','-p  ','-z  ','NULL'/)
     do i=1,nargs
@@ -128,6 +98,10 @@ program sagpr_apply
      endif
      if (arg(i).eq.'-p') periodic=.true.
     enddo
+
+!************************************************************************************
+! GET WEIGHTS FROM FILE
+!************************************************************************************
 
     ! Read in power spectrum file(s)
     degen = 2*lm + 1
@@ -258,7 +232,7 @@ program sagpr_apply
     close(33)
 
     ! Array deallocation
-    deallocate(xyz,atname,natoms,comment,sparsification,cell,PS,PS_tr_lam,natoms_tr,wt)
+    deallocate(xyz,atname,natoms,comment,sparsification,cell,PS,PS_tr_lam,natoms_tr,wt,arg)
     if (allocated(PS_tr_0)) deallocate(PS_tr_0)
     if (allocated(ker)) deallocate(ker)
     if (allocated(ker_lm)) deallocate(ker_lm)

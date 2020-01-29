@@ -1,4 +1,5 @@
 module apply
+ use sagpr
 
  ! Variables for getting coordinates
  real*8, allocatable :: xyz(:,:,:),cell(:,:,:)
@@ -11,8 +12,30 @@ module apply
  real*8, allocatable :: PS_tr_lam(:,:,:,:),PS_tr_0(:,:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
  real*8, allocatable :: prediction_lm(:,:),wt(:)
  complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
+ ! Parameters for PS and kernel building
+ integer lm,nmax,lmax,zeta
+ real*8 rcut,sg,rs(3)
+ logical periodic
+ logical all_species(nelements),all_centres(nelements)
 
  contains
+
+!****************************************************************************************************************
+subroutine set_defaults()
+ implicit none
+
+  lm = 0
+  nmax = 8
+  lmax = 6
+  rcut = 4.d0
+  sg = 0.3d0
+    all_centres(:) = .false.
+    all_species(:) = .false.
+  rs = (/0.d0,0.d0,0.d0/)
+  periodic = .false.
+  zeta = 1
+
+end subroutine
 
 !****************************************************************************************************************
 function process_hyperparameters(model)
