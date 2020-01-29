@@ -374,7 +374,7 @@ module sagpr
   implicit none
 
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l,mu
-  integer llmax,ps_shape(4),m,n,nn
+  integer llmax,ps_shape(4),m,n,nn,jmin,jmax
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
   complex*16 sparsification(2,ncut,ncut)
   real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax),inner
@@ -560,19 +560,32 @@ module sagpr
   ! If necessary, pre-compute the Wigner 3j symbols
   if (lm.gt.0) then
    if (.not. allocated(w3j)) then
-    allocate(w3j(2*lm+1,lmax+1,lmax+1,2*lmax+1),tmp_3j(1))
+    allocate(w3j(2*lm+1,lmax+1,lmax+1,2*lmax+1))
     w3j(:,:,:,:) = 0.d0
-    do l1=1,lmax+1
-     do l2=1,lmax+1
-      do m=1,2*l1+1
-       do mu=1,2*lm+1
-        call wigner3j(tmp_3j,lm,lm,l2,l1,mu-lm,m-l1-mu+lm,-m+l1)
+    do l1=0,lmax
+     do l2=0,lmax
+      do m=0,2*l1
+       do mu=0,2*lm
+        if (allocated(tmp_3j)) deallocate(tmp_3j)
+        allocate(tmp_3j(l2+l1+1))
+        call wigner3j(tmp_3j,jmin,jmax,l2,l1,mu-lm,m-l1-mu+lm,-m+l1)
+        if (lm.ge.jmin .and. lm.le.jmax) w3j(mu+1,l1+1,l2+1,m+1) = tmp_3j(lm-jmin+1) * (-1.d0)**(m-l1)
        enddo
       enddo
      enddo
     enddo
    endif
   endif
+
+  do l1=0,lmax
+   do l2=0,lmax
+    do m=0,2*l1
+     do mu=0,2*lm
+      write(*,*) 'W3J',l1,l2,m,mu,w3j(mu+1,l1+1,l2+1,m+1)
+     enddo
+    enddo
+   enddo
+  enddo
 
   ! Do the power spectrum computation
   do i=1,nframes
