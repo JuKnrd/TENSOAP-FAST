@@ -1,0 +1,21 @@
+#!/bin/bash
+
+echo "Configuring SOAPFAST..."
+echo
+echo "Checking for SHTOOLS..."
+if [ ! -f install/SHTOOLS/lib/libSHTOOLS.a ];then
+	echo "...SHTOOLS not found"
+	if [ ! -d install/SHTOOLS ];then
+		mkdir -p install
+		cd install
+		git clone https://github.com/dilkins/SHTOOLS.git
+		cd ../
+	fi
+	echo "NOW MAKE SHTOOLS"
+	cd install/SHTOOLS
+	make
+	cd ../../
+else
+	echo "...SHTOOLS found"
+fi
+echo "NOW SEARCH FOR LAPACK AND BLAS, AND THEN DO ALL OF THE LINKING"
