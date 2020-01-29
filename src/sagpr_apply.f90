@@ -3,20 +3,17 @@ program sagpr_apply
     use apply
     implicit none
 
-    integer nargs,numkeys,reals,bytes
+    integer numkeys,reals,bytes
     character(len=100), allocatable :: arg(:),keylist(:),keys1(:),keys2(:)
     integer lm,i,j,k,l,ii,nfeat,degen,nmol
     integer nmax,lmax,ncut,zeta,nfeat0,ncut0
     real*8 rcut,sg,rs(3),meanval,a1,a2
-    character(len=100) ofile,fname,model,args
+    character(len=100) ofile,fname,model
     logical periodic,readnext
     logical all_species(nelements),all_centres(nelements)
     real*8, allocatable, target :: raw_model(:)
-    real*8, allocatable :: PS_tr_lam(:,:,:,:),PS_tr_0(:,:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
-    real*8, allocatable :: prediction_lm(:,:),wt(:)
-    complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
     character(len=3) symbol
-    logical do_scalar,new_arg
+    logical do_scalar
 
 !************************************************************************************
 ! GET COMMAND-LINE ARGUMENTS
@@ -48,25 +45,28 @@ program sagpr_apply
     if (model.eq.'') stop 'ERROR: model file required!'
 
     ! Read in hyperparameters
-    open(unit=21,file=trim(adjustl(model))//'.hyp',status='old')
-    read(21,'(A)') args
-    nargs = 0
-    new_arg = .false.
-    do i=1,len(trim(adjustl(args)))
-     if (args(i:i).ne.' ') then
-      if (.not.new_arg) then
-       new_arg = .true.
-       nargs = nargs + 1
-      endif
-     else
-      ! We have reached the end of an argument
-      new_arg = .false.
-     endif
-    enddo
+!    open(unit=21,file=trim(adjustl(model))//'.hyp',status='old')
+!    read(21,'(A)') args
+!    nargs = 0
+!    new_arg = .false.
+!    do i=1,len(trim(adjustl(args)))
+!     if (args(i:i).ne.' ') then
+!      if (.not.new_arg) then
+!       new_arg = .true.
+!       nargs = nargs + 1
+!      endif
+!     else
+!      ! We have reached the end of an argument
+!      new_arg = .false.
+!     endif
+!    enddo
+!    deallocate(arg)
+!    allocate(arg(nargs+1))
+!    read(args,*) (arg(i),i=1,nargs)
+!    arg(nargs+1) = 'NULL'
+
     deallocate(arg)
-    allocate(arg(nargs+1))
-    read(args,*) (arg(i),i=1,nargs)
-    arg(nargs+1) = 'NULL'
+    arg = process_hyperparameters(model)
 
 !************************************************************************************
 ! GET INFORMATION ABOUT THE MODEL

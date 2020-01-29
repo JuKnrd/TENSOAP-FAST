@@ -1,12 +1,49 @@
 module apply
 
+ ! Variables for getting coordinates
  real*8, allocatable :: xyz(:,:,:),cell(:,:,:)
  character(len=4), allocatable :: atname(:,:)
  character(len=1000), allocatable :: comment(:)
  integer, allocatable :: natoms(:)
  integer nframes,nlines,natmax
+ ! Variables for getting models
+ integer nargs
+ real*8, allocatable :: PS_tr_lam(:,:,:,:),PS_tr_0(:,:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
+ real*8, allocatable :: prediction_lm(:,:),wt(:)
+ complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
 
  contains
+
+!****************************************************************************************************************
+function process_hyperparameters(model)
+ implicit none
+
+ character(len=100) model,args
+ character(len=100), allocatable :: process_hyperparameters(:)
+ integer i
+ logical new_arg
+
+    ! Read in hyperparameters
+    open(unit=21,file=trim(adjustl(model))//'.hyp',status='old')
+    read(21,'(A)') args
+    nargs = 0
+    new_arg = .false.
+    do i=1,len(trim(adjustl(args)))
+     if (args(i:i).ne.' ') then
+      if (.not.new_arg) then
+       new_arg = .true.
+       nargs = nargs + 1
+      endif
+     else
+      ! We have reached the end of an argument
+      new_arg = .false.
+     endif
+    enddo
+    allocate(process_hyperparameters(nargs+1))
+    read(args,*) (process_hyperparameters(i),i=1,nargs)
+    process_hyperparameters(nargs+1) = 'NULL'
+
+end function
 
 !****************************************************************************************************************
 subroutine read_xyz(fname,periodic)
