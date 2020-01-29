@@ -568,6 +568,7 @@ module sagpr
        do mu=0,2*lm
         if (allocated(tmp_3j)) deallocate(tmp_3j)
         allocate(tmp_3j(l2+l1+1))
+        tmp_3j(:) = 0.d0
         call wigner3j(tmp_3j,jmin,jmax,l2,l1,mu-lm,m-l1-mu+lm,-m+l1)
         if (lm.ge.jmin .and. lm.le.jmax) w3j(mu+1,l1+1,l2+1,m+1) = tmp_3j(lm-jmin+1) * (-1.d0)**(m-l1)
        enddo
@@ -576,16 +577,6 @@ module sagpr
     enddo
    endif
   endif
-
-  do l1=0,lmax
-   do l2=0,lmax
-    do m=0,2*l1
-     do mu=0,2*lm
-      write(*,*) 'W3J',l1,l2,m,mu,w3j(mu+1,l1+1,l2+1,m+1)
-     enddo
-    enddo
-   enddo
-  enddo
 
   ! Do the power spectrum computation
   do i=1,nframes
