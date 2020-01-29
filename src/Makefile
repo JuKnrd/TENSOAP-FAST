@@ -1,9 +1,9 @@
 .PHONY: all clean
 
 FF=gfortran
-FOPTS=-O3 -g -fopenmp -funroll-loops -ffast-math -m64 -fPIC
-SHTOOLS_LIB=-L/home/dwilkins/source/SHTOOLS/lib
-SHTOOLS_INCLUDE=-I/home/dwilkins/source/SHTOOLS/modules
+FOPTS=-O3 -g -fopenmp -funroll-loops -Wunused -ffast-math -m64 -fPIC
+SHTOOLS_LIB=-L/home/dwilkins/source/soapfast_fortran/install/SHTOOLS/lib
+SHTOOLS_INCLUDE=-I/home/dwilkins/source/soapfast_fortran/install/SHTOOLS/modules
 LD=$(SHTOOLS_LIB) -lSHTOOLS -lfftw3 -lm -lblas -llapack
 INCLUDE=$(SHTOOLS_INCLUDE)
 SAGPR_PREFIX=
@@ -51,9 +51,7 @@ mkcheck:
 	@echo "NOT YET SET UP TO RUN TESTS!"
 
 config:
-	@echo "NOT YET SET UP TO MAKE CONFIG!"
-	@echo "https://github.com/joeydumont/wignerSymbols.git"
-	@echo "https://github.com/SHTOOLS/SHTOOLS.git"
+	@ cd ../;./configure;cd src
 
 clean: 
 	rm -rf *.o *.mod ../bin/* ../bin ../lib

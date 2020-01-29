@@ -609,7 +609,6 @@ module sagpr
 
    else
      ! Spherical
-     write(*,*) 'we are here'
      stop 'NOT YET IMPLEMENTED!'
    endif
 

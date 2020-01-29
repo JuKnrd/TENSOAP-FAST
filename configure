@@ -10,12 +10,40 @@ if [ ! -f install/SHTOOLS/lib/libSHTOOLS.a ];then
 		cd install
 		git clone https://github.com/dilkins/SHTOOLS.git
 		cd ../
+		echo "SHTOOLS cloned"
 	fi
-	echo "NOW MAKE SHTOOLS"
+	echo "Compiling SHTOOLS..."
 	cd install/SHTOOLS
 	make
 	cd ../../
+	echo "...SHTOOLS compiled"
 else
 	echo "...SHTOOLS found"
 fi
+echo
+cd install
+echo "program test" > test.f90
+echo "end program" >> test.f90
+echo "Checking for BLAS..."
+nerr=$(gfortran -lblas test.f90 | wc -l)
+if [ ${nerr} -eq 0 ];then
+	echo "...BLAS found"
+else
+	echo "...BLAS not found"
+	echo "Compiling BLAS..."
+fi
+echo
+echo "Checking for LAPACK..."
+nerr=$(gfortran -llapack test.f90 | wc -l)
+if [ ${nerr} -eq 0 ];then
+        echo "...LAPACK found"
+else
+        echo "...LAPACK not found"
+        echo "Compiling LAPACK..."
+fi
+echo
+rm test.f90
+if [ -f a.out ];then rm a.out;fi
+cd ../
+echo "Editing Makefile..."
 echo "NOW SEARCH FOR LAPACK AND BLAS, AND THEN DO ALL OF THE LINKING"
