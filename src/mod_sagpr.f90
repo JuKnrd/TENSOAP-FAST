@@ -563,24 +563,14 @@ module sagpr
     allocate(w3j(2*lm+1,lmax+1,lmax+1,2*lmax+1))
     w3j(:,:,:,:) = 0.d0
     do l1=0,lmax
-!    do l1=1,1
      do l2=0,lmax
-!     do l2=6,6
       do m=0,2*l1
        do mu=0,2*lm
-!      do m=2,2
-!       do mu=0,0
         if (allocated(tmp_3j)) deallocate(tmp_3j)
         allocate(tmp_3j(l2+l1+1))
         tmp_3j(:) = 0.d0
-!        jmin = max(abs(l2-l1),abs(mu-lm))
-!        jmax = l2+l1
-!        write(*,*) jmin,jmax
-!        if (jmax.ge.jmin) then
         call wigner3j(tmp_3j,jmin,jmax,l2,l1,mu-lm,m-l1-mu+lm,-m+l1)
-!        write(*,*) jmin,jmax,l2,l1,mu-lm
         if (lm.ge.jmin .and. lm.le.jmax) w3j(mu+1,l1+1,l2+1,m+1) = tmp_3j(lm-jmin+1) * (-1.d0)**(m-l1)
-!        endif
        enddo
       enddo
      enddo
