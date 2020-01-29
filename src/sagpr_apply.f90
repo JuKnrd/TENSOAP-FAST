@@ -8,12 +8,12 @@ program sagpr_apply
     integer lm,i,j,k,l,ii,nfeat,degen,nmol
     integer nmax,lmax,ncut,zeta,nfeat0,ncut0
     real*8 rcut,sg,rs(3),meanval,a1,a2
-    character(len=100) ofile,trainmodel,fname,model,args
+    character(len=100) ofile,fname,model,args
     logical periodic,readnext
     logical all_species(nelements),all_centres(nelements)
     real*8, allocatable, target :: raw_model(:)
-    real*8, allocatable :: PS_tr_lam(:,:,:),PS_tr_0(:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
-    real*8, allocatable :: prediction_lm(:,:)
+    real*8, allocatable :: PS_tr_lam(:,:,:,:),PS_tr_0(:,:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
+    real*8, allocatable :: prediction_lm(:,:),wt(:)
     complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
     character(len=3) symbol
     logical do_scalar,new_arg
@@ -31,15 +31,16 @@ program sagpr_apply
     arg(nargs+1) = 'NULL'
 
     ! Parse these arguments
-    allocate(keys1(3))
+    allocate(keys1(4))
     fname = ''
     model = ''
-    trainmodel = ''
-    keys1 = (/'-f  ','-m  ','-tm ','NULL'/)
+    ofile = 'prediction.out'
+    keys1 = (/'-f  ','-m  ','-o  ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
-     if (arg(i).eq.'-f') read(arg(i+1),*) fname
+     if (arg(i).eq.'-f') read(arg(i+1),'(A)') fname
      if (arg(i).eq.'-m') read(arg(i+1),'(A)') model
+     if (arg(i).eq.'-o') read(arg(i+1),'(A)') ofile
     enddo
 
     ! Check for arguments that are required
@@ -80,11 +81,10 @@ program sagpr_apply
     all_centres(:) = .false.
     all_species(:) = .false.
     rs = (/0.d0,0.d0,0.d0/)
-    ofile = 'prediction.out'
     periodic = .false.
     zeta = 1
-    allocate(keys2(12))
-    keys2 = (/'-lm ','-n  ','-l  ','-rc ','-sg ','-c  ','-s  ','-rs ','-p  ','-o  ','-z  ','NULL'/)
+    allocate(keys2(11))
+    keys2 = (/'-lm ','-n  ','-l  ','-rc ','-sg ','-c  ','-s  ','-rs ','-p  ','-z  ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-lm') read(arg(i+1),*) lm
@@ -126,7 +126,6 @@ program sagpr_apply
       read(arg(i+2),*) rs(2)
       read(arg(i+3),*) rs(3)
      endif
-     if (arg(i).eq.'-o') read(arg(i+1),*) ofile
      if (arg(i).eq.'-p') periodic=.true.
     enddo
 
@@ -145,20 +144,20 @@ program sagpr_apply
      nfeat0 = int(raw_model(4))
      i = 4
     endif
-    allocate(PS_tr_lam(nmol,degen,nfeat))
+    allocate(PS_tr_lam(nmol,1,degen,nfeat))
     do j=1,nmol
      do k=1,degen
       do l=1,nfeat
        i = i + 1
-       PS_tr_lam(j,k,l) = raw_model(i)
+       PS_tr_lam(j,1,k,l) = raw_model(i)
       enddo
      enddo
     enddo
     if (do_scalar) then
-     allocate(PS_tr_0(nmol,1,nfeat))
+     allocate(PS_tr_0(nmol,1,1,nfeat))
      do j=1,nmol
       do k=1,nfeat0
-       PS_tr_0(j,1,k) = raw_model(i)
+       PS_tr_0(j,1,1,k) = raw_model(i)
       enddo
      enddo
     endif
@@ -207,13 +206,18 @@ program sagpr_apply
     ! Get weights
     i = i + 1
     meanval = raw_model(i)
+    allocate(wt(nmol))
+    do j=1,nmol
+     i = i + 1
+     wt(j) = raw_model(i)
+    enddo
     if (i.ne.reals) stop 'ERROR: diferent file size to that expected for model!'
 
 !************************************************************************************
 ! READ IN DATA
 !************************************************************************************
 
-    call get_xyz(fname,periodic)
+    call read_xyz(fname,periodic)
 
 !************************************************************************************
 ! USE THE MODEL AND THE DATA TO MAKE A PREDICTION
@@ -244,7 +248,7 @@ program sagpr_apply
 
     ! Get predictions
     allocate(prediction_lm(nmol,degen))
-    prediction_lm = do_prediction_no_wt(ker,meanval,degen,nframes,nmol)
+    prediction_lm = do_prediction(ker,wt,meanval,degen,nframes,nmol)
 
     ! Print predictions
     open(unit=33,file=ofile)
@@ -254,7 +258,7 @@ program sagpr_apply
     close(33)
 
     ! Array deallocation
-    deallocate(xyz,atname,natoms,comment,sparsification,cell,PS,PS_tr_lam,natoms_tr)
+    deallocate(xyz,atname,natoms,comment,sparsification,cell,PS,PS_tr_lam,natoms_tr,wt)
     if (allocated(PS_tr_0)) deallocate(PS_tr_0)
     if (allocated(ker)) deallocate(ker)
     if (allocated(ker_lm)) deallocate(ker_lm)

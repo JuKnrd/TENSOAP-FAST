@@ -9,7 +9,7 @@ module apply
  contains
 
 !****************************************************************************************************************
-subroutine get_xyz(fname,periodic)
+subroutine read_xyz(fname,periodic)
  implicit none
 
   character(len=100) fname
