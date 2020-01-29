@@ -40,16 +40,14 @@ program sagpr_apply
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-f') read(arg(i+1),*) fname
      if (arg(i).eq.'-m') read(arg(i+1),*) model
-     if (arg(i).eq.'-tm') read(arg(i+1),*) trainmodel
     enddo
 
     ! Check for arguments that are required
     if (fname.eq.'') stop 'ERROR: filename required!'
     if (model.eq.'') stop 'ERROR: model file required!'
-    if (trainmodel.eq.'') stop 'ERROR: model binary file required!'
 
     ! Read in hyperparameters
-    open(unit=21,file=model,status='old')
+    open(unit=21,file=trim(adjustl(model))//'.hyp',status='old')
     read(21,'(A)') args
     nargs = 0
     new_arg = .false.
@@ -134,7 +132,7 @@ program sagpr_apply
 
     ! Read in power spectrum file(s)
     degen = 2*lm + 1
-    open(unit=41,file=trainmodel,status='old',access='stream',form='unformatted')
+    open(unit=41,file=trim(adjustl(model))//'.mdl',status='old',access='stream',form='unformatted')
     inquire(unit=41,size=bytes)
     reals = bytes/8
     allocate(raw_model(reals))
