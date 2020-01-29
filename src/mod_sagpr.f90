@@ -370,9 +370,10 @@ module sagpr
 
  subroutine do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres, &
      &     all_species,ncut,sparsification,rs,periodic,mult_by_A)
+  use SHTOOLS, only: wigner3j
   implicit none
 
-  integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l
+  integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l,mu
   integer llmax,ps_shape(4),m,n,nn
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
   complex*16 sparsification(2,ncut,ncut)
@@ -384,7 +385,7 @@ module sagpr
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
   complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),omegaconj(:,:,:,:,:),ps_row(:,:,:)
-  real*8, allocatable :: orthoradint(:,:,:,:,:),w3j(:,:,:,:)
+  real*8, allocatable :: orthoradint(:,:,:,:,:),w3j(:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
 
   ! Get maximum number of neighbours
@@ -559,8 +560,17 @@ module sagpr
   ! If necessary, pre-compute the Wigner 3j symbols
   if (lm.gt.0) then
    if (.not. allocated(w3j)) then
-    allocate(w3j(2*lm+1,lmax+1,lmax+1,2*lmax+1))
+    allocate(w3j(2*lm+1,lmax+1,lmax+1,2*lmax+1),tmp_3j(1))
     w3j(:,:,:,:) = 0.d0
+    do l1=1,lmax+1
+     do l2=1,lmax+1
+      do m=1,2*l1+1
+       do mu=1,2*lm+1
+        call wigner3j(tmp_3j,lm,lm,l2,l1,mu-lm,m-l1-mu+lm,-m+l1)
+       enddo
+      enddo
+     enddo
+    enddo
    endif
   endif
 
@@ -595,7 +605,7 @@ module sagpr
 
    else
      ! Spherical
-
+     write(*,*) 'we are here'
      stop 'NOT YET IMPLEMENTED!'
    endif
 
@@ -969,26 +979,6 @@ module sagpr
    do i=2,n
     fact = fact * i
    enddo
-
- end function
-
-!***************************************************************************************************
-
- real*8 function cgcoeff(j1,j2,m1,m2,J,M)
-  implicit none
-
-   integer j1,j2,m1,m2,J,M
-   real*8 prefac
-
-   if (M.ne.(m1+m2)) then
-    cgcoeff = 0.d0
-   else
-    prefac = (2.d0*J + 1.d0) * (fact(J+j1-j2) * fact(J-j1+j2) * fact(j1+j2-J) / fact(j1+j2+J+1)) * &
-     &     fact(J+M) * fact(J-M) * fact(j1-m1) * fact(j1+m1) + fact(j2-m2) * fact(j2+m2)
-    prefac = dsqrt(prefac)
-    cgcoeff = 0.d0
-    cgcoeff = cgcoeff * prefac
-   endif
 
  end function
 

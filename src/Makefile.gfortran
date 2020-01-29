@@ -1,8 +1,11 @@
 .PHONY: all clean
 
 FF=gfortran
-FOPTS=-O3 -g -fopenmp -funroll-loops
-LD=-lblas -llapack
+FOPTS=-O3 -g -fopenmp -funroll-loops -ffast-math -m64 -fPIC
+SHTOOLS_LIB=-L/home/dwilkins/source/SHTOOLS/lib
+SHTOOLS_INCLUDE=-I/home/dwilkins/source/SHTOOLS/modules
+LD=$(SHTOOLS_LIB) -lSHTOOLS -lfftw3 -lm -lblas -llapack
+INCLUDE=$(SHTOOLS_INCLUDE)
 SAGPR_PREFIX=
 
 OBJECTS1=mod_sagpr.o sagpr_get_PS.o
@@ -18,23 +21,23 @@ mkbin:
 	@cd ../bin;if [ ! -f sagpr_convert_model ];then ln -s ../tools/sagpr_convert_model.py sagpr_convert_model;fi;cd -
 
 sagpr_get_PS: $(OBJECTS1)
-	$(FF) $(FOPTS) -o ../bin/sagpr_get_PS $(OBJECTS1) $(LD)
+	$(FF) $(FOPTS) -o ../bin/sagpr_get_PS $(OBJECTS1) $(INCLUDE) $(LD)
 
 sagpr_get_kernel: $(OBJECTS2)
-	$(FF) $(FOPTS) -o ../bin/sagpr_get_kernel $(OBJECTS2) $(LD)
+	$(FF) $(FOPTS) -o ../bin/sagpr_get_kernel $(OBJECTS2) $(INCLUDE) $(LD)
 
 sagpr_predict: $(OBJECTS3)
-	$(FF) $(FOPTS) -o ../bin/sagpr_predict $(OBJECTS3) $(LD)
+	$(FF) $(FOPTS) -o ../bin/sagpr_predict $(OBJECTS3) $(INCLUDE) $(LD)
 
 libsoapfast:
 	@if [ ! -d ../lib ];then mkdir ../lib;fi
 	ar r ../lib/libsoapfast.a $(OBJECTS4)
 
 sagpr_apply: $(OBJECTS5)
-	$(FF) $(FOPTS) -o ../bin/sagpr_apply $(OBJECTS5) -L../lib -lsoapfast $(LD)
+	$(FF) $(FOPTS) -o ../bin/sagpr_apply $(OBJECTS5) -L../lib -lsoapfast $(INCLUDE) $(LD)
 
 %.o: %.f90 
-	$(FF) $(FOPTS) -c $< 
+	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< 
 
 install: all mkinstall
 
@@ -49,6 +52,8 @@ mkcheck:
 
 config:
 	@echo "NOT YET SET UP TO MAKE CONFIG!"
+	@echo "https://github.com/joeydumont/wignerSymbols.git"
+	@echo "https://github.com/SHTOOLS/SHTOOLS.git"
 
 clean: 
 	rm -rf *.o *.mod ../bin/* ../bin ../lib
