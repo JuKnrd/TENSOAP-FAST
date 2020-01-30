@@ -706,14 +706,14 @@ module sagpr
     enddo
    enddo
 
-  do j=1,natoms(1)
-   do k=1,degen
-    do l=1,ncut
-     write(*,*) 'PS',real(PS(1,j,k,l)),aimag(PS(1,j,k,l))
-    enddo
-   enddo
-  enddo
-  stop
+!  do j=1,natoms(1)
+!   do k=1,degen
+!    do l=1,ncut
+!     write(*,*) 'PS',real(PS(1,j,k,l)),aimag(PS(1,j,k,l))
+!    enddo
+!   enddo
+!  enddo
+!  stop
 
 
    do i=1,nframes
