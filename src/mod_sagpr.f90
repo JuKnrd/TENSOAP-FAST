@@ -385,7 +385,7 @@ module sagpr
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
   complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),omegaconj(:,:,:,:,:),ps_row(:,:,:)
-  complex*16, allocatable :: harmconj(:,:,:,:,:,:,:),CC(:,:),inner_mu(:,:)
+  complex*16, allocatable :: CC(:,:),inner_mu(:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:),w3j(:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
 
@@ -633,11 +633,6 @@ module sagpr
 
    else
      ! Spherical
-!     stop
-!     allocate(harmconj(natoms(i),nspecies,lmax+1,lmax+1,2*lmax+1,2*lm+1,nnmax))
-!     write(*,*) 'frame',i
-!     stop
-!     harmconj(:,:,:,:,:,:,:) = 0.d0
      if (ncut.gt.0) then
       do j=1,ncut
        ia = components(j,1)
@@ -648,31 +643,20 @@ module sagpr
        l2 = components(j,6)
        do k=0,2*lm
         do l=1,natoms(i)
-         do im=0,2*l1
-          if (abs(im-l1-k+lm).le.l2) then
-!           harmconj(l,:,l2+1,l1+1,im+1,k+1,:) = dconjg(harmonic(l,:,l2+1,l2+im-l1-k+lm+1,:))
-          endif
-         enddo
-!       stop
          PS(i,l,k+1,j) = 0.d0
          do im=0,2*lmax
           do n=1,nnmax
            if (abs(im-l1-k+lm).le.l2) PS(i,l,k+1,j) = PS(i,l,k+1,j) + &
      &          (omega(l,ia,nn,l1+1,im+1)*orthoradint(l,ib,l2+1,mm,n)* &
-!     &     harmconj(l,ib,l2+1,l1+1,im,k+1,n)*w3j(k+1,l1+1,l2+1,im))
-!     &          harmconj(l,ib,l2+1,l1+1,im+1,k+1,n)*w3j(k+1,l1+1,l2+1,im+1)
      &          conjg(harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n))*w3j(k+1,l1+1,l2+1,im+1))
           enddo
          enddo
         enddo
        enddo
       enddo
-!      write(*,*) 'HERE'
-!			stop
      else
       stop 'ERROR: no sparsification information given; this is not recommended!'
      endif
-!     deallocate(harmconj)
    endif
 
    ! Deallocate
