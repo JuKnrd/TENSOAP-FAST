@@ -633,7 +633,7 @@ module sagpr
 
    else
      ! Spherical
-     harmonic = conjg(harmonic)
+
      if (ncut.gt.0) then
       !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n)
       do j=1,ncut
@@ -647,11 +647,13 @@ module sagpr
         do l=1,natoms(i)
          PS(i,l,k+1,j) = 0.d0
          do im=0,2*lmax
-          do n=1,nnmax
-           if (abs(im-l1-k+lm).le.l2) PS(i,l,k+1,j) = PS(i,l,k+1,j) + &
+          if (abs(im-l1-k+lm).le.l2) then
+           do n=1,nnmax
+            PS(i,l,k+1,j) = PS(i,l,k+1,j) + &
      &          (omega(l,ia,nn,l1+1,im+1)*orthoradint(l,ib,l2+1,mm,n)* &
-     &          harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n)*w3j(k+1,l1+1,l2+1,im+1))
-          enddo
+     &          conjg(harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n))*w3j(k+1,l1+1,l2+1,im+1))
+           enddo
+          endif
          enddo
         enddo
        enddo
