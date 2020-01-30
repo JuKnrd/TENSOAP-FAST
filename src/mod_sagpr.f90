@@ -10,6 +10,7 @@ module sagpr
  complex*16, allocatable :: PS(:,:,:,:)
  integer, allocatable :: components(:,:)
  real*8 start,finish
+ real*8, allocatable :: w3j(:,:,:,:)
 
  contains
 
@@ -30,12 +31,6 @@ module sagpr
        kte((i-1)*degen + mu,(j-1)*degen + nu) = kernel(i,j,mu,nu)
       enddo
      enddo
-    enddo
-   enddo
-
-   do i=1,nmol*degen
-    do j=1,nenv*degen
-     write(*,*) kte(i,j)
     enddo
    enddo
 
@@ -430,7 +425,7 @@ module sagpr
   integer info,lwork,work(lwmax)
   complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),omegaconj(:,:,:,:,:),ps_row(:,:,:)
   complex*16, allocatable :: CC(:,:),inner_mu(:,:)
-  real*8, allocatable :: orthoradint(:,:,:,:,:),w3j(:,:,:,:),tmp_3j(:)
+  real*8, allocatable :: orthoradint(:,:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
 
   ! Get maximum number of neighbours
@@ -786,7 +781,7 @@ module sagpr
 
   deallocate(all_indices,nneighmax,ncen)
   if (allocated(lvalues)) deallocate(lvalues)
-  if (allocated(components)) deallocate(components)
+  if (allocated(tmp_3j)) deallocate(tmp_3j)
 
  end subroutine
 

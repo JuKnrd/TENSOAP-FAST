@@ -99,9 +99,12 @@ program sagpr_apply
     close(33)
 
     ! Array deallocation
-    deallocate(xyz,atname,natoms,comment,sparsification,cell,PS,PS_tr_lam,natoms_tr,wt,arg)
+    deallocate(xyz,atname,natoms,comment,sparsification,cell,PS_tr_lam,natoms_tr,wt,arg,keys1,prediction_lm,PS)
     if (allocated(PS_tr_0)) deallocate(PS_tr_0)
     if (allocated(ker)) deallocate(ker)
     if (allocated(ker_lm)) deallocate(ker_lm)
+    if (allocated(sparsification0)) deallocate(sparsification0,PS_tr_0)
+    if (allocated(components)) deallocate(components)
+    if (allocated(w3j)) deallocate(w3j)
 
 end program
