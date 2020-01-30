@@ -374,7 +374,7 @@ module sagpr
   implicit none
 
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l,mu
-  integer llmax,ps_shape(4),m,n,nn,jmin,jmax,im
+  integer llmax,ps_shape(4),m,n,nn,jmin,jmax,im,ia,ib,mm
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
   complex*16 sparsification(2,ncut,ncut)
   real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax),inner
@@ -637,23 +637,32 @@ module sagpr
      harmconj(:,:,:,:,:,:,:) = 0.d0
      if (ncut.gt.0) then
       do j=1,ncut
+       ia = components(j,1)
+       ib = components(j,2)
+       nn = components(j,3)
+       mm = components(j,4)
+       l1 = components(j,5)
+       l2 = components(j,6)
        do k=0,2*lm
         do l=1,natoms(i)
-         l1 = components(j,5)
-         l2 = components(j,6)
          do im=0,2*l1
           if (abs(im-l1-k+lm).le.l2) then
            harmconj(:,:,l2+1,l1+1,im+1,k+1,:) = dconjg(harmonic(:,:,l2+1,l2+im-l1-k+lm+1,:))
           endif
          enddo
         enddo
+        PS(i,l,k,j) = 0.d0
+        do im=1,2*lmax+1
+         do n=1,nnmax
+          PS(i,l,k,j) = PS(i,l,k,j) + (omega(i,ia,nn,l1+1,im)*orthoradint(i,ib,l2+1,mm,n)* &
+     &     harmconj(i,ib,l2+1,l1+1,im,k+1,n)*w3j(k+1,l1+1,l2+1,im))
+         enddo
+        enddo
        enddo
       enddo
-
      else
       stop 'ERROR: no sparsification information given; this is not recommended!'
      endif
-     stop 'NOT YET IMPLEMENTED!'
      deallocate(harmconj)
    endif
 
@@ -666,10 +675,20 @@ module sagpr
   if (mult_by_A) then
    do i=1,nframes
     do j=1,natmax
-     PS(i,j,1,:) = matmul(PS(i,j,1,:),sparsification(2,:,:))
+     do k=1,degen
+      PS(i,j,k,:) = matmul(PS(i,j,k,:),sparsification(2,:,:))
+     enddo
     enddo
    enddo
   endif
+
+  do j=1,natoms(1)
+   do k=1,degen
+    do l=1,ncut
+     write(*,*) 'PS',real(PS(1,j,k,l)),aimag(PS(1,j,k,l))
+    enddo
+   enddo
+  enddo
 
   ! Make power spectrum real and normalize it
   if (lm.eq.0) then
