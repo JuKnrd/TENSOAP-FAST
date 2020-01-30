@@ -647,15 +647,15 @@ module sagpr
         do l=1,natoms(i)
          do im=0,2*l1
           if (abs(im-l1-k+lm).le.l2) then
-           harmconj(:,:,l2+1,l1+1,im+1,k+1,:) = dconjg(harmonic(:,:,l2+1,l2+im-l1-k+lm+1,:))
+           harmconj(l,:,l2+1,l1+1,im+1,k+1,:) = dconjg(harmonic(l,:,l2+1,l2+im-l1-k+lm+1,:))
           endif
          enddo
-        enddo
-        PS(i,l,k,j) = 0.d0
-        do im=1,2*lmax+1
-         do n=1,nnmax
-          PS(i,l,k,j) = PS(i,l,k,j) + (omega(i,ia,nn,l1+1,im)*orthoradint(i,ib,l2+1,mm,n)* &
-     &     harmconj(i,ib,l2+1,l1+1,im,k+1,n)*w3j(k+1,l1+1,l2+1,im))
+         PS(i,l,k+1,j) = 0.d0
+         do im=1,2*lmax+1
+          do n=1,nnmax
+           PS(i,l,k+1,j) = PS(i,l,k+1,j) + (omega(l,ia,nn,l1+1,im)*orthoradint(l,ib,l2+1,mm,n)* &
+     &     harmconj(l,ib,l2+1,l1+1,im,k+1,n)*w3j(k+1,l1+1,l2+1,im))
+          enddo
          enddo
         enddo
        enddo
@@ -705,39 +705,20 @@ module sagpr
      enddo
     enddo
    enddo
-
-!  do j=1,natoms(1)
-!   do k=1,degen
-!    do l=1,ncut
-!     write(*,*) 'PS',real(PS(1,j,k,l)),aimag(PS(1,j,k,l))
-!    enddo
-!   enddo
-!  enddo
-!  stop
-
-
    do i=1,nframes
     do j=1,natoms(i)
      inner = 0.d0
      do mu=1,degen
       do nu=1,degen
        inner_mu(mu,nu) = dot_product(PS(i,j,mu,:),PS(i,j,nu,:))
-       inner = inner + abs(inner_mu(mu,nu))**2
+       inner = inner + abs(inner_mu(mu,nu))
       enddo
      enddo
-     PS(i,j,:,:) = PS(i,j,:,:) / dsqrt(inner)
+     PS(i,j,:,:) = PS(i,j,:,:) / dsqrt(norm2(real(inner_mu)))
     enddo
    enddo
    deallocate(CC,inner_mu)
   endif
-
-  do j=1,natoms(1)
-   do k=1,degen
-    do l=1,ncut
-     write(*,*) 'PS',real(PS(1,j,k,l)),aimag(PS(1,j,k,l))
-    enddo
-   enddo
-  enddo
 
   ! Reorder the power spectrum so that the ordering of atoms matches their positions in the frame
   allocate(ps_row(natmax,degen,featsize),index_list(natmax))
