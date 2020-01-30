@@ -374,7 +374,7 @@ module sagpr
   implicit none
 
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l,mu
-  integer llmax,ps_shape(4),m,n,nn,jmin,jmax
+  integer llmax,ps_shape(4),m,n,nn,jmin,jmax,im
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
   complex*16 sparsification(2,ncut,ncut)
   real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax),inner
@@ -558,7 +558,6 @@ module sagpr
      enddo
     enddo
    else
-    write(*,*) 'COMPONENT LIST NEEDS TO BE TESTED FOR LM>0'
     allocate(components(ncut,6))
     n = 0
     do i=1,nspecies
@@ -621,8 +620,8 @@ module sagpr
     enddo
     omegaconj(:,:,:,:,:) = dconjg(omegatrue)
     if (ncut.gt.0) then
-     do k=1,natoms(i)
-      do j=1,ncut
+     do j=1,ncut
+      do k=1,natoms(i)
        PS(i,k,1,j) = dot_product(omegatrue(k,components(j,1),components(j,3),components(j,5),:), &
      &     omegatrue(k,components(j,2),components(j,4),components(j,5),:))
       enddo
@@ -634,7 +633,26 @@ module sagpr
 
    else
      ! Spherical
-     allocate(harmconj(natoms(i),nspecies,lmax+1,lmax+1,2*lmax+1,2*lmax+1,nnmax))
+     allocate(harmconj(natoms(i),nspecies,lmax+1,lmax+1,2*lmax+1,2*lm+1,nnmax))
+     harmconj(:,:,:,:,:,:,:) = 0.d0
+     if (ncut.gt.0) then
+      do j=1,ncut
+       do k=0,2*lm
+        do l=1,natoms(i)
+         l1 = components(j,5)
+         l2 = components(j,6)
+         do im=0,2*l1
+          if (abs(im-l1-k+lm).le.l2) then
+           harmconj(:,:,l2+1,l1+1,im+1,k+1,:) = dconjg(harmonic(:,:,l2+1,l2+im-l1-k+lm+1,:))
+          endif
+         enddo
+        enddo
+       enddo
+      enddo
+
+     else
+      stop 'ERROR: no sparsification information given; this is not recommended!'
+     endif
      stop 'NOT YET IMPLEMENTED!'
      deallocate(harmconj)
    endif
