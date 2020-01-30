@@ -373,7 +373,7 @@ module sagpr
   use SHTOOLS, only: wigner3j
   implicit none
 
-  integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l,mu
+  integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l,mu,nu
   integer llmax,ps_shape(4),m,n,nn,jmin,jmax,im,ia,ib,mm
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
   complex*16 sparsification(2,ncut,ncut)
@@ -385,7 +385,7 @@ module sagpr
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
   complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),omegaconj(:,:,:,:,:),ps_row(:,:,:)
-  complex*16, allocatable :: harmconj(:,:,:,:,:,:,:)
+  complex*16, allocatable :: harmconj(:,:,:,:,:,:,:),CC(:,:),inner_mu(:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:),w3j(:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
 
@@ -682,14 +682,6 @@ module sagpr
    enddo
   endif
 
-  do j=1,natoms(1)
-   do k=1,degen
-    do l=1,ncut
-     write(*,*) 'PS',real(PS(1,j,k,l)),aimag(PS(1,j,k,l))
-    enddo
-   enddo
-  enddo
-
   ! Make power spectrum real and normalize it
   if (lm.eq.0) then
    ! Scalar
@@ -702,8 +694,50 @@ module sagpr
    enddo
   else
    ! Spherical
-   stop 'NOT YET IMPLEMENTED!'
+   ! Get complex to real transformation
+   allocate(CC(degen,degen),inner_mu(degen,degen))
+   CC = complex_to_real_matrix(degen)
+   ! Apply transformation
+   do i=1,nframes
+    do j=1,natoms(i)
+     do k=1,ncut
+      PS(i,j,:,k) = real(matmul(CC,PS(i,j,:,k)))
+     enddo
+    enddo
+   enddo
+
+  do j=1,natoms(1)
+   do k=1,degen
+    do l=1,ncut
+     write(*,*) 'PS',real(PS(1,j,k,l)),aimag(PS(1,j,k,l))
+    enddo
+   enddo
+  enddo
+  stop
+
+
+   do i=1,nframes
+    do j=1,natoms(i)
+     inner = 0.d0
+     do mu=1,degen
+      do nu=1,degen
+       inner_mu(mu,nu) = dot_product(PS(i,j,mu,:),PS(i,j,nu,:))
+       inner = inner + abs(inner_mu(mu,nu))**2
+      enddo
+     enddo
+     PS(i,j,:,:) = PS(i,j,:,:) / dsqrt(inner)
+    enddo
+   enddo
+   deallocate(CC,inner_mu)
   endif
+
+  do j=1,natoms(1)
+   do k=1,degen
+    do l=1,ncut
+     write(*,*) 'PS',real(PS(1,j,k,l)),aimag(PS(1,j,k,l))
+    enddo
+   enddo
+  enddo
 
   ! Reorder the power spectrum so that the ordering of atoms matches their positions in the frame
   allocate(ps_row(natmax,degen,featsize),index_list(natmax))
@@ -975,6 +1009,30 @@ module sagpr
    else
     radial_scaling = c / (c + (r/r0)**m)
    endif
+
+ end function
+
+!***************************************************************************************************
+
+ function complex_to_real_matrix(degen)
+  implicit none
+
+   integer degen,lval,j
+   complex*16 complex_to_real_matrix(degen,degen),st
+
+    complex_to_real_matrix(:,:) = 0.d0
+    lval = (degen-1)/2
+    st = (-1.d0)**(lval+1)
+    do j=0,lval-1
+     complex_to_real_matrix(j+1,j+1) = (0.d0,1.d0)
+     complex_to_real_matrix(j+1,degen-j) = st*(0.d0,1.d0)
+     complex_to_real_matrix(degen-j,j+1) = 1.d0
+     complex_to_real_matrix(degen-j,degen-j) = st*(-1.d0)
+     st = st * (-1.d0)
+    enddo
+    complex_to_real_matrix(lval+1,lval+1) = dsqrt(2.d0)
+    complex_to_real_matrix(:,:) = complex_to_real_matrix(:,:) / dsqrt(2.d0)
+    complex_to_real_matrix(:,:) = dconjg(complex_to_real_matrix(:,:))
 
  end function
 
