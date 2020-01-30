@@ -634,6 +634,7 @@ module sagpr
    else
      ! Spherical
      if (ncut.gt.0) then
+      !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n)
       do j=1,ncut
        ia = components(j,1)
        ib = components(j,2)
@@ -654,6 +655,7 @@ module sagpr
         enddo
        enddo
       enddo
+      !$OMP END PARALLEL DO
      else
       stop 'ERROR: no sparsification information given; this is not recommended!'
      endif
