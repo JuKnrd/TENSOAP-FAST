@@ -25,21 +25,44 @@ cd install
 echo "program test" > test.f90
 echo "end program" >> test.f90
 echo "Checking for BLAS..."
-nerr=$(gfortran -lblas test.f90 | wc -l)
+nerr=$(gfortran -lblas test.f90 2>&1 | wc -l)
 if [ ${nerr} -eq 0 ];then
 	echo "...BLAS found"
+	OWN_BLAS=0
 else
 	echo "...BLAS not found"
-	echo "Compiling BLAS..."
+	if [ -f BLAS-*/libblas.a ] ;then
+		echo "BLAS found in install directory"
+		OWN_BLAS=1
+	else
+		echo "Compiling BLAS..."
+		wget http://www.netlib.org/blas/blas.tgz
+		tar xvfz blas.tgz;rm blas.tgz;cd BLAS-3.8.0
+		make
+		cd ../
+		mv BLAS-3.8.0/blas_LINUX.a BLAS-3.8.0/libblas.a
+		OWN_BLAS=1
+	fi
 fi
 echo
 echo "Checking for LAPACK..."
-nerr=$(gfortran -llapack test.f90 | wc -l)
+nerr=$(gfortran -llapack test.f90 2>&1 | wc -l)
 if [ ${nerr} -eq 0 ];then
         echo "...LAPACK found"
+	OWN_LAPACK=0
 else
         echo "...LAPACK not found"
-        echo "Compiling LAPACK..."
+	if [ -f lapack-*/liblapack.a ];then
+		echo "LAPACK found in install directory"
+		OWN_LAPACK=1
+	else
+	        echo "Compiling LAPACK..."
+		wget http://www.netlib.org/lapack/lapack.tgz
+		tar xvfz lapack.tgz;rm lapack.tgz;cd lapack-*
+		cat make.inc.example | sed 's:O2:O3:g' | sed 's:frecursive:frecursive -fPIC:g' > make.inc;make lib
+		cd ../
+		OWN_LAPACK=1
+	fi
 fi
 echo
 rm test.f90
@@ -47,3 +70,27 @@ if [ -f a.out ];then rm a.out;fi
 cd ../
 echo "Editing Makefile..."
 echo "NOW SEARCH FOR LAPACK AND BLAS, AND THEN DO ALL OF THE LINKING"
+#echo ${OWN_BLAS} ${OWN_LAPACK}
+
+if [ "${SAGPR_PREFIX}" != "" ];then
+	export USE_PREFIX=${SAGPR_PREFIX}
+fi
+
+if [ ${OWN_BLAS} -eq 1 ];then
+	cd install/BLAS*
+	export BLAS_LIB=-L$(pwd)
+	cd ../../
+fi
+
+if [ ${OWN_LAPACK} -eq 1 ];then
+	cd install/lapack*
+	export LAPACK_LIB=-L$(pwd)
+	cd ../../
+fi
+
+echo ${BLAS_LIB}
+echo ${LAPACK_LIB}
+
+export SHTOOLS_LIB=-L$(pwd)/install/SHTOOLS/lib
+export SHTOOLS_INC=-I$(pwd)/install/SHTOOLS/modules
+cat src/Makefile.template | awk '/SHTOOLS_LIB=/{printf "SHTOOLS_LIB=%s\n",ENVIRON["SHTOOLS_LIB"]}/SHTOOLS_INCLUDE=/{printf "SHTOOLS_INCLUDE=%s\n",ENVIRON["SHTOOLS_INC"]}/SAGPR_PREFIX=/{printf "SAGPR_PREFIX=%s\n",ENVIRON["USE_PREFIX"]}/BLAS_LIB=/{printf "BLAS_LIB=%s\n",ENVIRON["BLAS_LIB"]}/LAPACK_LIB=/{printf "LAPACK_LIB=%s\n",ENVIRON["LAPACK_LIB"]}!/SHTOOLS_LIB=|SHTOOLS_INCLUDE=|SAGPR_PREFIX=|BLAS_LIB=|LAPACK_LIB=/{print}'
