@@ -30,19 +30,19 @@ if (not do_scalar):
     am = np.load(args.sparse + '_Amat.npy')
     weights = np.load(args.weights)
     wt = weights[4]
-    if (len(weights)>4):
+    if (len(weights)>5):
         mv = np.load(args.weights)[5]
     else:
         mv = 0.0
     # Make model array
-    ln = 3 + np.size(pp) + 1 + np.size(fp) + 2*np.size(am) + 1 + np.size(wt)
-    model = np.zeros(ln,float)
     nmol = np.shape(pp)[0]
     ncut = np.shape(pp)[-1]
     if (len(np.shape(pp))==3):
         degen = 1
     else:
         degen = np.shape(pp)[-2]
+    ln = 3 + np.size(pp) + 1 + np.size(fp) + 2*np.size(am) + 1 + np.size(wt)
+    model = np.zeros(ln,float)
     p1 = np.zeros((nmol,1,degen,ncut),float)
     if (degen==1):
         for j in xrange(nmol):
@@ -75,7 +75,7 @@ if (not do_scalar):
             model[i] = np.imag(am[j,k])
     i+=1
     model[i] = mv
-    for j in xrange(nmol):
+    for j in xrange(nmol*degen):
         i+=1
         model[i] = wt[j]
 
@@ -96,7 +96,7 @@ if (not do_scalar):
     model.tofile(mfl)
     fl = open(hfl,'w')
     if (args.hyperparam):
-        print >> fl, args.hyperparam
+        print >> fl, args.hyperparam[0]
     else:
         print >> fl, ''
     fl.close()

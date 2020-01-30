@@ -85,7 +85,11 @@ program sagpr_apply
 
     ! Get predictions
     allocate(prediction_lm(nmol,degen))
-    prediction_lm = do_prediction(ker,wt,meanval,degen,nframes,nmol)
+    if (lm.eq.0) then
+     prediction_lm = do_prediction(ker,wt,meanval,degen,nframes,nmol)
+    else
+     prediction_lm = do_prediction(ker_lm,wt,meanval,degen,nframes,nmol)
+    endif
 
     ! Print predictions
     open(unit=33,file=ofile)

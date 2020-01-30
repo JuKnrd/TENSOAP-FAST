@@ -206,8 +206,8 @@ subroutine get_model(model)
    ! Get weights
    i = i + 1
    meanval = raw_model(i)
-   allocate(wt(nmol))
-   do j=1,nmol
+   allocate(wt(nmol*degen))
+   do j=1,nmol*degen
     i = i + 1
     wt(j) = raw_model(i)
    enddo

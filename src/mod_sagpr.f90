@@ -27,11 +27,18 @@ module sagpr
     do j=1,nenv
      do mu=1,degen
       do nu=1,degen
-       kte((i-1)*degen + nu,(j-1)*degen + mu) = kernel(i,j,mu,nu)
+       kte((i-1)*degen + mu,(j-1)*degen + nu) = kernel(i,j,mu,nu)
       enddo
      enddo
     enddo
    enddo
+
+   do i=1,nmol*degen
+    do j=1,nenv*degen
+     write(*,*) kte(i,j)
+    enddo
+   enddo
+
    !$OMP PARALLEL
    !$OMP WORKSHARE
    prediction_lm = matmul(kte,weights) + meanval
@@ -42,6 +49,43 @@ module sagpr
     do mu=1,degen
      k = k + 1
      do_prediction(i,mu) = prediction_lm(k)
+    enddo
+   enddo
+
+ end function
+
+!***************************************************************************************************
+! THE FOLLOWING FUNCTION EXISTS FOR CALLING sagpr_predict
+!***************************************************************************************************
+
+ function do_prediction_rev(kernel,weights,meanval,degen,nmol,nenv)
+  implicit none
+
+   integer degen,nmol,nenv,i,j,k,mu,nu
+   real*8 kernel(nmol,nenv,degen,degen),weights(nenv*degen),meanval,do_prediction_rev(nmol,degen)
+   real*8 kte(nmol*degen,nenv*degen),prediction_lm(nmol*degen)
+
+   kte(:,:) = 0.d0
+   do i=1,nmol
+    do j=1,nenv
+     do mu=1,degen
+      do nu=1,degen
+       kte((i-1)*degen + nu,(j-1)*degen + mu) = kernel(i,j,mu,nu)
+      enddo
+     enddo
+    enddo
+   enddo
+
+   !$OMP PARALLEL
+   !$OMP WORKSHARE
+   prediction_lm = matmul(kte,weights) + meanval
+   !$OMP END WORKSHARE
+   !$OMP END PARALLEL
+   k = 0
+   do i=1,nmol
+    do mu=1,degen
+     k = k + 1
+     do_prediction_rev(i,mu) = prediction_lm(k)
     enddo
    enddo
 
@@ -620,12 +664,14 @@ module sagpr
     enddo
     omegaconj(:,:,:,:,:) = dconjg(omegatrue)
     if (ncut.gt.0) then
+     !$OMP PARALLEL DO SHARED(components,PS,omegatrue,ncut,natoms,i) PRIVATE(j,k)
      do j=1,ncut
       do k=1,natoms(i)
        PS(i,k,1,j) = dot_product(omegatrue(k,components(j,1),components(j,3),components(j,5),:), &
      &     omegatrue(k,components(j,2),components(j,4),components(j,5),:))
       enddo
      enddo
+     !$OMP END PARALLEL DO
     else
      stop 'ERROR: no sparsification information given; this is not recommended!'
     endif
@@ -643,15 +689,14 @@ module sagpr
        mm = components(j,4)
        l1 = components(j,5)
        l2 = components(j,6)
-       do k=0,2*lm
+       do k=1,2*lm+1
         do l=1,natoms(i)
-         PS(i,l,k+1,j) = 0.d0
-         do im=0,2*lmax
+         do im=1,2*lmax+1
           if (abs(im-l1-k+lm).le.l2) then
            do n=1,nnmax
-            PS(i,l,k+1,j) = PS(i,l,k+1,j) + &
-     &          (omega(l,ia,nn,l1+1,im+1)*orthoradint(l,ib,l2+1,mm,n)* &
-     &          conjg(harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n))*w3j(k+1,l1+1,l2+1,im+1))
+            PS(i,l,k,j) = PS(i,l,k,j) + &
+     &          (omega(l,ia,nn,l1+1,im)*orthoradint(l,ib,l2+1,mm,n)* &
+     &          conjg(harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n))*w3j(k,l1+1,l2+1,im))
            enddo
           endif
          enddo
