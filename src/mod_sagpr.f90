@@ -441,9 +441,9 @@ module sagpr
   do i=1,nframes
    do j=1,nelements
     if (all_centres(j)) then
-     do k=1,natmax
-      !if (atn
-     enddo
+!     do k=1,natmax
+!      !if (atn
+!     enddo
      ncen(i) = ncen(i) + count(atname(i,:).eq.atomic_names(j))
     endif
    enddo
@@ -633,8 +633,11 @@ module sagpr
 
    else
      ! Spherical
-     allocate(harmconj(natoms(i),nspecies,lmax+1,lmax+1,2*lmax+1,2*lm+1,nnmax))
-     harmconj(:,:,:,:,:,:,:) = 0.d0
+!     stop
+!     allocate(harmconj(natoms(i),nspecies,lmax+1,lmax+1,2*lmax+1,2*lm+1,nnmax))
+!     write(*,*) 'frame',i
+!     stop
+!     harmconj(:,:,:,:,:,:,:) = 0.d0
      if (ncut.gt.0) then
       do j=1,ncut
        ia = components(j,1)
@@ -647,23 +650,29 @@ module sagpr
         do l=1,natoms(i)
          do im=0,2*l1
           if (abs(im-l1-k+lm).le.l2) then
-           harmconj(l,:,l2+1,l1+1,im+1,k+1,:) = dconjg(harmonic(l,:,l2+1,l2+im-l1-k+lm+1,:))
+!           harmconj(l,:,l2+1,l1+1,im+1,k+1,:) = dconjg(harmonic(l,:,l2+1,l2+im-l1-k+lm+1,:))
           endif
          enddo
+!       stop
          PS(i,l,k+1,j) = 0.d0
-         do im=1,2*lmax+1
+         do im=0,2*lmax
           do n=1,nnmax
-           PS(i,l,k+1,j) = PS(i,l,k+1,j) + (omega(l,ia,nn,l1+1,im)*orthoradint(l,ib,l2+1,mm,n)* &
-     &     harmconj(l,ib,l2+1,l1+1,im,k+1,n)*w3j(k+1,l1+1,l2+1,im))
+           if (abs(im-l1-k+lm).le.l2) PS(i,l,k+1,j) = PS(i,l,k+1,j) + &
+     &          (omega(l,ia,nn,l1+1,im+1)*orthoradint(l,ib,l2+1,mm,n)* &
+!     &     harmconj(l,ib,l2+1,l1+1,im,k+1,n)*w3j(k+1,l1+1,l2+1,im))
+!     &          harmconj(l,ib,l2+1,l1+1,im+1,k+1,n)*w3j(k+1,l1+1,l2+1,im+1)
+     &          conjg(harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n))*w3j(k+1,l1+1,l2+1,im+1))
           enddo
          enddo
         enddo
        enddo
       enddo
+!      write(*,*) 'HERE'
+!			stop
      else
       stop 'ERROR: no sparsification information given; this is not recommended!'
      endif
-     deallocate(harmconj)
+!     deallocate(harmconj)
    endif
 
    ! Deallocate
@@ -940,7 +949,7 @@ module sagpr
     radint(:,:,:,:,n1) = radint(:,:,:,:,n1) * normfact
    enddo
    !$OMP END PARALLEL DO
-   
+
    ! Get orthoradint
    !$OMP PARALLEL DO SHARED(orthoradint,radint,orthomatrix) PRIVATE(iat,k,neigh)
    do l=1,lmax+1
