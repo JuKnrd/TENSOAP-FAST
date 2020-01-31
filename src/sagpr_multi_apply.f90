@@ -4,10 +4,10 @@ program sagpr_apply
     implicit none
 
     character(len=100), allocatable :: arg(:),keys1(:)
-    integer i,j,ios,nat
+    integer i,j,ios
     character(len=100) ofile,fname,model
-    character(len=1000) line
-    logical keep_reading,first_frame
+!    character(len=1000) line
+!    logical keep_reading,first_frame
 
 !************************************************************************************
 ! GET COMMAND-LINE ARGUMENTS
@@ -59,23 +59,33 @@ program sagpr_apply
     call execute_command_line('mkfifo my_fifo')
 
     open(newunit=ios,file="my_fifo",access="stream",form="formatted")
-    keep_reading = .true.
-    first_frame = .true.
-    do while (keep_reading)
-     read(ios,'(A)') line
-     if (first_frame) then
-      read(line,*) nat
-      first_frame = .false.
-      write(*,*) 'reading',nat,'atoms'
-     endif
-     read(ios,'(A)') line
-     do i=1,nat
-      read(ios,*) line
-     enddo
-     first_frame=.true.
-     if (trim(adjustl(fname)).eq.'END') keep_reading=.false.
-    enddo
-    call execute_command_line('rm my_fifo')
+
+    call read_fifo(ios,periodic)
+
+!    read(ios,'(A)') line
+!    read(line,*) nat
+!    write(*,*) 'Reading',nat,'atoms'
+!    read(ios,'(A)') line
+!    do i=1,nat
+!     read(ios,*) line
+!    enddo
+
+!    keep_reading = .true.
+!    first_frame = .true.
+!    do while (keep_reading)
+!     read(ios,'(A)') line
+!     if (first_frame) then
+!      read(line,*) nat
+!      first_frame = .false.
+!      write(*,*) 'reading',nat,'atoms'
+!     endif
+!     read(ios,'(A)') line
+!     do i=1,nat
+!      read(ios,*) line
+!     enddo
+!     first_frame=.true.
+!     if (trim(adjustl(fname)).eq.'END') keep_reading=.false.
+!    enddo
 
     ios = 1
     do while (ios.ne.0)
@@ -139,6 +149,7 @@ program sagpr_apply
      endif
     enddo
     call system('rm exit')
+    call execute_command_line('rm my_fifo')
 
     ! Array deallocation
     deallocate(xyz,atname,natoms,comment,sparsification,cell,PS_tr_lam,natoms_tr,wt,arg,keys1,prediction_lm,PS)
