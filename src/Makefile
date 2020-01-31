@@ -55,3 +55,6 @@ config:
 
 clean: 
 	rm -rf *.o *.mod ../bin/* ../bin ../lib
+
+distclean:
+	rm -rf *.o *.mod ../bin ../lib ../install
