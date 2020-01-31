@@ -13,8 +13,9 @@ OBJECTS2=mod_sagpr.o sagpr_get_kernel.o
 OBJECTS3=mod_sagpr.o sagpr_predict.o
 OBJECTS4=mod_sagpr.o
 OBJECTS5=mod_apply.o sagpr_apply.o
+OBJECTS6=mod_apply.o sagpr_multi_apply.o
 
-all: mkbin sagpr_get_PS sagpr_get_kernel sagpr_predict libsoapfast sagpr_apply
+all: mkbin sagpr_get_PS sagpr_get_kernel sagpr_predict libsoapfast sagpr_apply sagpr_multi_apply
 
 mkbin:
 	@if [ ! -d ../bin ];then mkdir ../bin;fi
@@ -35,6 +36,9 @@ libsoapfast:
 
 sagpr_apply: $(OBJECTS5)
 	$(FF) $(FOPTS) -o ../bin/sagpr_apply $(OBJECTS5) -L../lib -lsoapfast $(INCLUDE) $(LD)
+
+sagpr_multi_apply: $(OBJECTS6)
+	$(FF) $(FOPTS) -o ../bin/sagpr_multi_apply $(OBJECTS6) -L../lib -lsoapfast $(INCLUDE) $(LD)
 
 %.o: %.f90 
 	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< 

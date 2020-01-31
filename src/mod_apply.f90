@@ -247,6 +247,7 @@ subroutine read_xyz(fname,periodic)
     enddo
     close(31)
 
+    if (allocated(xyz)) deallocate(xyz,atname,natoms,comment)
     allocate(xyz(nframes,natmax,3),atname(nframes,natmax),natoms(nframes),comment(nframes))
     xyz(:,:,:) = 0.d0
     atname(:,:) = ''
@@ -266,8 +267,10 @@ subroutine read_xyz(fname,periodic)
       stop 'ERROR: there should be an atom number here!'
      endif
     enddo
+    close(31)
 
     ! Get cell data
+    if (allocated(cell)) deallocate(cell)
     allocate(cell(nframes,3,3))
     if (.not.periodic) then
      cell(:,:,:) = 0.d0
