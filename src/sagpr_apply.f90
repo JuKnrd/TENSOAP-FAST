@@ -65,7 +65,10 @@ program sagpr_apply
      call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
      &     ncut,sparsification,rs,periodic,.true.)
     else
-     stop 'NOT YET SET UP FOR DOING ZETA>1'
+     call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
+     &     ncut,sparsification,rs,periodic,.true.)
+     call do_power_spectrum_scalar(xyz,atname,natoms,cell,nframes,natmax,0,nmax,lmax,rcut,sg,all_centres,all_species, &
+     &     ncut0,sparsification0,rs,periodic,.true.)
     endif
 
     ! Get kernel
@@ -80,7 +83,9 @@ program sagpr_apply
      &     natmax,1,dfloat(natoms),natoms_tr,zeta,.false.,degen)
      endif
     else
-     stop 'NOT YET SET UP FOR DOING ZETA>1'
+     if (lm.eq.0) stop 'ERROR: you have asked for a spherical power spectrum but provided lambda=0!'
+     ker_lm = do_nonlinear_spherical_kernel(real(PS),PS_tr_lam,real(PS0),PS_tr_0,nframes,nmol,nfeat,nfeat, &
+     &     nfeat0,nfeat0,natmax,1,dfloat(natoms),natoms_tr,zeta,.false.,degen)
     endif
 
     ! Get predictions
@@ -100,7 +105,7 @@ program sagpr_apply
 
     ! Array deallocation
     deallocate(xyz,atname,natoms,comment,sparsification,cell,PS_tr_lam,natoms_tr,wt,arg,keys1,prediction_lm,PS)
-    if (allocated(PS_tr_0)) deallocate(PS_tr_0)
+    if (allocated(PS0)) deallocate(PS0)
     if (allocated(ker)) deallocate(ker)
     if (allocated(ker_lm)) deallocate(ker_lm)
     if (allocated(sparsification0)) deallocate(sparsification0,PS_tr_0)

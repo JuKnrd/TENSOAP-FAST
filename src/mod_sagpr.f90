@@ -7,8 +7,8 @@ module sagpr
      &     'La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W ','Re','Os','Ir', &
      &     'Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th','Pa','U ','Np','Pu','Am','Cm','Bk','Cf', &
      &     'Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'/)
- complex*16, allocatable :: PS(:,:,:,:)
- integer, allocatable :: components(:,:)
+ complex*16, allocatable :: PS(:,:,:,:),PS0(:,:,:,:)
+ integer, allocatable :: components(:,:),components0(:,:)
  real*8 start,finish
  real*8, allocatable :: w3j(:,:,:,:)
 
@@ -423,7 +423,7 @@ module sagpr
   integer, allocatable :: all_indices(:,:,:),nneighmax(:,:),ncen(:),lvalues(:,:)
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
-  complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),omegaconj(:,:,:,:,:),ps_row(:,:,:)
+  complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),ps_row(:,:,:)
   complex*16, allocatable :: CC(:,:),inner_mu(:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
@@ -653,11 +653,10 @@ module sagpr
    ! Compute power spectrum
    if (lm.eq.0) then
     ! Scalar
-    allocate(omegatrue(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),omegaconj(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
+    allocate(omegatrue(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
     do l=0,lmax
      omegatrue(:,:,:,l+1,:) = omega(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
     enddo
-    omegaconj(:,:,:,:,:) = dconjg(omegatrue)
     if (ncut.gt.0) then
      !$OMP PARALLEL DO SHARED(components,PS,omegatrue,ncut,natoms,i) PRIVATE(j,k)
      do j=1,ncut
@@ -670,7 +669,7 @@ module sagpr
     else
      stop 'ERROR: no sparsification information given; this is not recommended!'
     endif
-    deallocate(omegatrue,omegaconj)
+    deallocate(omegatrue)
 
    else
      ! Spherical
@@ -781,6 +780,256 @@ module sagpr
 
   deallocate(all_indices,nneighmax,ncen)
   if (allocated(lvalues)) deallocate(lvalues)
+  if (allocated(tmp_3j)) deallocate(tmp_3j)
+
+ end subroutine
+
+!***************************************************************************************************
+! The subroutine below is for building the power spectrum that goes with zeta>1
+!***************************************************************************************************
+
+ subroutine do_power_spectrum_scalar(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres, &
+     &     all_species,ncut,sparsification,rs,periodic,mult_by_A)
+  use SHTOOLS, only: wigner3j
+  implicit none
+
+  integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l
+  integer llmax,ps_shape(4),m,n,nn
+  real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
+  complex*16 sparsification(2,ncut,ncut)
+  real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax),inner
+  character(len=4) atname(nframes,natmax)
+  integer natoms(nframes),ipiv(nmax)
+  logical periodic,all_centres(:),all_species(:),mult_by_A
+  integer, allocatable :: all_indices(:,:,:),nneighmax(:,:),ncen(:)
+  integer, parameter :: lwmax = 10000
+  integer info,lwork,work(lwmax)
+  complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),ps_row(:,:,:)
+  real*8, allocatable :: orthoradint(:,:,:,:,:),tmp_3j(:)
+  integer, allocatable :: index_list(:)
+
+  if (lm.ne.0) stop 'ERROR: scalar power spectrum has been called with non-scalar argument!'
+
+  ! Get maximum number of neighbours
+  if (.not.periodic) then
+   nnmax = natmax
+  else
+   nnmax = natmax * 10
+  endif
+
+  ! List indices for atoms of the same species
+  nsmax = nelements
+  allocate(all_indices(nframes,nsmax,natmax))
+  all_indices(:,:,:) = 0
+  do i=1,nframes
+   do j=1,natmax
+    do ispe=1,nelements
+     if (trim(adjustl(atname(i,j))).eq.trim(adjustl(atomic_names(ispe)))) then
+      do k=1,natmax
+       if (all_indices(i,ispe,k).eq.0) then 
+        all_indices(i,ispe,k) = j
+        exit
+       endif
+      enddo
+     endif
+    enddo
+   enddo
+  enddo
+
+  ! Maximum number of nearest neighbours
+  allocate(nneighmax(nframes,nsmax))
+  nneighmax(:,:) = 0
+  do i=1,nframes
+   do j=1,nsmax
+    do k=1,natmax
+     if (all_indices(i,j,k).gt.0) nneighmax(i,j) = nneighmax(i,j) + 1
+    enddo
+   enddo
+  enddo
+
+  ! Get list of centres and species
+  if (count(all_centres).eq.0) then
+   do i=1,nframes
+    do j=1,natmax
+     do k=1,nelements
+      if (trim(adjustl(atname(i,j))).eq.atomic_names(k)) all_centres(k) = .true.
+     enddo
+    enddo
+   enddo
+  endif
+  allocate(ncen(nframes))
+  ncen(:) = 0
+  do i=1,nframes
+   do j=1,nelements
+    if (all_centres(j)) then
+!     do k=1,natmax
+!      !if (atn
+!     enddo
+     ncen(i) = ncen(i) + count(atname(i,:).eq.atomic_names(j))
+    endif
+   enddo
+  enddo
+
+  if (count(all_species).eq.0) then
+   do i=1,nframes
+    do j=1,natmax
+     do k=1,nelements
+      if (trim(adjustl(atname(i,j))).eq.atomic_names(k)) all_species(k) = .true.
+     enddo
+    enddo
+   enddo
+  endif
+  nspecies = count(all_species)
+
+  ! Set up orthogonal matrix
+  sigma(:) = 0.d0
+  do i=1,nmax
+   sigma(i) = max(sqrt(dble(i-1)),1.0) * rcut / dble(nmax)
+  enddo
+  do i=1,nmax
+   do j=1,nmax
+    n1=i-1
+    n2=j-1
+    overlap(i,j) = (0.5d0 / (sigma(i))**2 + 0.5/(sigma(j))**2)**(-0.5d0*(3.d0 + n1 + n2)) &
+     &     /(sigma(i)**n1 * sigma(j)**n2)* gamma(0.5d0*(3.d0 + n1 + n2))/ &
+     &     ((sigma(i)*sigma(j))**1.5d0 * sqrt(gamma(1.5d0 + n1)*gamma(1.5d0 + n2)))
+   enddo
+  enddo
+
+  lwork = lwmax
+  ! Get eigenvalues and eigenvectors
+  call DSYEV('Vectors','Upper',nmax,overlap,nmax,eigenval,work,lwork,info)
+  diagsqrt(:,:) = 0.d0
+  do i=1,nmax
+   diagsqrt(i,i) = sqrt(eigenval(i))
+  enddo
+  orthomatrix = matmul(overlap,matmul(diagsqrt,transpose(overlap)))
+  ! Invert square root of overlap matrix to get orthogonal matrix
+  call DGETRF(nmax,nmax,orthomatrix,nmax,ipiv,info)
+  call DGETRI(nmax,orthomatrix,nmax,ipiv,work,lwork,info)
+
+  ! Allocate power spectrum array
+  degen = 2*lm + 1
+  if (ncut.ne.-1) then
+   featsize = ncut
+  else
+   if (lm.eq.0) then
+    featsize = nspecies*nspecies*nmax**2*(lmax+1)
+   else
+    featsize = nspecies*nspecies*nmax**2*llmax
+   endif
+  endif
+  if (.not.allocated(PS0)) then
+   allocate(PS0(nframes,natmax,degen,featsize))
+  else
+   ! We have already allocated the power spectrum; let's see if we need to reallocate it
+   ps_shape = shape(PS0)
+   if (.not.(ps_shape(1).ge.nframes .and. ps_shape(2).ge.natmax .and. ps_shape(3).ge.degen .and. ps_shape(4).ge.featsize)) then
+    deallocate(PS0)
+    allocate(PS0(nframes,natmax,degen,featsize))
+   endif
+  endif
+  PS0(:,:,:,:) = (0.d0,0.d0)
+
+  ! Get list of components
+  if (.not. allocated(components0) .and. ncut.gt.0) then
+   allocate(components0(ncut,5))
+   n = 0
+   do i=1,nspecies
+    do j=1,nspecies
+    do k=1,nmax
+      do l=1,nmax
+       do m=1,lmax+1
+        n = n + 1
+        ! Check if this component is required
+        do nn=1,ncut
+         ! Remember we have to add 1 because we're dealing with python arrays
+         if (sparsification(1,nn,1)+1.eq.n) then
+          components0(nn,:) = (/i,j,k,l,m/)
+         endif
+        enddo
+       enddo
+      enddo
+     enddo
+    enddo
+   enddo
+  endif
+
+  ! Do the power spectrum computation
+  do i=1,nframes
+
+   ! Get omega, harmonic and radint matrices
+   allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nspecies,lmax+1,2*lmax+1,nnmax),&
+     &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax))
+   call initsoap(omega,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
+     &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,all_centres,all_species,rcut,xyz(i,:,:),sigma,orthomatrix)
+
+   ! Compute power spectrum
+   allocate(omegatrue(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
+   do l=0,lmax
+    omegatrue(:,:,:,l+1,:) = omega(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
+   enddo
+   if (ncut.gt.0) then
+    !$OMP PARALLEL DO SHARED(components,PS0,omegatrue,ncut,natoms,i) PRIVATE(j,k)
+    do j=1,ncut
+     do k=1,natoms(i)
+      PS0(i,k,1,j) = dot_product(omegatrue(k,components0(j,1),components0(j,3),components0(j,5),:), &
+     &     omegatrue(k,components0(j,2),components0(j,4),components0(j,5),:))
+     enddo
+    enddo
+    !$OMP END PARALLEL DO
+   else
+    stop 'ERROR: no sparsification information given; this is not recommended!'
+   endif
+   deallocate(omegatrue)
+
+   ! Deallocate
+   deallocate(omega,harmonic,orthoradint)
+
+  enddo
+
+  ! Multiply by A matrix
+  if (mult_by_A) then
+   do i=1,nframes
+    do j=1,natmax
+     do k=1,degen
+      PS0(i,j,k,:) = matmul(PS0(i,j,k,:),sparsification(2,:,:))
+     enddo
+    enddo
+   enddo
+  endif
+
+  ! Make power spectrum real and normalize it
+  PS0(:,:,:,:) = real(PS0(:,:,:,:))
+  do i=1,nframes
+   do j=1,natoms(i)
+    inner = dot_product(PS0(i,j,1,:),PS0(i,j,1,:))
+    PS0(i,j,1,:) = PS0(i,j,1,:) / dsqrt(inner)
+   enddo
+  enddo
+
+  ! Reorder the power spectrum so that the ordering of atoms matches their positions in the frame
+  allocate(ps_row(natmax,degen,featsize),index_list(natmax))
+  do i=1,nframes
+   ps_row(:,:,:) = 0.d0
+   index_list(:) = 0
+   l = 0
+   do j=1,nelements
+    do k=1,natmax
+     if (all_indices(i,j,k).gt.0) then
+      l = l + 1
+      index_list(l) = all_indices(i,j,k)
+     endif
+    enddo
+   enddo
+   do j=1,natoms(i)
+    ps_row(index_list(j),:,:) = PS0(i,j,:,:)
+   enddo
+   PS0(i,:,:,:) = ps_row(:,:,:)
+  enddo
+  deallocate(ps_row,index_list)
+
+  deallocate(all_indices,nneighmax,ncen)
   if (allocated(tmp_3j)) deallocate(tmp_3j)
 
  end subroutine
