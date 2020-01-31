@@ -117,7 +117,7 @@ else:
     # Make model array
     nmol = np.shape(pp)[0]
     ncut = np.shape(pp)[-1]
-    ncut0 = np.shape(p1)[-1]
+    ncut0 = np.shape(p0)[-1]
     if (len(np.shape(pp))==3):
         degen = 1
     else:

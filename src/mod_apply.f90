@@ -157,6 +157,7 @@ subroutine get_model(model)
     allocate(PS_tr_0(nmol,1,1,nfeat))
     do j=1,nmol
      do k=1,nfeat0
+      i = i + 1
       PS_tr_0(j,1,1,k) = raw_model(i)
      enddo
     enddo
