@@ -91,19 +91,7 @@ program sagpr_apply
     do while (ios.ne.0)
      open(unit=73,file='EXIT',status='old',iostat=ios)
      if (ios.ne. 0) then
-!     write(*,*) 'HERE 1'
-!     ios = 0
-!     write(*,*) 'HERE 2'
-!     write(*,*) 'ENTER FILENAME:'
-!     read(*,*) fname
-!     if (trim(adjustl(fname)).eq.'EXIT') then
-!      call system('touch EXIT')
-!      ios=0
-!     else
-!      write(*,*) 'ENTER OUTPUT FILE:'
-!      read(*,*) ofile
 
-!      call read_xyz(fname,periodic)
       call read_fifo(un,periodic)
 
       ! Get power spectrum
@@ -153,7 +141,6 @@ program sagpr_apply
 
      endif
     enddo
-!    call system('rm exit')
     call execute_command_line('rm my_fifo')
 
     ! Array deallocation
