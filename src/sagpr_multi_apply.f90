@@ -4,8 +4,10 @@ program sagpr_apply
     implicit none
 
     character(len=100), allocatable :: arg(:),keys1(:)
-    integer i,j,ios
+    integer i,j,ios,nat
     character(len=100) ofile,fname,model
+    character(len=1000) line
+    logical keep_reading,first_frame
 
 !************************************************************************************
 ! GET COMMAND-LINE ARGUMENTS
@@ -53,6 +55,27 @@ program sagpr_apply
 !************************************************************************************
 ! READ IN DATA SEVERAL TIMES AND MAKE PREDICTIONS
 !************************************************************************************
+
+    call execute_command_line('mkfifo my_fifo')
+
+    open(newunit=ios,file="my_fifo",access="stream",form="formatted")
+    keep_reading = .true.
+    first_frame = .true.
+    do while (keep_reading)
+     read(ios,'(A)') line
+     if (first_frame) then
+      read(line,*) nat
+      first_frame = .false.
+      write(*,*) 'reading',nat,'atoms'
+     endif
+     read(ios,'(A)') line
+     do i=1,nat
+      read(ios,*) line
+     enddo
+     first_frame=.true.
+     if (trim(adjustl(fname)).eq.'END') keep_reading=.false.
+    enddo
+    call execute_command_line('rm my_fifo')
 
     ios = 1
     do while (ios.ne.0)
