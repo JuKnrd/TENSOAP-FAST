@@ -4,7 +4,7 @@ program sagpr_apply
     implicit none
 
     character(len=100), allocatable :: arg(:),keys1(:)
-    integer i,j,ios
+    integer i,j,ios,un
     character(len=100) ofile,fname,model
 !    character(len=1000) line
 !    logical keep_reading,first_frame
@@ -58,9 +58,9 @@ program sagpr_apply
 
     call execute_command_line('mkfifo my_fifo')
 
-    open(newunit=ios,file="my_fifo",access="stream",form="formatted")
+    open(newunit=un,file="my_fifo",access="stream",form="formatted")
 
-    call read_fifo(ios,periodic)
+!    call read_fifo(ios,periodic)
 
 !    read(ios,'(A)') line
 !    read(line,*) nat
@@ -90,16 +90,21 @@ program sagpr_apply
     ios = 1
     do while (ios.ne.0)
      open(unit=73,file='EXIT',status='old',iostat=ios)
-     write(*,*) 'ENTER FILENAME:'
-     read(*,*) fname
-     if (trim(adjustl(fname)).eq.'EXIT') then
-      call system('touch EXIT')
-      ios=0
-     else
-      write(*,*) 'ENTER OUTPUT FILE:'
-      read(*,*) ofile
+     if (ios.ne. 0) then
+!     write(*,*) 'HERE 1'
+!     ios = 0
+!     write(*,*) 'HERE 2'
+!     write(*,*) 'ENTER FILENAME:'
+!     read(*,*) fname
+!     if (trim(adjustl(fname)).eq.'EXIT') then
+!      call system('touch EXIT')
+!      ios=0
+!     else
+!      write(*,*) 'ENTER OUTPUT FILE:'
+!      read(*,*) ofile
 
-      call read_xyz(fname,periodic)
+!      call read_xyz(fname,periodic)
+      call read_fifo(un,periodic)
 
       ! Get power spectrum
       if (.not.do_scalar) then
@@ -148,11 +153,12 @@ program sagpr_apply
 
      endif
     enddo
-    call system('rm exit')
+!    call system('rm exit')
     call execute_command_line('rm my_fifo')
 
     ! Array deallocation
-    deallocate(xyz,atname,natoms,comment,sparsification,cell,PS_tr_lam,natoms_tr,wt,arg,keys1,prediction_lm,PS)
+    if (allocated(xyz)) deallocate(xyz,atname,natoms,comment,sparsification,cell,PS_tr_lam,wt,arg,keys1,prediction_lm,PS)
+    if (allocated(natoms_tr)) deallocate(natoms_tr)
     if (allocated(PS0)) deallocate(PS0)
     if (allocated(ker)) deallocate(ker)
     if (allocated(ker_lm)) deallocate(ker_lm)

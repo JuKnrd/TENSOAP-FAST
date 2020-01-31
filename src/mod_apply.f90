@@ -228,8 +228,14 @@ subroutine read_fifo(un,periodic)
 
    nframes = 1
    read(un,'(A)') line
-   read(line,*) natmax
-   if (allocated(xyz)) deallocate(xyz)
+   read(line,*,iostat=ios) nat
+   if (ios.ne.0) then
+    call system('rm my_fifo')
+    write(*,*) 'Non-standard input detected; now stopping'
+    stop
+   endif
+   natmax = nat
+   if (allocated(xyz)) deallocate(xyz,atname,natoms,comment)
    allocate(xyz(nframes,natmax,3),atname(nframes,natmax),natoms(nframes),comment(nframes))
    natoms(1) = nat
    read(un,'(A)') comment(1)
