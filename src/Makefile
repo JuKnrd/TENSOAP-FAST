@@ -48,7 +48,7 @@ mkinstall:
 check: all mkcheck
 
 mkcheck:
-	@echo "NOT YET SET UP TO RUN TESTS!"
+	@cd ../tests/water_monomer_zeta2/;bash run_test.sh
 
 config:
 	@ cd ../;./configure;cd src
