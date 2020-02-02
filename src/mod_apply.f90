@@ -261,6 +261,7 @@ subroutine read_fifo(un,periodic)
     read(c1,*) cell(i,1,1),cell(i,1,2),cell(i,1,3),cell(i,2,1),cell(i,2,2),cell(i,2,3),cell(i,3,1),cell(i,3,2),cell(i,3,3)
    enddo
   endif
+  write(*,*) 'Got input frame with ',nat,'atoms'
 
 end subroutine
 

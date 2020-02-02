@@ -56,9 +56,10 @@ program sagpr_apply
 ! READ IN DATA SEVERAL TIMES AND MAKE PREDICTIONS
 !************************************************************************************
 
-    call execute_command_line('mkfifo my_fifo')
+    call execute_command_line('if [ -f my_fifo_in ];then rm my_fifo_in;fi')
+    call execute_command_line('mkfifo my_fifo_in')
 
-    open(newunit=un,file="my_fifo",access="stream",form="formatted")
+    open(newunit=un,file="my_fifo_in",access="stream",form="formatted")
 
 !    call read_fifo(ios,periodic)
 
@@ -136,8 +137,10 @@ program sagpr_apply
       open(unit=33,file=ofile)
       do i=1,nframes
        write(33,*) (prediction_lm(i,j),j=1,degen)
+       write(*,*) (prediction_lm(i,j),j=1,degen)
       enddo
       close(33)
+      write(un,*) 'DONE'
 
      endif
     enddo
