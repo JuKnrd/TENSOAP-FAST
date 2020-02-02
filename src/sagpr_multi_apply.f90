@@ -6,6 +6,7 @@ program sagpr_apply
     character(len=100), allocatable :: arg(:),keys1(:)
     integer i,j,ios,un,u2
     character(len=100) ofile,fname,model
+    real*8 t1,t2
 
 !************************************************************************************
 ! GET COMMAND-LINE ARGUMENTS
@@ -70,6 +71,8 @@ program sagpr_apply
 
       call read_fifo(un,periodic)
 
+      call cpu_time(t1)
+
       ! Get power spectrum
       if (.not.do_scalar) then
        call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
@@ -117,6 +120,9 @@ program sagpr_apply
       enddo
 
      endif
+
+     call cpu_time(t2)
+     write(*,*) 'Time taken (seconds):',t2-t1
     enddo
     close(33)
     call execute_command_line('rm my_fifo')
