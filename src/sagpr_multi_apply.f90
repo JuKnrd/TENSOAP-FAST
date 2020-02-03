@@ -53,12 +53,12 @@ program sagpr_apply
 !************************************************************************************
 
     call execute_command_line('if [ -p my_fifo_in ];then rm my_fifo_in;fi')
-    call execute_command_line('mkfifo my_fifo_in')
+    call execute_command_line('mkfifo my_fifo_in ')
     call execute_command_line('if [ -p my_fifo_out ];then rm my_fifo_out;fi')
-    call execute_command_line('mkfifo my_fifo_out')
+    call execute_command_line('mkfifo my_fifo_out ')
 
-    open(newunit=un,file="my_fifo_in",access="stream",form="formatted")
-    open(newunit=u2,file="my_fifo_out",access="stream",form="formatted")
+    open(newunit=un,file="my_fifo_in",status="old",access="stream",form="formatted")
+    open(newunit=u2,file="my_fifo_out",status="old",access="stream",form="formatted")
 
     ios = 1
     open(unit=33,file=ofile)
