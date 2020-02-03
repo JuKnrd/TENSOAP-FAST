@@ -3,6 +3,12 @@
 echo "Configuring SOAPFAST..."
 echo
 compiler=gfortran
+if [ $(command -v ifort | wc -l) -gt 0 ];then
+	compiler=ifort
+	echo "Using intel compiler"
+else
+	echo "Using gnu compiler"
+fi
 if [ "${compiler}" == "gfortran" ];then
 	echo
 	echo "Checking for SHTOOLS..."
@@ -114,6 +120,18 @@ else
                 echo "...SHTOOLS found"
         fi
         echo
+	echo "Checking for MKL..."
+	cd install
+	echo "program test" > test.f90
+	echo "end program" >> test.f90
+	nerr=$(ifort -mkl test.f90 -lmkl_intel_lp64 -lmkl_sequential -lmkl_core 2>&1 | wc -l)
+	if [ ${nerr} -eq 0 ];then
+		echo "...MKL found"
+	else
+		echo "ERROR: no MKL found"
+		exit
+	fi
+	echo "Checking for FFTW..."
 fi
 echo "Editing Makefile..."
 
