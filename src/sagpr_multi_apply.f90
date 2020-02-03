@@ -5,7 +5,7 @@ program sagpr_apply
 
     character(len=100), allocatable :: arg(:),keys1(:)
     integer i,j,ios,un,u2
-    character(len=100) ofile,fname,model
+    character(len=100) ofile,model
     real*8 t1,t2
 
 !************************************************************************************
@@ -21,21 +21,18 @@ program sagpr_apply
     arg(nargs+1) = 'NULL'
 
     ! Parse these arguments
-    allocate(keys1(4))
-    fname = ''
+    allocate(keys1(3))
     model = ''
     ofile = 'prediction.out'
-    keys1 = (/'-f  ','-m  ','-o  ','NULL'/)
+    keys1 = (/'-m  ','-o  ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
-     if (arg(i).eq.'-f') read(arg(i+1),'(A)') fname
      if (arg(i).eq.'-m') read(arg(i+1),'(A)') model
      if (arg(i).eq.'-o') read(arg(i+1),'(A)') ofile
     enddo
     deallocate(arg)
 
     ! Check for arguments that are required
-    if (fname.eq.'') stop 'ERROR: filename required!'
     if (model.eq.'') stop 'ERROR: model file required!'
 
 !************************************************************************************
