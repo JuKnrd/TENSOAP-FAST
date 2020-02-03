@@ -2,6 +2,8 @@
 
 echo "Configuring SOAPFAST..."
 echo
+compiler=gfortran
+echo
 echo "Checking for SHTOOLS..."
 if [ ! -f install/SHTOOLS/lib/libSHTOOLS.a ];then
 	echo "...SHTOOLS not found"
@@ -116,6 +118,6 @@ fi
 
 export SHTOOLS_LIB=-L$(pwd)/install/SHTOOLS/lib
 export SHTOOLS_INC=-I$(pwd)/install/SHTOOLS/modules
-cat src/Makefile.template | awk '/SHTOOLS_LIB=/{printf "SHTOOLS_LIB=%s\n",ENVIRON["SHTOOLS_LIB"]}/SHTOOLS_INCLUDE=/{printf "SHTOOLS_INCLUDE=%s\n",ENVIRON["SHTOOLS_INC"]}/SAGPR_PREFIX=/{printf "SAGPR_PREFIX=%s\n",ENVIRON["USE_PREFIX"]}/BLAS_LIB=/{printf "BLAS_LIB=%s\n",ENVIRON["BLAS_LIB"]}/LAPACK_LIB=/{printf "LAPACK_LIB=%s\n",ENVIRON["LAPACK_LIB"]}/FFTW_LIB=/{printf "FFTW_LIB=%s\n",ENVIRON["FFTW_LIB"]}!/SHTOOLS_LIB=|SHTOOLS_INCLUDE=|SAGPR_PREFIX=|BLAS_LIB=|LAPACK_LIB=|FFTW_LIB=/{print}' > src/Makefile
+cat src/Makefile.${compiler} | awk '/SHTOOLS_LIB=/{printf "SHTOOLS_LIB=%s\n",ENVIRON["SHTOOLS_LIB"]}/SHTOOLS_INCLUDE=/{printf "SHTOOLS_INCLUDE=%s\n",ENVIRON["SHTOOLS_INC"]}/SAGPR_PREFIX=/{printf "SAGPR_PREFIX=%s\n",ENVIRON["USE_PREFIX"]}/BLAS_LIB=/{printf "BLAS_LIB=%s\n",ENVIRON["BLAS_LIB"]}/LAPACK_LIB=/{printf "LAPACK_LIB=%s\n",ENVIRON["LAPACK_LIB"]}/FFTW_LIB=/{printf "FFTW_LIB=%s\n",ENVIRON["FFTW_LIB"]}!/SHTOOLS_LIB=|SHTOOLS_INCLUDE=|SAGPR_PREFIX=|BLAS_LIB=|LAPACK_LIB=|FFTW_LIB=/{print}' > src/Makefile
 
 echo "Go to src and run the command 'make' to compile the code"
