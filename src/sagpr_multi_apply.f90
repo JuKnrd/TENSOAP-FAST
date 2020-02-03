@@ -6,7 +6,8 @@ program sagpr_apply
     character(len=100), allocatable :: arg(:),keys1(:)
     integer i,j,ios,un,u2
     character(len=100) ofile,model
-    real*8 t1,t2
+    integer t1,t2,cr
+    real*8 rate
 
 !************************************************************************************
 ! GET COMMAND-LINE ARGUMENTS
@@ -60,6 +61,10 @@ program sagpr_apply
     open(newunit=un,file="my_fifo_in",status="old",access="stream",form="formatted")
     open(newunit=u2,file="my_fifo_out",status="old",access="stream",form="formatted")
 
+    ! Initialize the system clock
+    call system_clock(count_rate=cr)
+    rate = real(cr)
+
     ios = 1
     open(unit=33,file=ofile)
     do while (ios.ne.0)
@@ -68,7 +73,7 @@ program sagpr_apply
 
       call read_fifo(un,periodic)
 
-      call cpu_time(t1)
+      call system_clock(t1)
 
       ! Get power spectrum
       if (.not.do_scalar) then
@@ -118,11 +123,11 @@ program sagpr_apply
 
      endif
 
-     call cpu_time(t2)
-     write(*,*) 'Time taken (seconds):',t2-t1
+     call system_clock(t2)
+     write(*,'(A,F6.3,A)') 'Time taken:',(t2-t1)/rate,' seconds'
     enddo
     close(33)
-    call execute_command_line('rm my_fifo')
+    call execute_command_line('rm my_fifo*')
 
     ! Array deallocation
     if (allocated(xyz)) deallocate(xyz,atname,natoms,comment,sparsification,cell,PS_tr_lam,wt,arg,keys1,prediction_lm,PS)
