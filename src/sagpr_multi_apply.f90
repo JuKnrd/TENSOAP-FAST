@@ -65,6 +65,8 @@ program sagpr_apply
     call system_clock(count_rate=cr)
     rate = real(cr)
 
+    write(*,*) 'Ready to accept input at my_fifo_in'
+
     ios = 1
     open(unit=33,file=ofile)
     do while (ios.ne.0)
