@@ -4,7 +4,7 @@ FF=ifort
 FOPTS=-O3 -fpp -m64 -free -mkl -fp-model precise -check bounds -check uninit -check pointers -traceback -g -fpe0 -qopenmp
 SHTOOLS_LIB=-L/home/dwilkins/source/soapfast_fortran_ifort/install/SHTOOLS/lib
 SHTOOLS_INCLUDE=-I/home/dwilkins/source/soapfast_fortran_ifort/install/SHTOOLS/modules
-LD=$(SHTOOLS_LIB) -lSHTOOLS -lm -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -L/ssoft/spack/humagne/v1/opt/spack/linux-rhel7-x86_E5v4_Mellanox/intel-18.0.5/fftw-3.3.8-shubm3yf4w2wtgskz7jicutnt3hv2kdn/lib -lfftw3
+LD=$(SHTOOLS_LIB) -lSHTOOLS -lm -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
 INCLUDE=$(SHTOOLS_INCLUDE)
 SAGPR_PREFIX=
 
