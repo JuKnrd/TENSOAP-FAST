@@ -127,7 +127,7 @@ program sagpr_apply
      write(*,'(A,F6.3,A)') 'Time taken:',(t2-t1)/rate,' seconds'
     enddo
     close(33)
-    call execute_command_line('rm my_fifo*')
+    call execute_command_line('rm my_fifo_in my_fifo_out')
 
     ! Array deallocation
     if (allocated(xyz)) deallocate(xyz,atname,natoms,comment,sparsification,cell,PS_tr_lam,wt,arg,keys1,prediction_lm,PS)
