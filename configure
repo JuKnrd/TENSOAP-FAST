@@ -3,96 +3,119 @@
 echo "Configuring SOAPFAST..."
 echo
 compiler=gfortran
-echo
-echo "Checking for SHTOOLS..."
-if [ ! -f install/SHTOOLS/lib/libSHTOOLS.a ];then
-	echo "...SHTOOLS not found"
-	if [ ! -d install/SHTOOLS ];then
-		mkdir -p install
-		cd install
-		git clone https://github.com/dilkins/SHTOOLS.git
-		cd ../
-		echo "SHTOOLS cloned"
-	fi
-	echo "Compiling SHTOOLS..."
-	cd install/SHTOOLS
-	make
-	cd ../../
-	echo "...SHTOOLS compiled"
-else
-	echo "...SHTOOLS found"
-fi
-echo
-cd install
-echo "program test" > test.f90
-echo "end program" >> test.f90
-echo "Checking for BLAS..."
-nerr=$(gfortran -lblas test.f90 2>&1 | wc -l)
-if [ ${nerr} -eq 0 ];then
-	echo "...BLAS found"
-	OWN_BLAS=0
-else
-	echo "...BLAS not found"
-	if [ -f BLAS-*/libblas.a ] ;then
-		echo "BLAS found in install directory"
-		OWN_BLAS=1
-	else
-		echo "Compiling BLAS..."
-		wget http://www.netlib.org/blas/blas.tgz
-		tar xvfz blas.tgz;rm blas.tgz;cd BLAS-3.8.0
+if [ "${compiler}" == "gfortran" ];then
+	echo
+	echo "Checking for SHTOOLS..."
+		if [ ! -f install/SHTOOLS/lib/libSHTOOLS.a ];then
+		echo "...SHTOOLS not found"
+		if [ ! -d install/SHTOOLS ];then
+			mkdir -p install
+			cd install
+			git clone https://github.com/dilkins/SHTOOLS.git
+			cd ../
+			echo "SHTOOLS cloned"
+		fi
+		echo "Compiling SHTOOLS..."
+		cd install/SHTOOLS
 		make
-		cd ../
-		mv BLAS-3.8.0/blas_LINUX.a BLAS-3.8.0/libblas.a
-		OWN_BLAS=1
-	fi
-fi
-echo
-echo "Checking for LAPACK..."
-nerr=$(gfortran -llapack test.f90 2>&1 | wc -l)
-if [ ${nerr} -eq 0 ];then
-        echo "...LAPACK found"
-	OWN_LAPACK=0
-else
-        echo "...LAPACK not found"
-	if [ -f lapack-*/liblapack.a ];then
-		echo "LAPACK found in install directory"
-		OWN_LAPACK=1
+		cd ../../
+		echo "...SHTOOLS compiled"
 	else
-	        echo "Compiling LAPACK..."
-		wget http://www.netlib.org/lapack/lapack.tgz
-		tar xvfz lapack.tgz;rm lapack.tgz;cd lapack-*
-		cat make.inc.example | sed 's:O2:O3:g' | sed 's:frecursive:frecursive -fPIC:g' > make.inc;make lib
-		cd ../
-		OWN_LAPACK=1
+		echo "...SHTOOLS found"
 	fi
-fi
-echo
-echo "Checking for FFTW..."
-nerr=$(gfortran -lfftw3 test.f90 2>&1 | wc -l)
-if [ ${nerr} -eq 0 ];then
-	echo "...FFTW found"
-	OWN_FFTW=0
-else
-	echo "...FFTW not found"
-	if [ -f fftw*/libs/lib/libfftw3.a ];then
-		echo "FFTW found in install directory"
-		OWN_FFTW=1
+	echo
+	cd install
+	echo "program test" > test.f90
+	echo "end program" >> test.f90
+	echo "Checking for BLAS..."
+	nerr=$(gfortran -lblas test.f90 2>&1 | wc -l)
+	if [ ${nerr} -eq 0 ];then
+		echo "...BLAS found"
+		OWN_BLAS=0
 	else
-		echo "Compiling FFTW..."
-		wget http://www.fftw.org/fftw-3.3.4.tar.gz
-		tar xvfz fftw-3.3.4.tar.gz;rm fftw-3.3.4.tar.gz;cd fftw-3.3.4
-		./configure --prefix=$(pwd)/libs
-		make all install
-		cd ../
-		OWN_FFTW=1
+		echo "...BLAS not found"
+		if [ -f BLAS-*/libblas.a ] ;then
+			echo "BLAS found in install directory"
+			OWN_BLAS=1
+		else
+			echo "Compiling BLAS..."
+			wget http://www.netlib.org/blas/blas.tgz
+			tar xvfz blas.tgz;rm blas.tgz;cd BLAS-3.8.0
+			make
+			cd ../
+			mv BLAS-3.8.0/blas_LINUX.a BLAS-3.8.0/libblas.a
+			OWN_BLAS=1
+		fi
 	fi
+	echo
+	echo "Checking for LAPACK..."
+	nerr=$(gfortran -llapack test.f90 2>&1 | wc -l)
+	if [ ${nerr} -eq 0 ];then
+	        echo "...LAPACK found"
+		OWN_LAPACK=0
+	else
+	        echo "...LAPACK not found"
+		if [ -f lapack-*/liblapack.a ];then
+			echo "LAPACK found in install directory"
+			OWN_LAPACK=1
+		else
+		        echo "Compiling LAPACK..."
+			wget http://www.netlib.org/lapack/lapack.tgz
+			tar xvfz lapack.tgz;rm lapack.tgz;cd lapack-*
+			cat make.inc.example | sed 's:O2:O3:g' | sed 's:frecursive:frecursive -fPIC:g' > make.inc;make lib
+			cd ../
+			OWN_LAPACK=1
+		fi
+	fi
+	echo
+	echo "Checking for FFTW..."
+	nerr=$(gfortran -lfftw3 test.f90 2>&1 | wc -l)
+	if [ ${nerr} -eq 0 ];then
+		echo "...FFTW found"
+		OWN_FFTW=0
+	else
+		echo "...FFTW not found"
+		if [ -f fftw*/libs/lib/libfftw3.a ];then
+			echo "FFTW found in install directory"
+			OWN_FFTW=1
+		else
+			echo "Compiling FFTW..."
+			wget http://www.fftw.org/fftw-3.3.4.tar.gz
+			tar xvfz fftw-3.3.4.tar.gz;rm fftw-3.3.4.tar.gz;cd fftw-3.3.4
+			./configure --prefix=$(pwd)/libs
+			make all install
+			cd ../
+			OWN_FFTW=1
+		fi
+	fi
+	echo
+	rm test.f90
+	if [ -f a.out ];then rm a.out;fi
+	cd ../
+else
+        echo
+        echo "Checking for SHTOOLS..."
+                if [ ! -f install/SHTOOLS/lib/libSHTOOLS.a ];then
+                echo "...SHTOOLS not found"
+                if [ ! -d install/SHTOOLS ];then
+                        mkdir -p install
+                        cd install
+                        git clone https://github.com/dilkins/SHTOOLS.git
+                        cd ../
+                        echo "SHTOOLS cloned"
+                fi
+                echo "Compiling SHTOOLS..."
+                cd install/SHTOOLS
+		cat Makefile | awk '/F95 =/{print "F95 = ifort"}!/F95 =/{print}' > Makefile.temp;mv Makefile.temp Makefile
+                make
+                cd ../../
+                echo "...SHTOOLS compiled"
+        else
+                echo "...SHTOOLS found"
+        fi
+        echo
 fi
-echo
-rm test.f90
-if [ -f a.out ];then rm a.out;fi
-cd ../
 echo "Editing Makefile..."
-#echo ${OWN_BLAS} ${OWN_LAPACK}
 
 if [ "${SAGPR_PREFIX}" != "" ];then
 	export USE_PREFIX=${SAGPR_PREFIX}
