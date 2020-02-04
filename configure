@@ -65,27 +65,6 @@ else
 	fi
 fi
 echo
-echo "Checking for FFTW..."
-nerr=$(gfortran -lfftw3 test.f90 2>&1 | wc -l)
-if [ ${nerr} -eq 0 ];then
-	echo "...FFTW found"
-	OWN_FFTW=0
-else
-	echo "...FFTW not found"
-	if [ -f fftw*/libs/lib/libfftw3.a ];then
-		echo "FFTW found in install directory"
-		OWN_FFTW=1
-	else
-		echo "Compiling FFTW..."
-		wget http://www.fftw.org/fftw-3.3.4.tar.gz
-		tar xvfz fftw-3.3.4.tar.gz;rm fftw-3.3.4.tar.gz;cd fftw-3.3.4
-		./configure --prefix=$(pwd)/libs
-		make all install
-		cd ../
-		OWN_FFTW=1
-	fi
-fi
-echo
 rm test.f90
 if [ -f a.out ];then rm a.out;fi
 cd ../
@@ -108,14 +87,8 @@ if [ ${OWN_LAPACK} -eq 1 ];then
 	cd ../../
 fi
 
-if [ ${OWN_FFTW} -eq 1 ];then
-	cd install/fftw*/libs/lib
-	export FFTW_LIB=-L$(pwd)
-	cd ../../../../
-fi
-
 export SHTOOLS_LIB=-L$(pwd)/install/SHTOOLS/lib
 export SHTOOLS_INC=-I$(pwd)/install/SHTOOLS/modules
-cat src/Makefile.template | awk '/SHTOOLS_LIB=/{printf "SHTOOLS_LIB=%s\n",ENVIRON["SHTOOLS_LIB"]}/SHTOOLS_INCLUDE=/{printf "SHTOOLS_INCLUDE=%s\n",ENVIRON["SHTOOLS_INC"]}/SAGPR_PREFIX=/{printf "SAGPR_PREFIX=%s\n",ENVIRON["USE_PREFIX"]}/BLAS_LIB=/{printf "BLAS_LIB=%s\n",ENVIRON["BLAS_LIB"]}/LAPACK_LIB=/{printf "LAPACK_LIB=%s\n",ENVIRON["LAPACK_LIB"]}/FFTW_LIB=/{printf "FFTW_LIB=%s\n",ENVIRON["FFTW_LIB"]}!/SHTOOLS_LIB=|SHTOOLS_INCLUDE=|SAGPR_PREFIX=|BLAS_LIB=|LAPACK_LIB=|FFTW_LIB=/{print}' > src/Makefile
+cat src/Makefile.template | awk '/SHTOOLS_LIB=/{printf "SHTOOLS_LIB=%s\n",ENVIRON["SHTOOLS_LIB"]}/SHTOOLS_INCLUDE=/{printf "SHTOOLS_INCLUDE=%s\n",ENVIRON["SHTOOLS_INC"]}/SAGPR_PREFIX=/{printf "SAGPR_PREFIX=%s\n",ENVIRON["USE_PREFIX"]}/BLAS_LIB=/{printf "BLAS_LIB=%s\n",ENVIRON["BLAS_LIB"]}/LAPACK_LIB=/{printf "LAPACK_LIB=%s\n",ENVIRON["LAPACK_LIB"]}!/SHTOOLS_LIB=|SHTOOLS_INCLUDE=|SAGPR_PREFIX=|BLAS_LIB=|LAPACK_LIB=/{print}' > src/Makefile
 
 echo "Go to src and run the command 'make' to compile the code"

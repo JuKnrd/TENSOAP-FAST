@@ -77,12 +77,6 @@ function process_hyperparameters(model)
   keys2 = (/'-lm ','-n  ','-l  ','-rc ','-sg ','-c  ','-s  ','-rs ','-p  ','-z  ','NULL'/)
   do i=1,nargs
    process_hyperparameters(i) = trim(adjustl(process_hyperparameters(i)))
-!   if (process_hyperparameters(i).eq.'-lm') read(process_hyperparameters(i+1),*) lm
-!   if (process_hyperparameters(i).eq.'-n') read(process_hyperparameters(i+1),*) nmax
-!   if (process_hyperparameters(i).eq.'-l') read(process_hyperparameters(i+1),*) lmax
-!   if (process_hyperparameters(i).eq.'-rc') read(process_hyperparameters(i+1),*) rcut
-!   if (process_hyperparameters(i).eq.'-sg') read(process_hyperparameters(i+1),*) sg
-!   if (process_hyperparameters(i).eq.'-z') read(process_hyperparameters(i+1),*) zeta
    if (process_hyperparameters(i).eq.'-c') then
     readnext = .true.
     do k=i+1,nargs
@@ -116,10 +110,7 @@ function process_hyperparameters(model)
     read(process_hyperparameters(i+2),*) rs(2)
     read(process_hyperparameters(i+3),*) rs(3)
    endif
-!   if (process_hyperparameters(i).eq.'-p') periodic=.true.
   enddo
-  ! Set degeneracy
-  degen = 2*lm + 1
 
 end function
 

@@ -4,10 +4,9 @@ FF=gfortran
 FOPTS=-O3 -g -fopenmp -funroll-loops -ffast-math -m64 -fPIC
 BLAS_LIB=
 LAPACK_LIB=
-FFTW_LIB=
 SHTOOLS_LIB=
 SHTOOLS_INCLUDE=
-LD=$(SHTOOLS_LIB) -lSHTOOLS $(FFTW_LIB) -lfftw3 -lm $(LAPACK_LIB) -llapack $(BLAS_LIB) -lblas
+LD=$(SHTOOLS_LIB) -lSHTOOLS -lm $(LAPACK_LIB) -llapack $(BLAS_LIB) -lblas
 INCLUDE=$(SHTOOLS_INCLUDE)
 SAGPR_PREFIX=
 
