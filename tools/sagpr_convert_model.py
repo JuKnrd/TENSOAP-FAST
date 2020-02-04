@@ -5,13 +5,20 @@ import sys,os
 import numpy as np
 
 parser = argparse.ArgumentParser(description="Put together SOAPFAST model for prediction program")
-parser.add_argument("-ps",   "--power",      type=str, required=True,             help="Training power spectrum file")
-parser.add_argument("-sf",  "--sparse",     type=str, required=True,             help="Sparsification file")
-parser.add_argument("-w",   "--weights",    type=str, required=True,             help="Weights file")
-parser.add_argument("-p0",  "--power0",     type=str, required=False,            help="Scalar training power spectrum file")
-parser.add_argument("-sf0", "--sparse0",    type=str, required=False,            help="Scalar sparsification file")
-parser.add_argument("-hp",  "--hyperparam", type=str, required=False, nargs='+', help="Hyperparameter string")
-parser.add_argument("-o",   "--outfile",    type=str, required=True,             help="Output file")
+parser.add_argument("-ps",   "--power",     type=str,   required=True,             help="Training power spectrum file")
+parser.add_argument("-sf",  "--sparse",     type=str,   required=True,             help="Sparsification file")
+parser.add_argument("-w",   "--weights",    type=str,   required=True,             help="Weights file")
+parser.add_argument("-p0",  "--power0",     type=str,   required=False,            help="Scalar training power spectrum file")
+parser.add_argument("-sf0", "--sparse0",    type=str,   required=False,            help="Scalar sparsification file")
+parser.add_argument("-hp",  "--hyperparam", type=str,   required=False, nargs='+', help="Hyperparameter string")
+parser.add_argument("-o",   "--outfile",    type=str,   required=True,             help="Output file")
+parser.add_argument("-n",   "--nmax",       type=int,   default=-1,   nargs='+',   help="nmax")
+parser.add_argument("-l",   "--lmax",       type=int,   default=-1,   nargs='+',   help="lmax")
+parser.add_argument("-rc",  "--rcut",       type=float, default=-1.0, nargs='+',   help="rcut")
+parser.add_argument("-pr",  "--periodic",   action='store_true',                   help="Periodic system")
+parser.add_argument("-lm",  "--lambdaval",  type=int,   default=0,                 help="Spherical order")
+parser.add_argument("-z",   "--zeta",       type=int,   default=1,                 help="zeta")
+parser.add_argument("-sg",  "--sigma",      type=float, default=-1.0, nargs='+',   help="sigma")
 args = parser.parse_args()
 
 do_scalar = False
@@ -40,7 +47,7 @@ if (not do_scalar):
         degen = 1
     else:
         degen = np.shape(pp)[-2]
-    ln = 3 + np.size(pp) + 1 + np.size(fp) + 2*np.size(am) + 1 + np.size(wt)
+    ln = 5 + np.size(pp) + 1 + np.size(fp) + 2*np.size(am) + 1 + np.size(wt) + 4
     model = np.zeros(ln,float)
     p1 = np.zeros((nmol,1,degen,ncut),float)
     if (degen==1):
@@ -53,9 +60,15 @@ if (not do_scalar):
                 for l in xrange(ncut):
                     p1[j,0,k,l] = pp[j,0,k,l]
     model[0] = 0.0
-    model[1] = nmol
-    model[2] = ncut
-    i = 2
+    model[1] = args.lambdaval
+    model[2] = args.zeta
+    if (args.periodic):
+        model[3] = 1.0
+    else:
+        model[3] = 0.0
+    model[3] = nmol
+    model[4] = ncut
+    i = 5
     for j in xrange(nmol):
         for k in xrange(degen):
             for l in xrange(ncut):
@@ -77,6 +90,15 @@ if (not do_scalar):
     for j in xrange(nmol*degen):
         i+=1
         model[i] = wt[j]
+    i+=1
+    print len(args.nmax)
+    model[i] = float(args.nmax)
+    i+=1
+    model[i] = float(args.lmax)
+    i+=1
+    model[i] = args.rcut[0]
+    i+=1
+    model[i] = args.sigma[0]
 
     # Save files
     output = args.outfile
@@ -122,7 +144,7 @@ else:
         degen = 1
     else:
         degen = np.shape(pp)[-2]
-    ln = 4 + np.size(pp) + np.size(p0) + 1 + np.size(fp) + 2*np.size(am) + 1 + np.size(f0) + 2*np.size(a0) + 1 + np.size(wt)
+    ln = 7 + np.size(pp) + np.size(p0) + 1 + np.size(fp) + 2*np.size(am) + 1 + np.size(f0) + 2*np.size(a0) + 1 + np.size(wt) + 8
     model = np.zeros(ln,float)
     p1 = np.zeros((nmol,1,degen,ncut),float)
     if (degen==1):
@@ -135,10 +157,16 @@ else:
                 for l in xrange(ncut):
                     p1[j,0,k,l] = pp[j,0,k,l]
     model[0] = 1.0
-    model[1] = nmol
-    model[2] = ncut
-    model[3] = ncut0
-    i = 3
+    model[1] = args.lambdaval
+    model[2] = args.zeta
+    if (args.periodic):
+        model[3] = 1.0
+    else:
+        model[3] = 0.0
+    model[4] = nmol
+    model[5] = ncut
+    model[6] = ncut0
+    i = 6
     for j in xrange(nmol):
         for k in xrange(degen):
             for l in xrange(ncut):
@@ -175,6 +203,34 @@ else:
     for j in xrange(nmol*degen):
         i+=1
         model[i] = wt[j]
+    i+=1
+    model[i] = float(args.nmax[0])
+    i+=1
+    model[i] = float(args.lmax[0])
+    i+=1
+    model[i] = args.rcut[0]
+    i+=1
+    model[i] = args.sigma[0]
+    i+=1
+    if (len(args.nmax)>1):
+        model[i] = float(args.nmax[1])
+    else:
+        model[i] = float(args.nmax[0])
+    i+=1
+    if (len(args.lmax)>1):
+        model[i] = float(args.lmax[1])
+    else:
+        model[i] = float(args.lmax[0])
+    i+=1
+    if (len(args.rcut)>1):
+        model[i] = args.rcut[1]
+    else:
+        model[i] = args.rcut[0]
+    i+=1
+    if (len(args.sigma)>1):
+        model[i] = args.sigma[1]
+    else:
+        model[i] = args.sigma[0]
 
     # Save files
     output = args.outfile

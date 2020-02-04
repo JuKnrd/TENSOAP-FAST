@@ -18,6 +18,9 @@ module apply
  integer lm,nmax,lmax,zeta,degen
  real*8 rcut,sg,rs(3)
  logical periodic
+ ! Defaults
+ integer, parameter :: nmax_default = 8, lmax_default = 6
+ real*8, parameter :: rcut_default = 4.d0,sg_default = 0.3d0
 
  contains
 
@@ -26,12 +29,12 @@ subroutine set_defaults()
  implicit none
 
   lm = 0
-  nmax = 8
-  lmax = 6
-  rcut = 4.d0
-  sg = 0.3d0
-    all_centres(:) = .false.
-    all_species(:) = .false.
+  nmax = nmax_default
+  lmax = lmax_default
+  rcut = rcut_default
+  sg = sg_default
+  all_centres(:) = .false.
+  all_species(:) = .false.
   rs = (/0.d0,0.d0,0.d0/)
   periodic = .false.
   zeta = 1
@@ -74,12 +77,12 @@ function process_hyperparameters(model)
   keys2 = (/'-lm ','-n  ','-l  ','-rc ','-sg ','-c  ','-s  ','-rs ','-p  ','-z  ','NULL'/)
   do i=1,nargs
    process_hyperparameters(i) = trim(adjustl(process_hyperparameters(i)))
-   if (process_hyperparameters(i).eq.'-lm') read(process_hyperparameters(i+1),*) lm
-   if (process_hyperparameters(i).eq.'-n') read(process_hyperparameters(i+1),*) nmax
-   if (process_hyperparameters(i).eq.'-l') read(process_hyperparameters(i+1),*) lmax
-   if (process_hyperparameters(i).eq.'-rc') read(process_hyperparameters(i+1),*) rcut
-   if (process_hyperparameters(i).eq.'-sg') read(process_hyperparameters(i+1),*) sg
-   if (process_hyperparameters(i).eq.'-z') read(process_hyperparameters(i+1),*) zeta
+!   if (process_hyperparameters(i).eq.'-lm') read(process_hyperparameters(i+1),*) lm
+!   if (process_hyperparameters(i).eq.'-n') read(process_hyperparameters(i+1),*) nmax
+!   if (process_hyperparameters(i).eq.'-l') read(process_hyperparameters(i+1),*) lmax
+!   if (process_hyperparameters(i).eq.'-rc') read(process_hyperparameters(i+1),*) rcut
+!   if (process_hyperparameters(i).eq.'-sg') read(process_hyperparameters(i+1),*) sg
+!   if (process_hyperparameters(i).eq.'-z') read(process_hyperparameters(i+1),*) zeta
    if (process_hyperparameters(i).eq.'-c') then
     readnext = .true.
     do k=i+1,nargs
@@ -113,7 +116,7 @@ function process_hyperparameters(model)
     read(process_hyperparameters(i+2),*) rs(2)
     read(process_hyperparameters(i+3),*) rs(3)
    endif
-   if (process_hyperparameters(i).eq.'-p') periodic=.true.
+!   if (process_hyperparameters(i).eq.'-p') periodic=.true.
   enddo
   ! Set degeneracy
   degen = 2*lm + 1
@@ -136,12 +139,16 @@ subroutine get_model(model)
    allocate(raw_model(reals))
    read(41,pos=1) raw_model
    do_scalar = (raw_model(1).ne.0.d0)
-   nmol = int(raw_model(2))
-   nfeat = int(raw_model(3))
-   i = 3
+   lm = int(raw_model(2))
+   degen=2*lm + 1
+   zeta = int(raw_model(3))
+   periodic = (int(raw_model(4)).eq.1)
+   nmol = int(raw_model(5))
+   nfeat = int(raw_model(6))
+   i = 6
    if (do_scalar) then
-    nfeat0 = int(raw_model(4))
-    i = 4
+    nfeat0 = int(raw_model(7))
+    i = 7
    endif
    allocate(PS_tr_lam(nmol,1,degen,nfeat))
    do j=1,nmol
@@ -211,7 +218,37 @@ subroutine get_model(model)
     i = i + 1
     wt(j) = raw_model(i)
    enddo
-   if (i.ne.reals) stop 'ERROR: diferent file size to that expected for model!'
+
+   ! Get hyperparameters
+   i = i + 1
+   nmax = int(raw_model(i))
+   if (nmax.eq.-1) nmax=nmax_default
+   i = i + 1
+   lmax = int(raw_model(i))
+   if (lmax.eq.-1) lmax=lmax_default
+   i = i + 1
+   rcut = raw_model(i)
+   if (rcut.lt.0.d0) rcut=rcut_default
+   i = i + 1
+   sg = raw_model(i)
+   if (sg.lt.0.d0) sg=sg_default
+   if (do_scalar) then
+    write(*,*) 'WARNING: not yet set up for different n,l values!'
+    i = i + 1
+    nmax = int(raw_model(i))
+    if (nmax.eq.-1) nmax=nmax_default
+    i = i + 1
+    lmax = int(raw_model(i))
+    if (lmax.eq.-1) lmax=lmax_default
+    i = i + 1
+    rcut = raw_model(i)
+    if (rcut.lt.0.d0) rcut=rcut_default
+    i = i + 1
+    sg = raw_model(i)
+    if (sg.lt.0.d0) sg=sg_default
+   endif
+
+   if (i.ne.reals) stop 'ERROR: different file size to that expected for model!'
 
 end subroutine
 
