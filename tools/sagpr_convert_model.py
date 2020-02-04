@@ -5,20 +5,21 @@ import sys,os
 import numpy as np
 
 parser = argparse.ArgumentParser(description="Put together SOAPFAST model for prediction program")
-parser.add_argument("-ps",   "--power",     type=str,   required=True,             help="Training power spectrum file")
-parser.add_argument("-sf",  "--sparse",     type=str,   required=True,             help="Sparsification file")
-parser.add_argument("-w",   "--weights",    type=str,   required=True,             help="Weights file")
-parser.add_argument("-p0",  "--power0",     type=str,   required=False,            help="Scalar training power spectrum file")
-parser.add_argument("-sf0", "--sparse0",    type=str,   required=False,            help="Scalar sparsification file")
-parser.add_argument("-hp",  "--hyperparam", type=str,   required=False, nargs='+', help="Hyperparameter string")
-parser.add_argument("-o",   "--outfile",    type=str,   required=True,             help="Output file")
-parser.add_argument("-n",   "--nmax",       type=int,   default=-1,   nargs='+',   help="nmax")
-parser.add_argument("-l",   "--lmax",       type=int,   default=-1,   nargs='+',   help="lmax")
-parser.add_argument("-rc",  "--rcut",       type=float, default=-1.0, nargs='+',   help="rcut")
-parser.add_argument("-pr",  "--periodic",   action='store_true',                   help="Periodic system")
-parser.add_argument("-lm",  "--lambdaval",  type=int,   default=0,                 help="Spherical order")
-parser.add_argument("-z",   "--zeta",       type=int,   default=1,                 help="zeta")
-parser.add_argument("-sg",  "--sigma",      type=float, default=-1.0, nargs='+',   help="sigma")
+parser.add_argument("-ps",   "--power",     type=str,   required=True,                     help="Training power spectrum file")
+parser.add_argument("-sf",  "--sparse",     type=str,   required=True,                     help="Sparsification file")
+parser.add_argument("-w",   "--weights",    type=str,   required=True,                     help="Weights file")
+parser.add_argument("-p0",  "--power0",     type=str,   required=False,                    help="Scalar training power spectrum file")
+parser.add_argument("-sf0", "--sparse0",    type=str,   required=False,                    help="Scalar sparsification file")
+parser.add_argument("-hp",  "--hyperparam", type=str,   required=False,        nargs='+',  help="Hyperparameter string")
+parser.add_argument("-o",   "--outfile",    type=str,   required=True,                     help="Output file")
+parser.add_argument("-n",   "--nmax",       type=int,   default=-1,            nargs='+',  help="nmax")
+parser.add_argument("-l",   "--lmax",       type=int,   default=-1,            nargs='+',  help="lmax")
+parser.add_argument("-rc",  "--rcut",       type=float, default=-1.0,          nargs='+',  help="rcut")
+parser.add_argument("-pr",  "--periodic",   action='store_true',                           help="Periodic system")
+parser.add_argument("-lm",  "--lambdaval",  type=int,   default=0,                         help="Spherical order")
+parser.add_argument("-z",   "--zeta",       type=int,   default=1,                         help="zeta")
+parser.add_argument("-sg",  "--sigma",      type=float, default=-1.0,          nargs='+',  help="sigma")
+parser.add_argument("-rs",  "--radial",     type=float, default=[0.0,0.0,0.0], nargs='+',  help="radial scaling")
 args = parser.parse_args()
 
 do_scalar = False
@@ -29,6 +30,10 @@ if (args.power0!=None or args.sparse0!=None):
         print "ERROR: all scalar files must be specified!"
         sys.exit(0)
     do_scalar = True
+
+if (len(args.radial)!=3 and len(args.radial)!=6):
+    print "ERROR: three or six parameters are required for radial scaling!"
+    sys.exit(0)
 
 if (not do_scalar):
     pp = np.load(args.power)
@@ -47,7 +52,7 @@ if (not do_scalar):
         degen = 1
     else:
         degen = np.shape(pp)[-2]
-    ln = 5 + np.size(pp) + 1 + np.size(fp) + 2*np.size(am) + 1 + np.size(wt) + 4
+    ln = 5 + np.size(pp) + 1 + np.size(fp) + 2*np.size(am) + 1 + np.size(wt) + 7
     model = np.zeros(ln,float)
     p1 = np.zeros((nmol,1,degen,ncut),float)
     if (degen==1):
@@ -99,6 +104,12 @@ if (not do_scalar):
     model[i] = args.rcut[0]
     i+=1
     model[i] = args.sigma[0]
+    i+=1
+    model[i] = args.radial[0]
+    i+=1
+    model[i] = args.radial[1]
+    i+=1
+    model[i] = args.radial[2]
 
     # Save files
     output = args.outfile
@@ -144,7 +155,7 @@ else:
         degen = 1
     else:
         degen = np.shape(pp)[-2]
-    ln = 7 + np.size(pp) + np.size(p0) + 1 + np.size(fp) + 2*np.size(am) + 1 + np.size(f0) + 2*np.size(a0) + 1 + np.size(wt) + 8
+    ln = 7 + np.size(pp) + np.size(p0) + 1 + np.size(fp) + 2*np.size(am) + 1 + np.size(f0) + 2*np.size(a0) + 1 + np.size(wt) + 14
     model = np.zeros(ln,float)
     p1 = np.zeros((nmol,1,degen,ncut),float)
     if (degen==1):
@@ -212,6 +223,12 @@ else:
     i+=1
     model[i] = args.sigma[0]
     i+=1
+    model[i] = args.radial[0]
+    i+=1
+    model[i] = args.radial[1]
+    i+=1
+    model[i] = args.radial[2]
+    i+=1
     if (len(args.nmax)>1):
         model[i] = float(args.nmax[1])
     else:
@@ -231,6 +248,21 @@ else:
         model[i] = args.sigma[1]
     else:
         model[i] = args.sigma[0]
+    i+=1
+    if (len(args.radial)>3):
+        model[i] = args.radial[3]
+    else:
+        model[i] = args.radial[0]
+    i+=1
+    if (len(args.radial)>3):
+        model[i] = args.radial[4]
+    else:
+        model[i] = args.radial[1]
+    i+=1
+    if (len(args.radial)>3):
+        model[i] = args.radial[5]
+    else:
+        model[i] = args.radial[2]
 
     # Save files
     output = args.outfile

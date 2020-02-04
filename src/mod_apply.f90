@@ -20,7 +20,7 @@ module apply
  logical periodic
  ! Defaults
  integer, parameter :: nmax_default = 8, lmax_default = 6
- real*8, parameter :: rcut_default = 4.d0,sg_default = 0.3d0
+ real*8, parameter :: rcut_default = 4.d0,sg_default = 0.3d0,rs_default(3) = (/0.d0,0.d0,0.d0/)
 
  contains
 
@@ -35,7 +35,7 @@ subroutine set_defaults()
   sg = sg_default
   all_centres(:) = .false.
   all_species(:) = .false.
-  rs = (/0.d0,0.d0,0.d0/)
+  rs = rs_default
   periodic = .false.
   zeta = 1
 
@@ -72,9 +72,9 @@ function process_hyperparameters(model)
   process_hyperparameters(nargs+1) = 'NULL'
 
   ! Get hyperparameters from model file
-  numkeys = 11
+  numkeys = 3
   allocate(keys2(numkeys))
-  keys2 = (/'-lm ','-n  ','-l  ','-rc ','-sg ','-c  ','-s  ','-rs ','-p  ','-z  ','NULL'/)
+  keys2 = (/'-c  ','-s  ','NULL'/)
   do i=1,nargs
    process_hyperparameters(i) = trim(adjustl(process_hyperparameters(i)))
    if (process_hyperparameters(i).eq.'-c') then
@@ -104,11 +104,6 @@ function process_hyperparameters(model)
       enddo
      endif
     enddo
-   endif
-   if (process_hyperparameters(i).eq.'-rs') then
-    read(process_hyperparameters(i+1),*) rs(1)
-    read(process_hyperparameters(i+2),*) rs(2)
-    read(process_hyperparameters(i+3),*) rs(3)
    endif
   enddo
 
@@ -223,6 +218,13 @@ subroutine get_model(model)
    i = i + 1
    sg = raw_model(i)
    if (sg.lt.0.d0) sg=sg_default
+   i = i + 1
+   rs(1) = raw_model(i)
+   i = i + 1
+   rs(2) = raw_model(i)
+   i = i + 1
+   rs(3) = raw_model(i)
+   if (rs(3).eq.0.d0) rs=rs_default
    if (do_scalar) then
     write(*,*) 'WARNING: not yet set up for different n,l values!'
     i = i + 1
@@ -237,6 +239,13 @@ subroutine get_model(model)
     i = i + 1
     sg = raw_model(i)
     if (sg.lt.0.d0) sg=sg_default
+    i = i + 1
+    rs(1) = raw_model(i)
+    i = i + 1
+    rs(2) = raw_model(i)
+    i = i + 1
+    rs(3) = raw_model(i)
+    if (rs(3).eq.0.d0) rs=rs_default
    endif
 
    if (i.ne.reals) stop 'ERROR: different file size to that expected for model!'
