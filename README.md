@@ -6,7 +6,7 @@ This code allows the use of models trained using the SOAPFAST code; the key part
 
 I have tested this code with `gfortran`, version `7.4.0`. In order to compile this code, it should suffice to run the `configuration` script in the topmost directory. This will search for the required libraries, and compile them from scratch if needed; it will then produce a `Makefile`, so that you can compile the code by running `make` in the `src` directory.
 
-It should be noted that there is no guarantee this code is as optimized as it can be; further, if you already have the required libraries (`BLAS`, `lapack`, `fftw3`) on your system these are recommended, rather than compiling your own version.
+It should be noted that there is no guarantee this code is as optimized as it can be; further, if you already have the required libraries (`BLAS`, `lapack`) on your system these are recommended, rather than compiling your own version.
 
 # Use
 
