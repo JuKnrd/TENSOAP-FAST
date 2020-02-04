@@ -42,72 +42,72 @@ subroutine set_defaults()
 end subroutine
 
 !****************************************************************************************************************
-function process_hyperparameters(model)
- implicit none
+!function process_hyperparameters(model)
+! implicit none
 
- character(len=100) model,args
- character(len=100), allocatable :: process_hyperparameters(:),keys2(:)
- integer i,j,k,ii,numkeys
- logical new_arg,readnext
- character(len=3) symbol
+! character(len=100) model,args
+! character(len=100), allocatable :: process_hyperparameters(:),keys2(:)
+! integer i,j,k,ii,numkeys
+! logical new_arg,readnext
+! character(len=3) symbol
 
-  ! Read in hyperparameters
-  open(unit=21,file=trim(adjustl(model))//'.hyp',status='old')
-  read(21,'(A)') args
-  nargs = 0
-  new_arg = .false.
-  do i=1,len(trim(adjustl(args)))
-   if (args(i:i).ne.' ') then
-    if (.not.new_arg) then
-     new_arg = .true.
-     nargs = nargs + 1
-    endif
-   else
-    ! We have reached the end of an argument
-    new_arg = .false.
-   endif
-  enddo
-  allocate(process_hyperparameters(nargs+1))
-  read(args,*) (process_hyperparameters(i),i=1,nargs)
-  process_hyperparameters(nargs+1) = 'NULL'
-
-  ! Get hyperparameters from model file
-  numkeys = 3
-  allocate(keys2(numkeys))
-  keys2 = (/'-c  ','-s  ','NULL'/)
-  do i=1,nargs
-   process_hyperparameters(i) = trim(adjustl(process_hyperparameters(i)))
-   if (process_hyperparameters(i).eq.'-c') then
-    readnext = .true.
-    do k=i+1,nargs
-     do j=1,numkeys
-      readnext = readnext.and.(trim(adjustl(process_hyperparameters(k))).ne.trim(adjustl(keys2(j))))
-     enddo
-     if (readnext) then
-      read(process_hyperparameters(k),*) symbol
-      do ii=1,nelements
-       if (trim(adjustl(atomic_names(ii))).eq.trim(adjustl(symbol))) all_centres(ii) = .true.
-      enddo
-     endif
-    enddo
-   endif
-   if (process_hyperparameters(i).eq.'-s') then
-    readnext = .true.
-    do k=i+1,nargs
-     do j=1,numkeys
-      readnext = readnext.and.(trim(adjustl(process_hyperparameters(k))).ne.trim(adjustl(keys2(j))))
-     enddo
-     if (readnext) then
-      read(process_hyperparameters(k),*) symbol
-      do ii=1,nelements
-       if (trim(adjustl(atomic_names(ii))).eq.trim(adjustl(symbol))) all_species(ii) = .true.
-      enddo
-     endif
-    enddo
-   endif
-  enddo
-
-end function
+!  ! Read in hyperparameters
+!  open(unit=21,file=trim(adjustl(model))//'.hyp',status='old')
+!  read(21,'(A)') args
+!  nargs = 0
+!  new_arg = .false.
+!  do i=1,len(trim(adjustl(args)))
+!   if (args(i:i).ne.' ') then
+!    if (.not.new_arg) then
+!     new_arg = .true.
+!     nargs = nargs + 1
+!    endif
+!   else
+!    ! We have reached the end of an argument
+!    new_arg = .false.
+!   endif
+!  enddo
+!  allocate(process_hyperparameters(nargs+1))
+!  read(args,*) (process_hyperparameters(i),i=1,nargs)
+!  process_hyperparameters(nargs+1) = 'NULL'
+!
+ ! ! Get hyperparameters from model file
+ ! numkeys = 3
+ ! allocate(keys2(numkeys))
+ ! keys2 = (/'-c  ','-s  ','NULL'/)
+!  do i=1,nargs
+!   process_hyperparameters(i) = trim(adjustl(process_hyperparameters(i)))
+!   if (process_hyperparameters(i).eq.'-c') then
+!    readnext = .true.
+!    do k=i+1,nargs
+!     do j=1,numkeys
+!      readnext = readnext.and.(trim(adjustl(process_hyperparameters(k))).ne.trim(adjustl(keys2(j))))
+!     enddo
+!     if (readnext) then
+!      read(process_hyperparameters(k),*) symbol
+!      do ii=1,nelements
+!       if (trim(adjustl(atomic_names(ii))).eq.trim(adjustl(symbol))) all_centres(ii) = .true.
+!      enddo
+!     endif
+!    enddo
+!   endif
+!   if (process_hyperparameters(i).eq.'-s') then
+!    readnext = .true.
+!    do k=i+1,nargs
+!     do j=1,numkeys
+!      readnext = readnext.and.(trim(adjustl(process_hyperparameters(k))).ne.trim(adjustl(keys2(j))))
+!     enddo
+!     if (readnext) then
+!      read(process_hyperparameters(k),*) symbol
+!      do ii=1,nelements
+!       if (trim(adjustl(atomic_names(ii))).eq.trim(adjustl(symbol))) all_species(ii) = .true.
+!      enddo
+!     endif
+!    enddo
+!   endif
+!  enddo
+!
+!end function
 
 !****************************************************************************************************************
 subroutine get_model(model)

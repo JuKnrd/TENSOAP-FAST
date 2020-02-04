@@ -148,14 +148,7 @@ if (not do_scalar):
                 if (not os.path.isdir(make_folder)):
                     os.mkdir(make_folder)
     mfl = output + '.mdl'
-    hfl = output + '.hyp'
     model.tofile(mfl)
-    fl = open(hfl,'w')
-    if (args.hyperparam):
-        print >> fl, args.hyperparam[0]
-    else:
-        print >> fl, ''
-    fl.close()
 
 else:
     pp = np.load(args.power)
@@ -313,11 +306,4 @@ else:
                 if (not os.path.isdir(make_folder)):
                     os.mkdir(make_folder)
     mfl = output + '.mdl'
-    hfl = output + '.hyp'
     model.tofile(mfl)
-    fl = open(hfl,'w')
-    if (args.hyperparam):
-        print >> fl, args.hyperparam[0]
-    else:
-        print >> fl, ''
-    fl.close()
