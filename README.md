@@ -16,9 +16,9 @@ In order to use this code, the first thing needed is a model produced using SOAP
 2. Power spectra should also be sparsified over environments. There will be a single sparsified power spectra, with a name like `PS.npy`
 3. Finally, there should be a weights file, with a name like `weights_0.npy`.
 
-To create model files, run `/path/to/soapfast_fortran/bin/sagpr_convert_model -ps PS.npy -sf PS -w weights_0.npy -hp "HYPERPARAMETERS" -o fname`, where the `PS` in `-sf PS` is the prefix to `_fps.npy` and `_Amat.npy`. The hyperparameters should consist of all other arguments to be passed to the power spectrum and kernel calculations, e.g. `-p -n 5 -l 3 -z 2` for a periodic calculation with `nmax=5`, `lmax=3` and `zeta=2`.
+To create model files, run `/path/to/soapfast_fortran/bin/sagpr_convert_model -ps PS.npy -sf PS -w weights_0.npy -o fname`, where the `PS` in `-sf PS` is the prefix to `_fps.npy` and `_Amat.npy`. Any additional (lambda-)SOAP hyperparameters are specified via command line arguments (`/path/to/soapfast_fortran/bin/sagpr_convert_model -h` gives a list of these). For example, `-p -n 5 -l 3 -z 2` is for a periodic system, with `nmax=5`, `lmax=3` and `zeta=2`.
 
-This will create two files, `fname.mdl` (a binary file containing the training power spectrum, sparsification details and weights) and `fname.hyp` (containing the hyperparameters in text format).
+This will create the file `fname.mdl`, a binary file containing the training power spectrum, sparsification details, weights and hyperparameters.
 
 There are two modes of use:
 
