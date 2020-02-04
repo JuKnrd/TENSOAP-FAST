@@ -18,6 +18,8 @@ module apply
  integer lm,nmax,lmax,zeta,degen
  real*8 rcut,sg,rs(3)
  logical periodic
+ integer nmax0,lmax0
+ real*8 rcut0,sg0,rs0(3)
  ! Defaults
  integer, parameter :: nmax_default = 8, lmax_default = 6
  real*8, parameter :: rcut_default = 4.d0,sg_default = 0.3d0,rs_default(3) = (/0.d0,0.d0,0.d0/)
@@ -158,26 +160,25 @@ subroutine get_model(model)
    rs(3) = raw_model(i)
    if (rs(3).eq.0.d0) rs=rs_default
    if (do_scalar) then
-    write(*,*) 'WARNING: not yet set up for different n,l values!'
     i = i + 1
-    nmax = int(raw_model(i))
-    if (nmax.eq.-1) nmax=nmax_default
+    nmax0 = int(raw_model(i))
+    if (nmax0.eq.-1) nmax0=nmax_default
     i = i + 1
-    lmax = int(raw_model(i))
-    if (lmax.eq.-1) lmax=lmax_default
+    lmax0 = int(raw_model(i))
+    if (lmax0.eq.-1) lmax0=lmax_default
     i = i + 1
-    rcut = raw_model(i)
-    if (rcut.lt.0.d0) rcut=rcut_default
+    rcut0 = raw_model(i)
+    if (rcut0.lt.0.d0) rcut0=rcut_default
     i = i + 1
-    sg = raw_model(i)
-    if (sg.lt.0.d0) sg=sg_default
+    sg0 = raw_model(i)
+    if (sg0.lt.0.d0) sg0=sg_default
     i = i + 1
-    rs(1) = raw_model(i)
+    rs0(1) = raw_model(i)
     i = i + 1
-    rs(2) = raw_model(i)
+    rs0(2) = raw_model(i)
     i = i + 1
-    rs(3) = raw_model(i)
-    if (rs(3).eq.0.d0) rs=rs_default
+    rs0(3) = raw_model(i)
+    if (rs0(3).eq.0.d0) rs0=rs_default
    endif
    i = i + 1
    ncen = int(raw_model(i))
