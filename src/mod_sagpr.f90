@@ -11,6 +11,7 @@ module sagpr
  integer, allocatable :: components(:,:),components0(:,:)
  real*8 start,finish
  real*8, allocatable :: w3j(:,:,:,:)
+ logical all_species(nelements),all_centres(nelements)
 
  contains
 
@@ -407,8 +408,8 @@ module sagpr
 
 !***************************************************************************************************
 
- subroutine do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres, &
-     &     all_species,ncut,sparsification,rs,periodic,mult_by_A)
+ subroutine do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
+     &     ncut,sparsification,rs,periodic,mult_by_A)
   use SHTOOLS, only: wigner3j
   implicit none
 
@@ -419,7 +420,7 @@ module sagpr
   real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax),inner
   character(len=4) atname(nframes,natmax)
   integer natoms(nframes),ipiv(nmax)
-  logical periodic,all_centres(:),all_species(:),mult_by_A
+  logical periodic,mult_by_A
   integer, allocatable :: all_indices(:,:,:),nneighmax(:,:),ncen(:),lvalues(:,:)
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
@@ -788,8 +789,8 @@ module sagpr
 ! The subroutine below is for building the power spectrum that goes with zeta>1
 !***************************************************************************************************
 
- subroutine do_power_spectrum_scalar(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres, &
-     &     all_species,ncut,sparsification,rs,periodic,mult_by_A)
+ subroutine do_power_spectrum_scalar(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
+     &     ncut,sparsification,rs,periodic,mult_by_A)
   use SHTOOLS, only: wigner3j
   implicit none
 
@@ -800,7 +801,7 @@ module sagpr
   real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax),inner
   character(len=4) atname(nframes,natmax)
   integer natoms(nframes),ipiv(nmax)
-  logical periodic,all_centres(:),all_species(:),mult_by_A
+  logical periodic,mult_by_A
   integer, allocatable :: all_indices(:,:,:),nneighmax(:,:),ncen(:)
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)

@@ -79,12 +79,12 @@ program sagpr_apply
 
       ! Get power spectrum
       if (.not.do_scalar) then
-       call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
+       call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
      &     ncut,sparsification,rs,periodic,.true.)
       else
-       call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
+       call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
      &     ncut,sparsification,rs,periodic,.true.)
-       call do_power_spectrum_scalar(xyz,atname,natoms,cell,nframes,natmax,0,nmax,lmax,rcut,sg,all_centres,all_species, &
+       call do_power_spectrum_scalar(xyz,atname,natoms,cell,nframes,natmax,0,nmax,lmax,rcut,sg, &
      &     ncut0,sparsification0,rs,periodic,.true.)
       endif
 

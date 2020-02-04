@@ -18,7 +18,6 @@ module apply
  integer lm,nmax,lmax,zeta,degen
  real*8 rcut,sg,rs(3)
  logical periodic
- logical all_species(nelements),all_centres(nelements)
 
  contains
 

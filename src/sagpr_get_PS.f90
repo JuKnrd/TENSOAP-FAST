@@ -9,7 +9,6 @@ program sagpr_get_PS
     real*8 rcut,sg,rs(3)
     character(len=100) ofile,sparse,fname
     logical periodic,readnext
-    logical all_species(nelements),all_centres(nelements)
     real*8, allocatable :: xyz(:,:,:),cell(:,:,:)
     character(len=4), allocatable :: atname(:,:)
     integer, allocatable :: natoms(:)
@@ -184,7 +183,7 @@ program sagpr_get_PS
     endif
 
     ! Get power spectrum
-    call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg,all_centres,all_species, &
+    call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
      &     ncut,sparsification,rs,periodic,.true.)
 
     ! Print power spectrum
