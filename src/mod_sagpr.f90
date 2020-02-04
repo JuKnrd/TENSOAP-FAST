@@ -649,7 +649,7 @@ module sagpr
    allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nspecies,lmax+1,2*lmax+1,nnmax),&
      &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax))
    call initsoap(omega,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
-     &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,all_centres,all_species,rcut,xyz(i,:,:),sigma,orthomatrix)
+     &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,rcut,xyz(i,:,:),sigma,orthomatrix)
 
    ! Compute power spectrum
    if (lm.eq.0) then
@@ -963,7 +963,7 @@ module sagpr
    allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nspecies,lmax+1,2*lmax+1,nnmax),&
      &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax))
    call initsoap(omega,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
-     &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,all_centres,all_species,rcut,xyz(i,:,:),sigma,orthomatrix)
+     &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,rcut,xyz(i,:,:),sigma,orthomatrix)
 
    ! Compute power spectrum
    allocate(omegatrue(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
@@ -1038,18 +1038,23 @@ module sagpr
 !***************************************************************************************************
 
  subroutine initsoap(omega,harmonic,orthoradint,natoms,nspecies,nmax,lmax,nnmax,periodic,all_indices,nneighmax, &
-     &     natmax,nsmax,cell,rs,sg,all_centres,all_species,rcut,xyz,sigma,orthomatrix)
+     &     natmax,nsmax,cell,rs,sg,rcut,xyz,sigma,orthomatrix)
   implicit none
 
    integer natoms,nspecies,nmax,lmax,nnmax,natmax,nsmax,iat,ncentype,icentype,icen,cen,n,ispe
    integer ineigh,neigh,lval,im,mval,n1,n2,l,i,k,nn,ncell,ia,ib,ic
    real*8 rcut2,rx,ry,rz,r2,rdist,cth,ph,normfact,sigmafact,rv(3),sv(3),rcv(3)
    complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms,nspecies,lmax+1,2*lmax+1,nnmax)
-   real*8 radint(natoms,nspecies,nnmax,lmax+1,nmax),orthoradint(natoms,nspecies,lmax+1,nmax,nnmax)
-   real*8 efact(natoms,nspecies,nnmax),length(natoms,nspecies,nnmax),cell(3,3),rs(3),sg,rcut,xyz(natmax,3)
+!   real*8 radint(natoms,nspecies,nnmax,lmax+1,nmax),orthoradint(natoms,nspecies,lmax+1,nmax,nnmax)
+!   real*8 efact(natoms,nspecies,nnmax),length(natoms,nspecies,nnmax),cell(3,3),rs(3),sg,rcut,xyz(natmax,3)
+   real*8 orthoradint(natoms,nspecies,lmax+1,nmax,nnmax)
+   real*8 cell(3,3),rs(3),sg,rcut,xyz(natmax,3)
+   real*8, allocatable :: radint(:,:,:,:,:),efact(:,:,:),length(:,:,:)
    real*8 sigma(nmax),orthomatrix(nmax,nmax),alpha,sg2,radial_c,radial_r0,radial_m,invcell(3,3)
-   integer nneigh(natoms,nspecies),all_indices(nsmax,natmax),nneighmax(nsmax),ipiv(3),info,lwork,work(1000)
-   logical periodic,all_centres(nelements),all_species(nelements)
+!   integer nneigh(natoms,nspecies),
+   integer, allocatable :: nneigh(:,:)
+   integer all_indices(nsmax,natmax),nneighmax(nsmax),ipiv(3),info,lwork,work(1000)
+   logical periodic
 
    sg2 = sg*sg
    alpha = 1.d0 / (2.d0 * sg2)
@@ -1058,6 +1063,8 @@ module sagpr
    radial_m = rs(3)
    rcut2 = rcut*rcut
    ncell = 2
+
+   allocate(radint(natoms,nspecies,nnmax,lmax+1,nmax),efact(natoms,nspecies,nnmax),length(natoms,nspecies,nnmax),nneigh(natoms,nspecies))
 
    nneigh(:,:) = 0
    length(:,:,:) = 0.d0
@@ -1259,6 +1266,8 @@ module sagpr
     enddo
    enddo
    !$OMP END PARALLEL DO
+
+   deallocate(radint,efact,length,nneigh)
 
  end subroutine
 

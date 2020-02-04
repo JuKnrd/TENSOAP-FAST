@@ -1,7 +1,7 @@
 .PHONY: all clean
 
 FF=ifort
-FOPTS=-O3 -fpp -m64 -free -mkl -fp-model precise -check bounds -check uninit -check pointers -traceback -g -fpe0 -qopenmp
+FOPTS=-O3 -fpp -m64 -free -mkl -fp-model fast=2 -g -fpe3 -qopenmp
 SHTOOLS_LIB=-L/home/dwilkins/source/soapfast_fortran_ifort/install/SHTOOLS/lib
 SHTOOLS_INCLUDE=-I/home/dwilkins/source/soapfast_fortran_ifort/install/SHTOOLS/modules
 LD=$(SHTOOLS_LIB) -lSHTOOLS -lm -lmkl_intel_lp64 -lmkl_sequential -lmkl_core

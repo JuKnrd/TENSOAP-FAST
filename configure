@@ -136,7 +136,6 @@ else
         rm test.f90
         if [ -f a.out ];then rm a.out;fi
         cd ../
-	echo $LD_LIBRARY_PATH
 
 	echo "Editing Makefile..."
         export SHTOOLS_LIB=-L$(pwd)/install/SHTOOLS/lib
