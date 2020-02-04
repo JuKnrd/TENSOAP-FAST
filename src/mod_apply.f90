@@ -116,7 +116,7 @@ subroutine get_model(model)
   character(len=100) model
   real*8, allocatable, target :: raw_model(:)
   real*8 a1,a2
-  integer i,j,k,l
+  integer i,j,k,l,ncen,nspec
 
    ! Read in power spectrum file(s)
    open(unit=41,file=trim(adjustl(model))//'.mdl',status='old',access='stream',form='unformatted')
@@ -246,6 +246,22 @@ subroutine get_model(model)
     i = i + 1
     rs(3) = raw_model(i)
     if (rs(3).eq.0.d0) rs=rs_default
+   endif
+   i = i + 1
+   ncen = int(raw_model(i))
+   if (ncen.gt.0) then
+    do j=1,ncen
+     i = i + 1
+     all_centres(int(raw_model(i))) = .true.
+    enddo
+   endif
+   i = i + 1
+   nspec = int(raw_model(i))
+   if (nspec.gt.0) then
+    do j=1,ncen
+     i = i + 1
+     all_species(int(raw_model(i))) = .true.
+    enddo
    endif
 
    if (i.ne.reals) stop 'ERROR: different file size to that expected for model!'
