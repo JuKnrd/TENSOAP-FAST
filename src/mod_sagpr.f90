@@ -1064,7 +1064,8 @@ module sagpr
    rcut2 = rcut*rcut
    ncell = 2
 
-   allocate(radint(natoms,nspecies,nnmax,lmax+1,nmax),efact(natoms,nspecies,nnmax),length(natoms,nspecies,nnmax),nneigh(natoms,nspecies))
+   allocate(radint(natoms,nspecies,nnmax,lmax+1,nmax),&
+     &     efact(natoms,nspecies,nnmax),length(natoms,nspecies,nnmax),nneigh(natoms,nspecies))
 
    nneigh(:,:) = 0
    length(:,:,:) = 0.d0
