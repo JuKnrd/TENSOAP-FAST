@@ -428,6 +428,8 @@ module sagpr
   complex*16, allocatable :: CC(:,:),inner_mu(:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
+  complex*16, allocatable :: om(:,:)
+  real*8, allocatable :: ord(:,:),ww(:,:)
 
   ! Get maximum number of neighbours
   if (.not.periodic) then
@@ -676,27 +678,50 @@ module sagpr
      ! Spherical
 
      if (ncut.gt.0) then
-      !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n)
+      !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ord,ww)
       do j=1,ncut
+       allocate(om(natoms(i),2*lmax+1),ord(natoms(i),nnmax),ww(2*lm+1,2*lmax+1))
        ia = components(j,1)
        ib = components(j,2)
        nn = components(j,3)
        mm = components(j,4)
        l1 = components(j,5)
        l2 = components(j,6)
+!       do l=1,natoms(i)
+!        om(l,:)  = omega(l,ia,nn,l1+1,:)
+!        do n=1,nnmax
+!         ord(l,n) = orthoradint(l,ib,l2+1,mm,n)
+!        enddo
+!       enddo
+!       do k=1,2*lm+1
+!        do im=1,2*lmax+1
+!         ww(k,im) = w3j(k,l1+1,l2+1,im)
+!        enddo
+!       enddo
+       ww(:,:) = w3j(:,l1+1,l2+1,:)
        do k=1,2*lm+1
         do l=1,natoms(i)
+!         do n=1,nnmax
+!          ord(l,n) = orthoradint(l,ib,l2+1,mm,n)
+!         enddo
          do im=1,2*lmax+1
           if (abs(im-l1-k+lm).le.l2) then
            do n=1,nnmax
+!            PS(i,l,k,j) = PS(i,l,k,j) + &
+!     &          (omega(l,ia,nn,l1+1,im)*orthoradint(l,ib,l2+1,mm,n)* &
+!     &          conjg(harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n))*w3j(k,l1+1,l2+1,im))
             PS(i,l,k,j) = PS(i,l,k,j) + &
      &          (omega(l,ia,nn,l1+1,im)*orthoradint(l,ib,l2+1,mm,n)* &
-     &          conjg(harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n))*w3j(k,l1+1,l2+1,im))
+     &          conjg(harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n))*ww(k,im))
            enddo
+!           PS(i,l,k,j) = PS(i,l,k,j) + &
+!     &          (omega(l,ia,nn,l1+1,im) * w3j(k,l1+1,l2+1,im) * &
+!     &          dot_product(harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,:),orthoradint(l,ib,l2+1,mm,:)))
           endif
          enddo
         enddo
        enddo
+       deallocate(om,ord,ww)
       enddo
       !$OMP END PARALLEL DO
      else
@@ -976,6 +1001,8 @@ module sagpr
      do k=1,natoms(i)
       PS0(i,k,1,j) = dot_product(omegatrue(k,components0(j,1),components0(j,3),components0(j,5),:), &
      &     omegatrue(k,components0(j,2),components0(j,4),components0(j,5),:))
+!      PS0(i,k,1,j) = zdotc(2*lmax+1,omegatrue(k,components0(j,1),components0(j,3),components0(j,5),:), &
+!     &     1,omegatrue(k,components0(j,2),components0(j,4),components0(j,5),:),1)
      enddo
     enddo
     !$OMP END PARALLEL DO
@@ -1055,6 +1082,8 @@ module sagpr
    integer, allocatable :: nneigh(:,:)
    integer all_indices(nsmax,natmax),nneighmax(nsmax),ipiv(3),info,lwork,work(1000)
    logical periodic
+   integer ts,tf,cr
+   real*8 rate
 
    sg2 = sg*sg
    alpha = 1.d0 / (2.d0 * sg2)
@@ -1063,6 +1092,9 @@ module sagpr
    radial_m = rs(3)
    rcut2 = rcut*rcut
    ncell = 2
+
+    call system_clock(count_rate=cr)
+    rate = real(cr)
 
    allocate(radint(natoms,nspecies,nnmax,lmax+1,nmax),&
      &     efact(natoms,nspecies,nnmax),length(natoms,nspecies,nnmax),nneigh(natoms,nspecies))
@@ -1075,7 +1107,7 @@ module sagpr
    radint(:,:,:,:,:) = 0.d0
    orthoradint(:,:,:,:,:) = 0.d0
 
-   call cpu_time(start)
+   call system_clock(ts)
 
    if (.not.periodic) then
 
@@ -1215,6 +1247,10 @@ module sagpr
 
    endif
 
+   call system_clock(tf)
+   write(*,'(A,F6.3,A)') ' got harmonic in ',(tf-ts)/rate,' s'
+   call system_clock(ts)
+
    ! Get radial integral
    !$OMP PARALLEL DO SHARED(radint,efact,length,sg2) PRIVATE(n1,n2,normfact,sigmafact,i,k,nn,l)
    do n1=1,nmax
@@ -1237,6 +1273,10 @@ module sagpr
    enddo
    !$OMP END PARALLEL DO
 
+   call system_clock(tf)
+   write(*,'(A,F6.3,A)') ' got radint in ',(tf-ts)/rate,' s'
+   call system_clock(ts)
+
    ! Get orthoradint
    !$OMP PARALLEL DO SHARED(orthoradint,radint,orthomatrix) PRIVATE(iat,k,neigh)
    do l=1,lmax+1
@@ -1250,23 +1290,31 @@ module sagpr
    enddo
    !$OMP END PARALLEL DO
 
+   call system_clock(tf)
+   write(*,'(A,F6.3,A)') ' got orthoradint in ',(tf-ts)/rate,' s'
+   call system_clock(ts)
+
    ! Get omega
    omega(:,:,:,:,:) = 0.d0
    !$OMP PARALLEL DO SHARED(omega,orthoradint,harmonic) PRIVATE(l,im,n1,k,iat,i)
    do im=1,2*lmax+1
-    do i=1,nnmax
+!    do i=1,nnmax
      do n1=1,nmax
       do l=1,lmax+1
        do k=1,nspecies
         do iat=1,natoms
-         omega(iat,k,n1,l,im) = omega(iat,k,n1,l,im) + (orthoradint(iat,k,l,n1,i) * harmonic(iat,k,l,im,i))
+!         omega(iat,k,n1,l,im) = omega(iat,k,n1,l,im) + (orthoradint(iat,k,l,n1,i) * harmonic(iat,k,l,im,i))
+         omega(iat,k,n1,l,im) = dot_product(orthoradint(iat,k,l,n1,:),harmonic(iat,k,l,im,:))
         enddo
        enddo
       enddo
      enddo
-    enddo
+!    enddo
    enddo
    !$OMP END PARALLEL DO
+
+   call system_clock(tf)
+   write(*,'(A,F6.3,A)') ' got omega in ',(tf-ts)/rate,' s'
 
    deallocate(radint,efact,length,nneigh)
 

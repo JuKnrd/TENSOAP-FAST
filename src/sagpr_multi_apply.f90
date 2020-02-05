@@ -6,7 +6,7 @@ program sagpr_apply
     character(len=100), allocatable :: arg(:),keys1(:)
     integer i,j,ios,un,u2
     character(len=100) ofile,model
-    integer t1,t2,cr
+    integer t1,t2,cr,ts,tf
     real*8 rate
 
 !************************************************************************************
@@ -72,19 +72,29 @@ program sagpr_apply
 
       ! Get power spectrum
       if (.not.do_scalar) then
+       call system_clock(ts)
        call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
      &     ncut,sparsification,rs,periodic,.true.)
+       call system_clock(tf)
+       write(*,'(A,F6.3,A)') 'Got PS in',(tf-ts)/rate,' s'
       else
+       call system_clock(ts)
        call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
      &     ncut,sparsification,rs,periodic,.true.)
+       call system_clock(tf)
+       write(*,'(A,I2,A,F6.3,A)') 'Got L=',lm,' PS in',(tf-ts)/rate,' s'
+       call system_clock(ts)
        call do_power_spectrum_scalar(xyz,atname,natoms,cell,nframes,natmax,0,nmax0,lmax0,rcut0,sg0, &
      &     ncut0,sparsification0,rs0,periodic,.true.)
+       call system_clock(tf)
+       write(*,'(A,I2,A,F6.3,A)') 'Got L=',0,' PS in',(tf-ts)/rate,' s'
       endif
 
       ! Get kernel
       if (allocated(natoms_tr)) deallocate(natoms_tr)
       allocate(natoms_tr(nmol))
       natoms_tr(:) = 1.d0
+      call system_clock(ts)
       if (.not.do_scalar) then
        if (lm.eq.0) then
         ker = do_scalar_kernel(real(PS),PS_tr_lam,nframes,nmol,nfeat,nfeat,natmax,1,dfloat(natoms),natoms_tr,zeta,.false.)
@@ -98,6 +108,8 @@ program sagpr_apply
        ker_lm = do_nonlinear_spherical_kernel(real(PS),PS_tr_lam,real(PS0),PS_tr_0,nframes,nmol,nfeat,nfeat, &
      &     nfeat0,nfeat0,natmax,1,dfloat(natoms),natoms_tr,zeta,.false.,degen)
       endif
+      call system_clock(tf)
+      write(*,'(A,F6.3,A)') 'Got kernel in ',(tf-ts)/rate,' s'
 
       ! Get predictions
       if (allocated(prediction_lm)) deallocate(prediction_lm)
@@ -119,7 +131,8 @@ program sagpr_apply
      endif
 
      call system_clock(t2)
-     write(*,'(A,F6.3,A)') 'Time taken:',(t2-t1)/rate,' seconds'
+     write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
+     write(*,*)
     enddo
     close(33)
     call execute_command_line('rm my_fifo_in my_fifo_out')
