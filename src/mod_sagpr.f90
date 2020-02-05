@@ -435,7 +435,7 @@ module sagpr
   if (.not.periodic) then
    nnmax = natmax
   else
-   nnmax = natmax
+   nnmax = int(1.2d0 * (4.d0 * dacos(-1.d0) / 3.d0) * natmax * rcut * rcut * rcut / maxdet(cell,nframes))
   endif
 
   ! List indices for atoms of the same species
@@ -838,7 +838,7 @@ module sagpr
   if (.not.periodic) then
    nnmax = natmax
   else
-   nnmax = natmax
+   nnmax = int(1.2d0 * (4.d0 * dacos(-1.d0) / 3.d0) * natmax * rcut * rcut * rcut / maxdet(cell,nframes))
   endif
 
   ! List indices for atoms of the same species
@@ -1617,6 +1617,24 @@ module sagpr
   return
  end function
 
+
+!***************************************************************************************************
+
+ real*8 function maxdet(cell,nframes)
+  implicit none
+
+   integer nframes,i
+   real*8 cell(nframes,3,3),cl(3,3),dt
+
+   maxdet = 0.d0
+   do i=1,nframes
+    cl = cell(i,:,:)
+    dt = cl(1,1)*cl(2,2)*cl(3,3) - cl(1,1)*cl(2,3)*cl(3,2) - cl(2,1)*cl(1,2)*cl(3,3) + &
+     &     cl(1,2)*cl(2,3)*cl(3,1) + cl(1,3)*cl(2,1)*cl(3,2) - cl(1,3)*cl(2,2)*cl(3,1)
+    maxdet = max(maxdet,dt)
+   enddo
+
+ end function
 
 !***************************************************************************************************
 

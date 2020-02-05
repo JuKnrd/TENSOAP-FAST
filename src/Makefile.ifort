@@ -2,8 +2,8 @@
 
 FF=ifort
 FOPTS=-Ofast -fpp -m64 -free -mkl -g -fpe3 -qopenmp -ipo -funroll-loops -xHost
-SHTOOLS_LIB=-L/home/dwilkins/source/soapfast_fortran_ifort/install/SHTOOLS/lib
-SHTOOLS_INCLUDE=-I/home/dwilkins/source/soapfast_fortran_ifort/install/SHTOOLS/modules
+SHTOOLS_LIB=
+SHTOOLS_INCLUDE=
 LD=$(SHTOOLS_LIB) -lSHTOOLS -lm -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
 INCLUDE=$(SHTOOLS_INCLUDE)
 SAGPR_PREFIX=
