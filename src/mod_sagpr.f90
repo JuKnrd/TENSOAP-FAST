@@ -435,7 +435,7 @@ module sagpr
   if (.not.periodic) then
    nnmax = natmax
   else
-   nnmax = natmax * 10
+   nnmax = natmax
   endif
 
   ! List indices for atoms of the same species
@@ -708,10 +708,7 @@ module sagpr
 !        enddo
 !       enddo
        do k=1,2*lm+1
-!        im0 = max(1,k + l1-l2-lm)
-!        im1 = min(2*lmax+1,k + l1+l2-lm)
         do l=1,natoms(i)
-!         do im=im0,im1
          do im=1,2*lmax+1
           if (abs(im-l1-k+lm).le.l2) then
            do n=1,nnmax
@@ -841,7 +838,7 @@ module sagpr
   if (.not.periodic) then
    nnmax = natmax
   else
-   nnmax = natmax * 10
+   nnmax = natmax
   endif
 
   ! List indices for atoms of the same species
