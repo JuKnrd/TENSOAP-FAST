@@ -5,7 +5,7 @@ program sagpr_apply
 
     character(len=100), allocatable :: arg(:),keys1(:)
     integer i,j,ios,un,u2
-    character(len=100) ofile,model
+    character(len=100) ofile,model,fifo_in,fifo_out
     integer t1,t2,cr,ts,tf
     real*8 rate
 
@@ -46,19 +46,21 @@ program sagpr_apply
 ! READ IN DATA SEVERAL TIMES AND MAKE PREDICTIONS
 !************************************************************************************
 
-    call execute_command_line('if [ -p my_fifo_in ];then rm my_fifo_in;fi')
-    call execute_command_line('mkfifo my_fifo_in ')
-    call execute_command_line('if [ -p my_fifo_out ];then rm my_fifo_out;fi')
-    call execute_command_line('mkfifo my_fifo_out ')
+    fifo_in = trim(adjustl(model))//'.in'
+    fifo_out = trim(adjustl(model))//'.out'
+    call execute_command_line('if [ -p '//trim(adjustl(fifo_in))//' ];then rm '//trim(adjustl(fifo_in))//';fi')
+    call execute_command_line('mkfifo '//trim(adjustl(fifo_in)))
+    call execute_command_line('if [ -p '//trim(adjustl(fifo_out))//' ];then rm '//trim(adjustl(fifo_out))//';fi')
+    call execute_command_line('mkfifo '//trim(adjustl(fifo_out)))
 
-    open(newunit=un,file="my_fifo_in",status="old",access="stream",form="formatted")
-    open(newunit=u2,file="my_fifo_out",status="old",access="stream",form="formatted")
+    open(newunit=un,file=trim(adjustl(fifo_in)),status="old",access="stream",form="formatted")
+    open(newunit=u2,file=trim(adjustl(fifo_out)),status="old",access="stream",form="formatted")
 
     ! Initialize the system clock
     call system_clock(count_rate=cr)
     rate = real(cr)
 
-    write(*,*) 'Ready to accept input at my_fifo_in'
+    write(*,*) 'Ready to accept input at '//trim(adjustl(fifo_in))
 
     ios = 1
     open(unit=33,file=ofile)
@@ -66,7 +68,7 @@ program sagpr_apply
      open(unit=73,file='EXIT',status='old',iostat=ios)
      if (ios.ne. 0) then
 
-      call read_fifo(un,periodic)
+      call read_fifo(un,periodic,model)
 
       call system_clock(t1)
 
@@ -135,7 +137,7 @@ program sagpr_apply
      write(*,*)
     enddo
     close(33)
-    call execute_command_line('rm my_fifo_in my_fifo_out')
+    call execute_command_line('rm '//trim(adjustl(model))//'.{in,out}')
 
     ! Array deallocation
     if (allocated(xyz)) deallocate(xyz,atname,natoms,comment,sparsification,cell,PS_tr_lam,wt,arg,keys1,prediction_lm,PS)

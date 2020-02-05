@@ -203,11 +203,12 @@ end subroutine
 
 !****************************************************************************************************************
 
-subroutine read_fifo(un,periodic)
+subroutine read_fifo(un,periodic,model)
  implicit none
 
   integer ios,un,nat
   character(len=1000) line,c1
+  character(len=100) model
   integer i,j,ii
   logical periodic
 
@@ -215,7 +216,7 @@ subroutine read_fifo(un,periodic)
    read(un,'(A)') line
    read(line,*,iostat=ios) nat
    if (ios.ne.0) then
-    call system('rm my_fifo_in my_fifo_out')
+    call system('rm '//trim(adjustl(model))//'.{in,out}')
     write(*,*) 'Non-standard input detected; now stopping'
     stop
    endif
