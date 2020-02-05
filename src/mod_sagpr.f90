@@ -428,7 +428,7 @@ module sagpr
   complex*16, allocatable :: CC(:,:),inner_mu(:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
-  complex*16, allocatable :: om(:,:),ch(:,:,:,:)
+  complex*16, allocatable :: om(:,:),ch(:,:,:)
   real*8, allocatable :: ord(:,:),ww(:,:)
 
   ! Get maximum number of neighbours
@@ -676,11 +676,12 @@ module sagpr
 
    else
      ! Spherical
+     harmonic = conjg(harmonic)
 
      if (ncut.gt.0) then
-      !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ord,ww,ch)
+      !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ord,ww)
       do j=1,ncut
-       allocate(om(natoms(i),2*lmax+1),ord(natoms(i),nnmax),ww(2*lm+1,2*lmax+1))!,ch(natoms(i),2*lmax+1,2*lm+1,nnmax))
+       allocate(om(natoms(i),2*lmax+1),ord(natoms(i),nnmax),ww(2*lm+1,2*lmax+1))!,ch(natoms(i),2*lmax+1,nnmax))
        ia = components(j,1)
        ib = components(j,2)
        nn = components(j,3)
@@ -695,6 +696,7 @@ module sagpr
        ww(:,:)  = w3j(:,l1+1,l2+1,:)
        om(:,:)  = omega(:,ia,nn,l1+1,:)
        ord(:,:) = orthoradint(:,ib,l2+1,mm,:)
+!       ch(:,:,:) = conjg(harmonic(:,ib,l2+1,:,:))
 !       do l=1,natoms(i)
 !        do im=1,2*lmax+1
 !         do k=1,2*lm+1
@@ -713,9 +715,8 @@ module sagpr
 !     &          (omega(l,ia,nn,l1+1,im)*orthoradint(l,ib,l2+1,mm,n)* &
 !     &          conjg(harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n))*w3j(k,l1+1,l2+1,im))
             PS(i,l,k,j) = PS(i,l,k,j) + &
-     &          (om(l,im)*ord(l,n)* &
-     &          conjg(harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n))*ww(k,im))
-!     &          ch(l,im,k,n)*ww(k,im))
+     &          (om(l,im)*ord(l,n)*harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n)*ww(k,im))
+!     &          (om(l,im)*ord(l,n)*ch(l,l2+im-l1-k+lm+1,n)*ww(k,im))
            enddo
 !           PS(i,l,k,j) = PS(i,l,k,j) + &
 !     &          (omega(l,ia,nn,l1+1,im) * w3j(k,l1+1,l2+1,im) * &
