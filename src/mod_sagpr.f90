@@ -414,7 +414,7 @@ module sagpr
   implicit none
 
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l,mu,nu
-  integer llmax,ps_shape(4),m,n,nn,jmin,jmax,im,ia,ib,mm
+  integer llmax,ps_shape(4),m,n,nn,jmin,jmax,im,ia,ib,mm,im0,im1
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
   complex*16 sparsification(2,ncut,ncut)
   real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax),inner
@@ -679,7 +679,7 @@ module sagpr
      harmonic = conjg(harmonic)
 
      if (ncut.gt.0) then
-      !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ord,ww)
+      !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ord,ww,im0,im1)
       do j=1,ncut
        allocate(om(natoms(i),2*lmax+1),ord(natoms(i),nnmax),ww(2*lm+1,2*lmax+1))!,ch(natoms(i),2*lmax+1,nnmax))
        ia = components(j,1)
@@ -707,20 +707,16 @@ module sagpr
 !        enddo
 !       enddo
        do k=1,2*lm+1
+!        im0 = max(1,k + l1-l2-lm)
+!        im1 = min(2*lmax+1,k + l1+l2-lm)
         do l=1,natoms(i)
+!         do im=im0,im1
          do im=1,2*lmax+1
           if (abs(im-l1-k+lm).le.l2) then
            do n=1,nnmax
-!            PS(i,l,k,j) = PS(i,l,k,j) + &
-!     &          (omega(l,ia,nn,l1+1,im)*orthoradint(l,ib,l2+1,mm,n)* &
-!     &          conjg(harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n))*w3j(k,l1+1,l2+1,im))
             PS(i,l,k,j) = PS(i,l,k,j) + &
      &          (om(l,im)*ord(l,n)*harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n)*ww(k,im))
-!     &          (om(l,im)*ord(l,n)*ch(l,l2+im-l1-k+lm+1,n)*ww(k,im))
            enddo
-!           PS(i,l,k,j) = PS(i,l,k,j) + &
-!     &          (omega(l,ia,nn,l1+1,im) * w3j(k,l1+1,l2+1,im) * &
-!     &          dot_product(harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,:),orthoradint(l,ib,l2+1,mm,:)))
           endif
          enddo
         enddo
