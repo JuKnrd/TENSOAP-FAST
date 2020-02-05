@@ -414,7 +414,7 @@ module sagpr
   implicit none
 
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l,mu,nu
-  integer llmax,ps_shape(4),m,n,nn,jmin,jmax,im,ia,ib,mm,im0,im1
+  integer llmax,ps_shape(4),m,n,nn,jmin,jmax,im,ia,ib,mm
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
   complex*16 sparsification(2,ncut,ncut)
   real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax),inner
@@ -999,8 +999,6 @@ module sagpr
      do k=1,natoms(i)
       PS0(i,k,1,j) = dot_product(omegatrue(k,components0(j,1),components0(j,3),components0(j,5),:), &
      &     omegatrue(k,components0(j,2),components0(j,4),components0(j,5),:))
-!      PS0(i,k,1,j) = zdotc(2*lmax+1,omegatrue(k,components0(j,1),components0(j,3),components0(j,5),:), &
-!     &     1,omegatrue(k,components0(j,2),components0(j,4),components0(j,5),:),1)
      enddo
     enddo
     !$OMP END PARALLEL DO
@@ -1070,13 +1068,10 @@ module sagpr
    integer ineigh,neigh,lval,im,mval,n1,n2,l,i,k,nn,ncell,ia,ib,ic
    real*8 rcut2,rx,ry,rz,r2,rdist,cth,ph,normfact,sigmafact,rv(3),sv(3),rcv(3)
    complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms,nspecies,lmax+1,2*lmax+1,nnmax)
-!   real*8 radint(natoms,nspecies,nnmax,lmax+1,nmax),orthoradint(natoms,nspecies,lmax+1,nmax,nnmax)
-!   real*8 efact(natoms,nspecies,nnmax),length(natoms,nspecies,nnmax),cell(3,3),rs(3),sg,rcut,xyz(natmax,3)
    real*8 orthoradint(natoms,nspecies,lmax+1,nmax,nnmax)
    real*8 cell(3,3),rs(3),sg,rcut,xyz(natmax,3)
    real*8, allocatable :: radint(:,:,:,:,:),efact(:,:,:),length(:,:,:)
    real*8 sigma(nmax),orthomatrix(nmax,nmax),alpha,sg2,radial_c,radial_r0,radial_m,invcell(3,3)
-!   integer nneigh(natoms,nspecies),
    integer, allocatable :: nneigh(:,:)
    integer all_indices(nsmax,natmax),nneighmax(nsmax),ipiv(3),info,lwork,work(1000)
    logical periodic
@@ -1246,7 +1241,7 @@ module sagpr
    endif
 
    call system_clock(tf)
-   write(*,'(A,F6.3,A)') ' got harmonic in ',(tf-ts)/rate,' s'
+!   write(*,'(A,F6.3,A)') ' got harmonic in ',(tf-ts)/rate,' s'
    call system_clock(ts)
 
    ! Get radial integral
@@ -1272,7 +1267,7 @@ module sagpr
    !$OMP END PARALLEL DO
 
    call system_clock(tf)
-   write(*,'(A,F6.3,A)') ' got radint in ',(tf-ts)/rate,' s'
+!   write(*,'(A,F6.3,A)') ' got radint in ',(tf-ts)/rate,' s'
    call system_clock(ts)
 
    ! Get orthoradint
@@ -1289,30 +1284,27 @@ module sagpr
    !$OMP END PARALLEL DO
 
    call system_clock(tf)
-   write(*,'(A,F6.3,A)') ' got orthoradint in ',(tf-ts)/rate,' s'
+!   write(*,'(A,F6.3,A)') ' got orthoradint in ',(tf-ts)/rate,' s'
    call system_clock(ts)
 
    ! Get omega
    omega(:,:,:,:,:) = 0.d0
    !$OMP PARALLEL DO SHARED(omega,orthoradint,harmonic) PRIVATE(l,im,n1,k,iat,i)
    do im=1,2*lmax+1
-!    do i=1,nnmax
      do n1=1,nmax
       do l=1,lmax+1
        do k=1,nspecies
         do iat=1,natoms
-!         omega(iat,k,n1,l,im) = omega(iat,k,n1,l,im) + (orthoradint(iat,k,l,n1,i) * harmonic(iat,k,l,im,i))
          omega(iat,k,n1,l,im) = dot_product(orthoradint(iat,k,l,n1,:),harmonic(iat,k,l,im,:))
         enddo
        enddo
       enddo
      enddo
-!    enddo
    enddo
    !$OMP END PARALLEL DO
 
    call system_clock(tf)
-   write(*,'(A,F6.3,A)') ' got omega in ',(tf-ts)/rate,' s'
+!   write(*,'(A,F6.3,A)') ' got omega in ',(tf-ts)/rate,' s'
 
    deallocate(radint,efact,length,nneigh)
 
