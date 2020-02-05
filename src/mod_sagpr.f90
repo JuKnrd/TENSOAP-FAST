@@ -679,9 +679,9 @@ module sagpr
      harmonic = conjg(harmonic)
 
      if (ncut.gt.0) then
-      !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ord,ww,im0,im1)
+      !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ord,ww,ch)
       do j=1,ncut
-       allocate(om(natoms(i),2*lmax+1),ord(natoms(i),nnmax),ww(2*lm+1,2*lmax+1))!,ch(natoms(i),2*lmax+1,nnmax))
+       allocate(om(natoms(i),2*lmax+1),ord(natoms(i),nnmax),ww(2*lm+1,2*lmax+1),ch(natoms(i),2*lmax+1,nnmax))
        ia = components(j,1)
        ib = components(j,2)
        nn = components(j,3)
@@ -696,6 +696,7 @@ module sagpr
        ww(:,:)  = w3j(:,l1+1,l2+1,:)
        om(:,:)  = omega(:,ia,nn,l1+1,:)
        ord(:,:) = orthoradint(:,ib,l2+1,mm,:)
+!       ch(:,:,:) = harmonic(:,ib,l2+1,:,:)
 !       ch(:,:,:) = conjg(harmonic(:,ib,l2+1,:,:))
 !       do l=1,natoms(i)
 !        do im=1,2*lmax+1
@@ -721,7 +722,7 @@ module sagpr
          enddo
         enddo
        enddo
-       deallocate(om,ord,ww)!,ch)
+       deallocate(om,ord,ww,ch)
       enddo
       !$OMP END PARALLEL DO
      else
