@@ -701,10 +701,11 @@ module sagpr
 !       enddo
        ww(:,:)  = w3j(:,l1+1,l2+1,:)
        om(:,:)  = omega(:,ia,nn,l1+1,:)
-       ord(:,:) = orthoradint(:,ib,l2+1,mm,:)
+!       ord(:,:) = orthoradint(:,ib,l2+1,mm,:)
        do l=1,natoms(i)
         do im=1,2*lmax+1
-         ch(l,im) = dot_product(harmonic(l,ib,l2+1,im,:),ord(l,:))
+!         ch(l,im) = dot_product(harmonic(l,ib,l2+1,im,:),ord(l,:))
+         ch(l,im) = dot_product(harmonic(l,ib,l2+1,im,:),orthoradint(l,ib,l2+1,mm,:))
         enddo
        enddo
 !       ch(:,:,:) = harmonic(:,ib,l2+1,:,:)
