@@ -49,9 +49,9 @@ program sagpr_apply
     fifo_in = trim(adjustl(model))//'.in'
     fifo_out = trim(adjustl(model))//'.out'
     call execute_command_line('if [ -p '//trim(adjustl(fifo_in))//' ];then rm '//trim(adjustl(fifo_in))//';fi')
-    call execute_command_line('mkfifo '//trim(adjustl(fifo_in)))
+    call execute_command_line('mkfifo '//trim(adjustl(fifo_in))//' -m777')
     call execute_command_line('if [ -p '//trim(adjustl(fifo_out))//' ];then rm '//trim(adjustl(fifo_out))//';fi')
-    call execute_command_line('mkfifo '//trim(adjustl(fifo_out)))
+    call execute_command_line('mkfifo '//trim(adjustl(fifo_out))//' -m777')
 
     open(newunit=un,file=trim(adjustl(fifo_in)),status="old",access="stream",form="formatted")
     open(newunit=u2,file=trim(adjustl(fifo_out)),status="old",access="stream",form="formatted")

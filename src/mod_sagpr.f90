@@ -425,10 +425,11 @@ module sagpr
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
   complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),ps_row(:,:,:)
+  complex*16, allocatable :: ot1(:,:),ot2(:,:)
   complex*16, allocatable :: CC(:,:),inner_mu(:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
-  complex*16, allocatable :: om(:,:),ch(:,:,:)
+  complex*16, allocatable :: om(:,:),ch(:,:)
   real*8, allocatable :: ord(:,:),ww(:,:)
 
   ! Get maximum number of neighbours
@@ -661,12 +662,17 @@ module sagpr
      omegatrue(:,:,:,l+1,:) = omega(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
     enddo
     if (ncut.gt.0) then
-     !$OMP PARALLEL DO SHARED(components,PS,omegatrue,ncut,natoms,i) PRIVATE(j,k)
+     !$OMP PARALLEL DO SHARED(components,PS,omegatrue,ncut,natoms,i) PRIVATE(j,k,ot1,ot2)
      do j=1,ncut
+      allocate(ot1(natoms(i),2*lmax+1),ot2(natoms(i),2*lmax+1))
+      ot1(:,:) = omegatrue(:,components(j,1),components(j,3),components(j,5),:)
+      ot2(:,:) = omegatrue(:,components(j,2),components(j,4),components(j,5),:)
       do k=1,natoms(i)
-       PS(i,k,1,j) = dot_product(omegatrue(k,components(j,1),components(j,3),components(j,5),:), &
-     &     omegatrue(k,components(j,2),components(j,4),components(j,5),:))
+!       PS(i,k,1,j) = dot_product(omegatrue(k,components(j,1),components(j,3),components(j,5),:), &
+!     &     omegatrue(k,components(j,2),components(j,4),components(j,5),:))
+       PS(i,k,1,j) = dot_product(ot1(k,:),ot2(k,:))
       enddo
+      deallocate(ot1,ot2)
      enddo
      !$OMP END PARALLEL DO
     else
@@ -676,12 +682,12 @@ module sagpr
 
    else
      ! Spherical
-     harmonic = conjg(harmonic)
+!     harmonic = conjg(harmonic)
 
      if (ncut.gt.0) then
       !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ord,ww,ch)
       do j=1,ncut
-       allocate(om(natoms(i),2*lmax+1),ord(natoms(i),nnmax),ww(2*lm+1,2*lmax+1),ch(natoms(i),2*lmax+1,nnmax))
+       allocate(om(natoms(i),2*lmax+1),ord(natoms(i),nnmax),ww(2*lm+1,2*lmax+1),ch(natoms(i),2*lmax+1))
        ia = components(j,1)
        ib = components(j,2)
        nn = components(j,3)
@@ -696,6 +702,11 @@ module sagpr
        ww(:,:)  = w3j(:,l1+1,l2+1,:)
        om(:,:)  = omega(:,ia,nn,l1+1,:)
        ord(:,:) = orthoradint(:,ib,l2+1,mm,:)
+       do l=1,natoms(i)
+        do im=1,2*lmax+1
+         ch(l,im) = dot_product(harmonic(l,ib,l2+1,im,:),ord(l,:))
+        enddo
+       enddo
 !       ch(:,:,:) = harmonic(:,ib,l2+1,:,:)
 !       ch(:,:,:) = conjg(harmonic(:,ib,l2+1,:,:))
 !       do l=1,natoms(i)
@@ -711,10 +722,11 @@ module sagpr
         do l=1,natoms(i)
          do im=1,2*lmax+1
           if (abs(im-l1-k+lm).le.l2) then
-           do n=1,nnmax
+!           do n=1,nnmax
             PS(i,l,k,j) = PS(i,l,k,j) + &
-     &          (om(l,im)*ord(l,n)*harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n)*ww(k,im))
-           enddo
+!     &          (om(l,im)*ord(l,n)*harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n)*ww(k,im))
+     &          (om(l,im)*ch(l,l2+im-l1-k+lm+1)*ww(k,im))
+!           enddo
           endif
          enddo
         enddo
@@ -829,6 +841,7 @@ module sagpr
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
   complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),ps_row(:,:,:)
+  complex*16, allocatable :: ot1(:,:),ot2(:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
 
@@ -994,12 +1007,17 @@ module sagpr
     omegatrue(:,:,:,l+1,:) = omega(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
    enddo
    if (ncut.gt.0) then
-    !$OMP PARALLEL DO SHARED(components,PS0,omegatrue,ncut,natoms,i) PRIVATE(j,k)
+    !$OMP PARALLEL DO SHARED(components,PS0,omegatrue,ncut,natoms,i) PRIVATE(j,k,ot1,ot2)
     do j=1,ncut
+     allocate(ot1(natoms(i),2*lmax+1),ot2(natoms(i),2*lmax+1))
+     ot1(:,:) = omegatrue(:,components0(j,1),components0(j,3),components0(j,5),:)
+     ot2(:,:) = omegatrue(:,components0(j,2),components0(j,4),components0(j,5),:)
      do k=1,natoms(i)
-      PS0(i,k,1,j) = dot_product(omegatrue(k,components0(j,1),components0(j,3),components0(j,5),:), &
-     &     omegatrue(k,components0(j,2),components0(j,4),components0(j,5),:))
+!      PS0(i,k,1,j) = dot_product(omegatrue(k,components0(j,1),components0(j,3),components0(j,5),:), &
+!     &     omegatrue(k,components0(j,2),components0(j,4),components0(j,5),:))
+      PS0(i,k,1,j) = dot_product(ot1(k,:),ot2(k,:))
      enddo
+     deallocate(ot1,ot2)
     enddo
     !$OMP END PARALLEL DO
    else
