@@ -431,6 +431,11 @@ module sagpr
   integer, allocatable :: index_list(:)
   complex*16, allocatable :: om(:,:),ch(:,:)
   real*8, allocatable :: ww(:,:)
+  integer cr,ts,tf
+  real*8 rate
+
+  call system_clock(count_rate=cr)
+  rate = real(cr)
 
   ! Get maximum number of neighbours
   if (.not.periodic) then
@@ -682,7 +687,6 @@ module sagpr
 
    else
      ! Spherical
-!     harmonic = conjg(harmonic)
 
      if (ncut.gt.0) then
       !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ww,ch)
@@ -701,33 +705,16 @@ module sagpr
 !       enddo
        ww(:,:)  = w3j(:,l1+1,l2+1,:)
        om(:,:)  = omega(:,ia,nn,l1+1,:)
-!       ord(:,:) = orthoradint(:,ib,l2+1,mm,:)
        do l=1,natoms(i)
         do im=1,2*lmax+1
-!         ch(l,im) = dot_product(harmonic(l,ib,l2+1,im,:),ord(l,:))
          ch(l,im) = dot_product(harmonic(l,ib,l2+1,im,:),orthoradint(l,ib,l2+1,mm,:))
         enddo
        enddo
-!       ch(:,:,:) = harmonic(:,ib,l2+1,:,:)
-!       ch(:,:,:) = conjg(harmonic(:,ib,l2+1,:,:))
-!       do l=1,natoms(i)
-!        do im=1,2*lmax+1
-!         do k=1,2*lm+1
-!          do n=1,nnmax
-!           ch(l,im,k,n) = dconjg(harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n))
-!          enddo
-!         enddo
-!        enddo
-!       enddo
        do k=1,2*lm+1
         do l=1,natoms(i)
          do im=1,2*lmax+1
           if (abs(im-l1-k+lm).le.l2) then
-!           do n=1,nnmax
-            PS(i,l,k,j) = PS(i,l,k,j) + &
-!     &          (om(l,im)*ord(l,n)*harmonic(l,ib,l2+1,l2+im-l1-k+lm+1,n)*ww(k,im))
-     &          (om(l,im)*ch(l,l2+im-l1-k+lm+1)*ww(k,im))
-!           enddo
+            PS(i,l,k,j) = PS(i,l,k,j) + (om(l,im)*ch(l,l2+im-l1-k+lm+1)*ww(k,im))
           endif
          enddo
         enddo
@@ -748,11 +735,13 @@ module sagpr
   ! Multiply by A matrix
   if (mult_by_A) then
    do i=1,nframes
+    !$OMP PARALLEL DO SHARED(PS,sparsification) PRIVATE(j,k)
     do j=1,natmax
      do k=1,degen
       PS(i,j,k,:) = matmul(PS(i,j,k,:),sparsification(2,:,:))
      enddo
     enddo
+    !$OMP END PARALLEL DO
    enddo
   endif
 
@@ -1034,11 +1023,13 @@ module sagpr
   ! Multiply by A matrix
   if (mult_by_A) then
    do i=1,nframes
+    !$OMP PARALLEL DO SHARED(PS,sparsification) PRIVATE(j,k)
     do j=1,natmax
      do k=1,degen
       PS0(i,j,k,:) = matmul(PS0(i,j,k,:),sparsification(2,:,:))
      enddo
     enddo
+    !$OMP END PARALLEL DO
    enddo
   endif
 
@@ -1087,7 +1078,7 @@ module sagpr
    integer ineigh,neigh,lval,im,mval,n1,n2,l,i,k,nn,ncell,ia,ib,ic
    real*8 rcut2,rx,ry,rz,r2,rdist,cth,ph,normfact,sigmafact,rv(3),sv(3),rcv(3)
    complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms,nspecies,lmax+1,2*lmax+1,nnmax)
-   real*8 orthoradint(natoms,nspecies,lmax+1,nmax,nnmax)
+   real*8 orthoradint(natoms,nspecies,lmax+1,nmax,nnmax),f1
    real*8 cell(3,3),rs(3),sg,rcut,xyz(natmax,3)
    real*8, allocatable :: radint(:,:,:,:,:),efact(:,:,:),length(:,:,:)
    real*8 sigma(nmax),orthomatrix(nmax,nmax),alpha,sg2,radial_c,radial_r0,radial_m,invcell(3,3)
@@ -1264,18 +1255,18 @@ module sagpr
    call system_clock(ts)
 
    ! Get radial integral
-   !$OMP PARALLEL DO SHARED(radint,efact,length,sg2) PRIVATE(n1,n2,normfact,sigmafact,i,k,nn,l)
+   !$OMP PARALLEL DO SHARED(radint,efact,length,sg2) PRIVATE(n1,n2,normfact,sigmafact,i,k,nn,l,f1)
    do n1=1,nmax
     n2 = n1-1
     normfact = dsqrt(2.d0 / (gamma(1.5d0 + n2)*sigma(n1)**(3.d0 + 2.d0*n2)))
     sigmafact = (sg2**2 + sg2*sigma(n1)**2)/sigma(n1)**2
     do l=0,lmax
+     f1 = 2.d0**(-0.5d0*(1.d0 + l-n2)) * (1.d0/sg2 + 1.d0/sigma(n1)**2)**(-0.5d0*(3.d0 + l+n2)) * &
+     &   (gamma(0.5d0*(3.d0+l+n2))/gamma(1.5d0+l))  
      do nn=1,nnmax
       do k=1,nspecies
        do i=1,natoms
-        radint(i,k,nn,l+1,n1) = efact(i,k,nn) * 2.d0**(-0.5d0*(1.d0 + l-n2)) * &
-     &     (1.d0/sg2 + 1.d0/sigma(n1)**2)**(-0.5d0*(3.d0 + l+n2)) * &
-     &     (gamma(0.5d0*(3.d0+l+n2))/gamma(1.5d0+l)) * (length(i,k,nn)/sg2)**l * &
+        radint(i,k,nn,l+1,n1) = efact(i,k,nn) * f1 * (length(i,k,nn)/sg2)**l * &
      &     hg(0.5d0*(3.d0+l+n2),1.5d0 + l,0.5d0 * length(i,k,nn)**2/sigmafact) 
         enddo
        enddo
