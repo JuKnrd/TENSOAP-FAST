@@ -430,7 +430,7 @@ module sagpr
   real*8, allocatable :: orthoradint(:,:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
   complex*16, allocatable :: om(:,:),ch(:,:)
-  real*8, allocatable :: ord(:,:),ww(:,:)
+  real*8, allocatable :: ww(:,:)
 
   ! Get maximum number of neighbours
   if (.not.periodic) then
@@ -685,9 +685,9 @@ module sagpr
 !     harmonic = conjg(harmonic)
 
      if (ncut.gt.0) then
-      !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ord,ww,ch)
+      !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ww,ch)
       do j=1,ncut
-       allocate(om(natoms(i),2*lmax+1),ord(natoms(i),nnmax),ww(2*lm+1,2*lmax+1),ch(natoms(i),2*lmax+1))
+       allocate(om(natoms(i),2*lmax+1),ww(2*lm+1,2*lmax+1),ch(natoms(i),2*lmax+1))
        ia = components(j,1)
        ib = components(j,2)
        nn = components(j,3)
@@ -732,7 +732,7 @@ module sagpr
          enddo
         enddo
        enddo
-       deallocate(om,ord,ww,ch)
+       deallocate(om,ww,ch)
       enddo
       !$OMP END PARALLEL DO
      else
