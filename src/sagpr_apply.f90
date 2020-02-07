@@ -95,9 +95,9 @@ program sagpr_apply
      write(33,*) (prediction_lm(i,j),j=1,degen)
     enddo
     close(33)
-
     ! Array deallocation
-    deallocate(xyz,atname,natoms,comment,sparsification,cell,PS_tr_lam,natoms_tr,wt,arg,keys1,prediction_lm,PS)
+    if (allocated(xyz)) deallocate(xyz,atname,natoms,comment,sparsification,cell,PS_tr_lam,wt,keys1,prediction_lm,PS)
+    if (allocated(natoms_tr)) deallocate(natoms_tr)
     if (allocated(PS0)) deallocate(PS0)
     if (allocated(ker)) deallocate(ker)
     if (allocated(ker_lm)) deallocate(ker_lm)
