@@ -253,6 +253,60 @@ end subroutine
 
 !****************************************************************************************************************
 
+subroutine read_frame(un,periodic)
+ implicit none
+
+  integer ios,un,nat
+  character(len=1000) line,c1
+  character(len=100) model
+  integer i,j,ii
+  logical periodic
+
+   nframes = 1
+   read(un,'(A)',iostat=ios) line
+   if (ios.ne.0) then
+    write(*,*) 'End-of-file detected'
+    stop
+   endif
+   read(line,*,iostat=ios) nat
+   if (ios.ne.0) then
+    call system('rm '//trim(adjustl(model))//'.{in,out}')
+    write(*,*) 'Non-standard input detected; now stopping'
+    stop
+   endif
+   natmax = nat
+   if (allocated(xyz)) deallocate(xyz,atname,natoms,comment)
+   allocate(xyz(nframes,natmax,3),atname(nframes,natmax),natoms(nframes),comment(nframes))
+   natoms(1) = nat
+   read(un,'(A)') comment(1)
+   do j=1,natoms(1)
+    read(un,*) atname(1,j),(xyz(1,j,ii),ii=1,3)
+   enddo
+
+  ! Get cell data
+  if (allocated(cell)) deallocate(cell)
+  allocate(cell(nframes,3,3))
+  if (.not.periodic) then
+   cell(:,:,:) = 0.d0
+  else
+   do i=1,nframes
+    ios = index(comment(i),'Lattice')
+    if (ios.eq.0) stop 'ERROR: input file is not periodic!'
+    c1 = comment(i)
+    c1 = c1(ios:len(c1))
+    ios = index(c1,'"')
+    c1 = c1(ios+1:len(c1))
+    ios = index(c1,'"')
+    c1 = c1(1:ios-1)
+    read(c1,*) cell(i,1,1),cell(i,1,2),cell(i,1,3),cell(i,2,1),cell(i,2,2),cell(i,2,3),cell(i,3,1),cell(i,3,2),cell(i,3,3)
+   enddo
+  endif
+  write(*,*) 'Got input frame with ',nat,'atoms'
+
+end subroutine
+
+!****************************************************************************************************************
+
 subroutine read_xyz(fname,periodic)
  implicit none
 
