@@ -11,9 +11,9 @@ SAGPR_PREFIX=
 OBJECTS1=mod_sagpr.o sagpr_get_PS.o
 OBJECTS2=mod_sagpr.o sagpr_get_kernel.o
 OBJECTS3=mod_sagpr.o sagpr_predict.o
-OBJECTS4=mod_sagpr.o
-OBJECTS5=mod_apply.o sagpr_apply.o
-OBJECTS6=mod_apply.o sagpr_multi_apply.o
+OBJECTS4=mod_sagpr.o mod_apply.o
+OBJECTS5=sagpr_apply.o
+OBJECTS6=sagpr_multi_apply.o
 
 all: mkbin sagpr_get_PS sagpr_get_kernel sagpr_predict libsoapfast sagpr_apply sagpr_multi_apply
 
@@ -31,7 +31,7 @@ sagpr_get_kernel: $(OBJECTS2)
 sagpr_predict: $(OBJECTS3)
 	$(FF) $(FOPTS) -o ../bin/sagpr_predict $(OBJECTS3) $(INCLUDE) $(LD)
 
-libsoapfast:
+libsoapfast: $(OBJECTS4)
 	@if [ ! -d ../lib ];then mkdir ../lib;fi
 	ar r ../lib/libsoapfast.a $(OBJECTS4)
 
