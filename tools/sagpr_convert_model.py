@@ -13,13 +13,13 @@ parser.add_argument("-p0",  "--power0",     type=str,   required=False,         
 parser.add_argument("-sf0", "--sparse0",    type=str,   required=False,                    help="Scalar sparsification file")
 parser.add_argument("-hp",  "--hyperparam", type=str,   required=False,        nargs='+',  help="Hyperparameter string")
 parser.add_argument("-o",   "--outfile",    type=str,   required=True,                     help="Output file")
-parser.add_argument("-n",   "--nmax",       type=int,   default=-1,            nargs='+',  help="nmax")
-parser.add_argument("-l",   "--lmax",       type=int,   default=-1,            nargs='+',  help="lmax")
-parser.add_argument("-rc",  "--rcut",       type=float, default=-1.0,          nargs='+',  help="rcut")
+parser.add_argument("-n",   "--nmax",       type=int,   default=[-1],          nargs='+',  help="nmax")
+parser.add_argument("-l",   "--lmax",       type=int,   default=[-1],          nargs='+',  help="lmax")
+parser.add_argument("-rc",  "--rcut",       type=float, default=[-1.0],        nargs='+',  help="rcut")
 parser.add_argument("-pr",  "--periodic",   action='store_true',                           help="Periodic system")
 parser.add_argument("-lm",  "--lambdaval",  type=int,   default=0,                         help="Spherical order")
 parser.add_argument("-z",   "--zeta",       type=int,   default=1,                         help="zeta")
-parser.add_argument("-sg",  "--sigma",      type=float, default=-1.0,          nargs='+',  help="sigma")
+parser.add_argument("-sg",  "--sigma",      type=float, default=[-1.0],        nargs='+',  help="sigma")
 parser.add_argument("-rs",  "--radial",     type=float, default=[0.0,0.0,0.0], nargs='+',  help="radial scaling")
 parser.add_argument("-c",   "--centres",    type=str,                          nargs='+',  help="centres")
 parser.add_argument("-s",   "--species",    type=str,                          nargs='+',  help="species")
@@ -85,7 +85,7 @@ if (not do_scalar):
         model[3] = 0.0
     model[3] = nmol
     model[4] = ncut
-    i = 5
+    i = 4
     for j in xrange(nmol):
         for k in xrange(degen):
             for l in xrange(ncut):
@@ -108,10 +108,9 @@ if (not do_scalar):
         i+=1
         model[i] = wt[j]
     i+=1
-    print len(args.nmax)
-    model[i] = float(args.nmax)
+    model[i] = float(args.nmax[0])
     i+=1
-    model[i] = float(args.lmax)
+    model[i] = float(args.lmax[0])
     i+=1
     model[i] = args.rcut[0]
     i+=1
