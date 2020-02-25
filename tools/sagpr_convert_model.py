@@ -30,12 +30,12 @@ do_scalar = False
 if (args.power0!=None or args.sparse0!=None):
     # Check that all of them are specified, otherwise exit
     if (not (args.power0!='' and args.sparse0!='')):
-        print "ERROR: all scalar files must be specified!"
+        print("ERROR: all scalar files must be specified!")
         sys.exit(0)
     do_scalar = True
 
 if (len(args.radial)!=3 and len(args.radial)!=6):
-    print "ERROR: three or six parameters are required for radial scaling!"
+    print("ERROR: three or six parameters are required for radial scaling!")
     sys.exit(0)
 
 if (args.centres==None):
@@ -51,10 +51,10 @@ if (not do_scalar):
     pp = np.load(args.power)
     fp = np.load(args.sparse + '_fps.npy')
     am = np.load(args.sparse + '_Amat.npy')
-    weights = np.load(args.weights)
+    weights = np.load(args.weights,allow_pickle=True)
     wt = weights[4]
     if (len(weights)>5):
-        mv = np.load(args.weights)[5]
+        mv = np.load(args.weights,allow_pickle=True)[5]
     else:
         mv = 0.0
     # Make model array
@@ -68,13 +68,13 @@ if (not do_scalar):
     model = np.zeros(ln,float)
     p1 = np.zeros((nmol,1,degen,ncut),float)
     if (degen==1):
-        for j in xrange(nmol):
-            for k in xrange(ncut):
+        for j in range(nmol):
+            for k in range(ncut):
                 p1[j,0,0,k] = pp[j,0,k]
     else:
-        for j in xrange(nmol):
-            for k in xrange(degen):
-                for l in xrange(ncut):
+        for j in range(nmol):
+            for k in range(degen):
+                for l in range(ncut):
                     p1[j,0,k,l] = pp[j,0,k,l]
     model[0] = 0.0
     model[1] = args.lambdaval
@@ -86,25 +86,25 @@ if (not do_scalar):
     model[3] = nmol
     model[4] = ncut
     i = 4
-    for j in xrange(nmol):
-        for k in xrange(degen):
-            for l in xrange(ncut):
+    for j in range(nmol):
+        for k in range(degen):
+            for l in range(ncut):
                 i+=1
                 model[i] = p1[j,0,k,l]
     i+=1
     model[i] = ncut
-    for j in xrange(ncut):
+    for j in range(ncut):
         i+=1
         model[i] = fp[j]
-    for j in xrange(ncut):
-        for k in xrange(ncut):
+    for j in range(ncut):
+        for k in range(ncut):
             i+=1
             model[i] = np.real(am[j,k])
             i+=1
             model[i] = np.imag(am[j,k])
     i+=1
     model[i] = mv
-    for j in xrange(nmol*degen):
+    for j in range(nmol*degen):
         i+=1
         model[i] = wt[j]
     i+=1
@@ -124,13 +124,13 @@ if (not do_scalar):
     i+=1
     model[i] = numcen
     if (numcen>0):
-        for j in xrange(numcen):
+        for j in range(numcen):
             i+=1
             model[i] = atomic_numbers[args.centres[j]]
     i+=1
     model[i] = numspec
     if (numspec>0):
-        for j in xrange(numspec):
+        for j in range(numspec):
             i+=1
             model[i] = atomic_numbers[args.species[j]]
 
@@ -142,7 +142,7 @@ if (not do_scalar):
         if (not os.path.isdir(folder)):
             split_folder = op[:len(op)-1]
             make_folder = ''
-            for i in xrange(len(split_folder)):
+            for i in range(len(split_folder)):
                 make_folder += split_folder[i] + '/'
                 if (not os.path.isdir(make_folder)):
                     os.mkdir(make_folder)
@@ -153,10 +153,10 @@ else:
     pp = np.load(args.power)
     fp = np.load(args.sparse + '_fps.npy')
     am = np.load(args.sparse + '_Amat.npy')
-    weights = np.load(args.weights)
+    weights = np.load(args.weights,allow_pickle=True)
     wt = weights[4]
     if (len(weights)>5):
-        mv = np.load(args.weights)[5]
+        mv = np.load(args.weights,allow_pickle=True)[5]
     else:
         mv = 0.0
     # Repeat for scalar
@@ -175,13 +175,13 @@ else:
     model = np.zeros(ln,float)
     p1 = np.zeros((nmol,1,degen,ncut),float)
     if (degen==1):
-        for j in xrange(nmol):
-            for k in xrange(ncut):
+        for j in range(nmol):
+            for k in range(ncut):
                 p1[j,0,0,k] = pp[j,0,k]
     else:
-        for j in xrange(nmol):
-            for k in xrange(degen):
-                for l in xrange(ncut):
+        for j in range(nmol):
+            for k in range(degen):
+                for l in range(ncut):
                     p1[j,0,k,l] = pp[j,0,k,l]
     model[0] = 1.0
     model[1] = args.lambdaval
@@ -194,40 +194,40 @@ else:
     model[5] = ncut
     model[6] = ncut0
     i = 6
-    for j in xrange(nmol):
-        for k in xrange(degen):
-            for l in xrange(ncut):
+    for j in range(nmol):
+        for k in range(degen):
+            for l in range(ncut):
                 i+=1
                 model[i] = p1[j,0,k,l]
-    for j in xrange(nmol):
-        for k in xrange(ncut0):
+    for j in range(nmol):
+        for k in range(ncut0):
             i+=1
             model[i] = p0[j,0,k]
     i+=1
     model[i] = ncut
-    for j in xrange(ncut):
+    for j in range(ncut):
         i+=1
         model[i] = fp[j]
-    for j in xrange(ncut):
-        for k in xrange(ncut):
+    for j in range(ncut):
+        for k in range(ncut):
             i+=1
             model[i] = np.real(am[j,k])
             i+=1
             model[i] = np.imag(am[j,k])
     i+=1
     model[i] = ncut0
-    for j in xrange(ncut0):
+    for j in range(ncut0):
         i+=1
         model[i] = f0[j]
-    for j in xrange(ncut0):
-        for k in xrange(ncut0):
+    for j in range(ncut0):
+        for k in range(ncut0):
             i+=1
             model[i] = np.real(a0[j,k])
             i+=1
             model[i] = np.imag(a0[j,k])
     i+=1
     model[i] = mv
-    for j in xrange(nmol*degen):
+    for j in range(nmol*degen):
         i+=1
         model[i] = wt[j]
     i+=1
@@ -282,13 +282,13 @@ else:
     i+=1
     model[i] = numcen
     if (numcen>0):
-        for j in xrange(numcen):
+        for j in range(numcen):
             i+=1
             model[i] = atomic_numbers[args.centres[j]]
     i+=1
     model[i] = numspec
     if (numspec>0):
-        for j in xrange(numspec):
+        for j in range(numspec):
             i+=1
             model[i] = atomic_numbers[args.species[j]]
 
@@ -300,7 +300,7 @@ else:
         if (not os.path.isdir(folder)):
             split_folder = op[:len(op)-1]
             make_folder = ''
-            for i in xrange(len(split_folder)):
+            for i in range(len(split_folder)):
                 make_folder += split_folder[i] + '/'
                 if (not os.path.isdir(make_folder)):
                     os.mkdir(make_folder)
