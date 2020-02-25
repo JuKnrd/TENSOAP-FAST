@@ -64,7 +64,7 @@ if (not do_scalar):
         degen = 1
     else:
         degen = np.shape(pp)[-2]
-    ln = 5 + np.size(pp) + 1 + np.size(fp) + 2*np.size(am) + 1 + np.size(wt) + 7 + 1 + numcen + 1 + numspec
+    ln = 6 + np.size(pp) + 1 + np.size(fp) + 2*np.size(am) + 1 + np.size(wt) + 7 + 1 + numcen + 1 + numspec
     model = np.zeros(ln,float)
     p1 = np.zeros((nmol,1,degen,ncut),float)
     if (degen==1):
@@ -83,9 +83,9 @@ if (not do_scalar):
         model[3] = 1.0
     else:
         model[3] = 0.0
-    model[3] = nmol
-    model[4] = ncut
-    i = 4
+    model[4] = nmol
+    model[5] = ncut
+    i = 5
     for j in range(nmol):
         for k in range(degen):
             for l in range(ncut):
