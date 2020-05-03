@@ -27,4 +27,4 @@ There are two modes of use:
 
 # Maintenance
 
-Please contact david.wilkins@epfl.ch with any problems.
+Please contact d.wilkins@qub.ac.uk with any problems.
