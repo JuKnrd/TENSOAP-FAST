@@ -2,6 +2,7 @@ program sagpr_apply
     use sagpr
     use apply
     use sockets
+    USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer
     implicit none
 
     character(len=100), allocatable :: arg(:),keys(:)
@@ -43,7 +44,7 @@ program sagpr_apply
         readnext = readnext.and.(trim(adjustl(arg(k))).ne.trim(adjustl(keys(j))))
        enddo
        if (readnext) then
-        read(arg(k),*) sock_arg
+        read(arg(k),*) sock_arg(k-i)
        endif
       enddo
      endif
@@ -65,8 +66,10 @@ program sagpr_apply
 !************************************************************************************
 
     if (.not. use_socket) then
+     ! Open xyz file
      open(unit=un,file=trim(adjustl(fname)),status="old",access="stream",form="formatted")
     else
+     ! Set up sockets
     endif
 
     ! Initialize the system clock
@@ -80,8 +83,10 @@ program sagpr_apply
      if (ios.ne. 0) then
 
       if (.not. use_socket) then
+       ! Read the next frame from xyz file
        call read_frame(un,periodic)
       else
+       ! Read the next frame from socket
       endif
 
       call system_clock(t1)

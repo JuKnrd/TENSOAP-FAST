@@ -1,7 +1,9 @@
 .PHONY: all clean
 
 FF=gfortran
+CC=gcc
 FOPTS=-O3 -g -fopenmp -funroll-loops -ffast-math -m64 -fPIC
+COPTS=-O3 -g -fopenmp -funroll-loops -ffast-math -m64 -fPIC
 BLAS_LIB=
 LAPACK_LIB=
 SHTOOLS_LIB=
@@ -14,7 +16,7 @@ OBJECTS1=mod_sagpr.o sagpr_get_PS.o
 OBJECTS2=mod_sagpr.o sagpr_get_kernel.o
 OBJECTS3=mod_sagpr.o sagpr_predict.o
 OBJECTS4=mod_sagpr.o mod_apply.o
-OBJECTS5=mod_sockets.o sagpr_apply.o
+OBJECTS5=sockets.o fsockets.o mod_sockets.o sagpr_apply.o
 
 all: mkbin libsoapfast sagpr_apply
 
@@ -38,11 +40,17 @@ libsoapfast: $(OBJECTS4)
 	@if [ ! -d ../lib ];then mkdir ../lib;fi
 	ar r ../lib/libsoapfast.a $(OBJECTS4)
 
+sockets.o: sockets.c
+	$(CC) $(COPTS) -c -o sockets.o sockets.c
+
 sagpr_apply: $(OBJECTS5)
 	$(FF) $(FOPTS) -o ../bin/sagpr_apply $(OBJECTS5) -L../lib -lsoapfast $(INCLUDE) $(LD)
 
 %.o: %.f90 
 	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< 
+
+%.o: %.f
+	$(FF) $(FOPTS) -c $<
 
 install: all mkinstall
 
