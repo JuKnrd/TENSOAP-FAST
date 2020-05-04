@@ -1,16 +1,15 @@
 program sagpr_apply
     use sagpr
     use apply
-    use sockets
     USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer
     implicit none
 
     character(len=100), allocatable :: arg(:),keys(:)
-    integer i,j,k,ios,un,u2,numkeys
-    character(len=100) ofile,model,fname
+    integer i,j,k,ios,numkeys
+    character(len=100) ofile,model,fname,sock_arg(3)
     integer t1,t2,cr,ts,tf
     real*8 rate
-    logical readnext
+    logical readnext,use_socket
 
 !************************************************************************************
 ! GET COMMAND-LINE ARGUMENTS
@@ -38,6 +37,7 @@ program sagpr_apply
      if (arg(i).eq.'-o') read(arg(i+1),'(A)') ofile
      if (arg(i).eq.'-f') read(arg(i+1),'(A)') fname
      if (arg(i).eq.'-s') then
+      use_socket = .true.
       readnext = .true.
       do k=i+1,nargs
        do j=1,numkeys
@@ -67,7 +67,7 @@ program sagpr_apply
 
     if (.not. use_socket) then
      ! Open xyz file
-     open(unit=un,file=trim(adjustl(fname)),status="old",access="stream",form="formatted")
+     open(unit=15,file=trim(adjustl(fname)),status="old",access="stream",form="formatted")
     else
      ! Set up sockets
     endif
@@ -84,7 +84,7 @@ program sagpr_apply
 
       if (.not. use_socket) then
        ! Read the next frame from xyz file
-       call read_frame(un,periodic)
+       call read_frame(15,periodic)
       else
        ! Read the next frame from socket
       endif
