@@ -1,13 +1,15 @@
 program sagpr_apply
     use sagpr
     use apply
+    use sockets
     implicit none
 
-    character(len=100), allocatable :: arg(:),keys1(:)
-    integer i,j,ios,un,u2
+    character(len=100), allocatable :: arg(:),keys(:)
+    integer i,j,k,ios,un,u2,numkeys
     character(len=100) ofile,model,fname
     integer t1,t2,cr,ts,tf
     real*8 rate
+    logical readnext
 
 !************************************************************************************
 ! GET COMMAND-LINE ARGUMENTS
@@ -22,22 +24,35 @@ program sagpr_apply
     arg(nargs+1) = 'NULL'
 
     ! Parse these arguments
-    allocate(keys1(4))
+    numkeys = 5
+    allocate(keys(numkeys))
     model = ''
     ofile = 'prediction.out'
     fname = ''
-    keys1 = (/'-m  ','-o  ','-f  ','NULL'/)
+    use_socket = .false.
+    keys = (/'-m  ','-o  ','-f  ','-s  ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-m') read(arg(i+1),'(A)') model
      if (arg(i).eq.'-o') read(arg(i+1),'(A)') ofile
      if (arg(i).eq.'-f') read(arg(i+1),'(A)') fname
+     if (arg(i).eq.'-s') then
+      readnext = .true.
+      do k=i+1,nargs
+       do j=1,numkeys
+        readnext = readnext.and.(trim(adjustl(arg(k))).ne.trim(adjustl(keys(j))))
+       enddo
+       if (readnext) then
+        read(arg(k),*) sock_arg
+       endif
+      enddo
+     endif
     enddo
     deallocate(arg)
 
     ! Check for arguments that are required
     if (model.eq.'') stop 'ERROR: model file required!'
-    if (fname.eq.'') stop 'ERROR: file name required!'
+    if (fname.eq.'' .and. (.not. use_socket)) stop 'ERROR: file name required!'
 
 !************************************************************************************
 ! GET MODEL
@@ -49,19 +64,25 @@ program sagpr_apply
 ! READ IN DATA AND MAKE PREDICTIONS
 !************************************************************************************
 
-    open(unit=un,file=trim(adjustl(fname)),status="old",access="stream",form="formatted")
+    if (.not. use_socket) then
+     open(unit=un,file=trim(adjustl(fname)),status="old",access="stream",form="formatted")
+    else
+    endif
 
     ! Initialize the system clock
     call system_clock(count_rate=cr)
     rate = real(cr)
 
     ios = 1
-    open(unit=33,file=ofile)
+    if (.not. use_socket) open(unit=33,file=ofile)
     do while (ios.ne.0)
      open(unit=73,file='EXIT',status='old',iostat=ios)
      if (ios.ne. 0) then
 
-      call read_frame(un,periodic)
+      if (.not. use_socket) then
+       call read_frame(un,periodic)
+      else
+      endif
 
       call system_clock(t1)
 
@@ -69,10 +90,11 @@ program sagpr_apply
       call predict_frame(rate)
 
       ! Print predictions
-      do i=1,nframes
-       write(33,*) (prediction_lm(i,j),j=1,degen)
+      if (.not. use_socket) then
+       write(33,*) (prediction_lm(1,j),j=1,degen)
        flush(33)
-      enddo
+      else
+      endif
 
      endif
 
@@ -83,7 +105,7 @@ program sagpr_apply
     close(33)
 
     ! Array deallocation
-    if (allocated(xyz)) deallocate(xyz,atname,natoms,comment,sparsification,cell,PS_tr_lam,wt,arg,keys1,prediction_lm,PS)
+    if (allocated(xyz)) deallocate(xyz,atname,natoms,comment,sparsification,cell,PS_tr_lam,wt,arg,keys,prediction_lm,PS)
     if (allocated(natoms_tr)) deallocate(natoms_tr)
     if (allocated(PS0)) deallocate(PS0)
     if (allocated(ker)) deallocate(ker)
