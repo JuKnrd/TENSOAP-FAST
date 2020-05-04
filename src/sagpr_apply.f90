@@ -5,8 +5,8 @@ program sagpr_apply
     implicit none
 
     character(len=100), allocatable :: arg(:),keys(:)
-    integer i,j,k,ios,numkeys
-    character(len=100) ofile,model,fname,sock_arg(3)
+    integer i,j,k,l,ios,numkeys,port
+    character(len=100) ofile,model,fname,sock_arg(3),hostname
     integer t1,t2,cr,ts,tf
     real*8 rate
     logical readnext,use_socket
@@ -39,12 +39,14 @@ program sagpr_apply
      if (arg(i).eq.'-s') then
       use_socket = .true.
       readnext = .true.
+      l = 0
       do k=i+1,nargs
        do j=1,numkeys
         readnext = readnext.and.(trim(adjustl(arg(k))).ne.trim(adjustl(keys(j))))
        enddo
        if (readnext) then
-        read(arg(k),*) sock_arg(k-i)
+        l = l + 1
+        read(arg(k),*) sock_arg(l)
        endif
       enddo
      endif
@@ -70,6 +72,13 @@ program sagpr_apply
      open(unit=15,file=trim(adjustl(fname)),status="old",access="stream",form="formatted")
     else
      ! Set up sockets
+     if (l.eq.0) then
+     else if (l.eq.2) then
+      hostname = trim(adjustl(sock_arg(1)))//achar(0)
+      read(sock_arg(2),*) port
+     else
+      stop 'ERROR: wrong number of arguments given for socket!'
+     endif
     endif
 
     ! Initialize the system clock
