@@ -173,24 +173,7 @@ program sagpr_apply
         stop
        endif
       endif
-
-!      call system_clock(t1)
-!
-!      ! Do prediction
-!      call predict_frame(rate)
-!
-!      ! Print predictions
-!      if (.not. use_socket) then
-!       write(33,*) (prediction_lm(1,j),j=1,degen)
-!       flush(33)
-!      else
-!      endif
-
      endif
-
-!     call system_clock(t2)
-!     write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
-!     write(*,*)
     enddo
     close(33)
 
