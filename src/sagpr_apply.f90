@@ -5,8 +5,11 @@ program sagpr_apply
     implicit none
 
     character(len=100), allocatable :: arg(:),keys(:)
-    integer i,j,k,l,ios,numkeys,port
-    character(len=100) ofile,model,fname,sock_arg(3),hostname
+    integer i,j,k,l,ios,numkeys,port,socket,inet
+    character(len=100) ofile,model,fname,sock_arg(3)
+    character(len=1024) hostname
+    character(len=12) header
+    integer, parameter :: MSGLEN=12
     integer t1,t2,cr,ts,tf
     real*8 rate
     logical readnext,use_socket
@@ -24,13 +27,14 @@ program sagpr_apply
     arg(nargs+1) = 'NULL'
 
     ! Parse these arguments
-    numkeys = 5
+    numkeys = 6
     allocate(keys(numkeys))
     model = ''
     ofile = 'prediction.out'
     fname = ''
     use_socket = .false.
-    keys = (/'-m  ','-o  ','-f  ','-s  ','NULL'/)
+    inet = 1
+    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-m') read(arg(i+1),'(A)') model
@@ -50,6 +54,7 @@ program sagpr_apply
        endif
       enddo
      endif
+     if (arg(i).eq.'-u') inet = 0
     enddo
     deallocate(arg)
 
@@ -71,15 +76,16 @@ program sagpr_apply
      ! Open xyz file
      open(unit=15,file=trim(adjustl(fname)),status="old",access="stream",form="formatted")
     else
-     ! Set up sockets
-     if (l.eq.0) then
-     else if (l.eq.2) then
-      hostname = trim(adjustl(sock_arg(1)))//achar(0)
-      read(sock_arg(2),*) port
-     else
-      stop 'ERROR: wrong number of arguments given for socket!'
-     endif
+     ! Set up socket
+     hostname = trim(adjustl(sock_arg(1)))//achar(0)
+     read(sock_arg(2),*) port
+     call open_socket(socket,inet,port,hostname)
     endif
+
+!    CALL readbuffer(socket, header, MSGLEN)
+!    write(*,*) MSGLEN
+!    write(*,*) header
+!    stop
 
     ! Initialize the system clock
     call system_clock(count_rate=cr)
@@ -96,27 +102,49 @@ program sagpr_apply
       if (.not. use_socket) then
        ! Read the next frame from xyz file
        call read_frame(15,periodic)
-      else
-       ! Read the next frame from socket
-      endif
 
-      call system_clock(t1)
+       call system_clock(t1)
 
-      ! Do prediction
-      call predict_frame(rate)
+       ! Do prediction
+       call predict_frame(rate)
 
-      ! Print predictions
-      if (.not. use_socket) then
+       ! Print predictions
        write(33,*) (prediction_lm(1,j),j=1,degen)
        flush(33)
+
+       call system_clock(t2)
+       write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
+       write(*,*)
+
       else
+       ! Read from the socket
+       call readbuffer(socket,header,MSGLEN)
+       if (trim(header)=='STATUS') then
+       elseif (trim(header)=='INIT') then
+       elseif (trim(header)=='POSDATA') then
+       elseif (trim(header)=='GETFORCE') then
+       endif
+       write(*,*) header
+       stop
       endif
+
+!      call system_clock(t1)
+!
+!      ! Do prediction
+!      call predict_frame(rate)
+!
+!      ! Print predictions
+!      if (.not. use_socket) then
+!       write(33,*) (prediction_lm(1,j),j=1,degen)
+!       flush(33)
+!      else
+!      endif
 
      endif
 
-     call system_clock(t2)
-     write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
-     write(*,*)
+!     call system_clock(t2)
+!     write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
+!     write(*,*)
     enddo
     close(33)
 

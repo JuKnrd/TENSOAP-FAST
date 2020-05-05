@@ -570,16 +570,18 @@ module sagpr
     featsize = nspecies*nspecies*nmax**2*llmax
    endif
   endif
-  if (.not.allocated(PS)) then
-   allocate(PS(nframes,natmax,degen,featsize))
-  else
-   ! We have already allocated the power spectrum; let's see if we need to reallocate it
-   ps_shape = shape(PS)
-   if (.not.(ps_shape(1).ge.nframes .and. ps_shape(2).ge.natmax .and. ps_shape(3).ge.degen .and. ps_shape(4).ge.featsize)) then
-    deallocate(PS)
-    allocate(PS(nframes,natmax,degen,featsize))
-   endif
-  endif
+  if (allocated(PS)) deallocate(PS)
+  allocate(PS(nframes,natmax,degen,featsize))
+! if (.not.allocated(PS)) then
+!  allocate(PS(nframes,natmax,degen,featsize))
+! else
+!  ! We have already allocated the power spectrum; let's see if we need to reallocate it
+!  ps_shape = shape(PS)
+!  if (.not.(ps_shape(1).ge.nframes .and. ps_shape(2).ge.natmax .and. ps_shape(3).ge.degen .and. ps_shape(4).ge.featsize)) then
+!   deallocate(PS)
+!   allocate(PS(nframes,natmax,degen,featsize))
+!  endif
+! endif
   PS(:,:,:,:) = (0.d0,0.d0)
 
   ! Get list of components
@@ -946,16 +948,18 @@ module sagpr
     featsize = nspecies*nspecies*nmax**2*llmax
    endif
   endif
-  if (.not.allocated(PS0)) then
-   allocate(PS0(nframes,natmax,degen,featsize))
-  else
-   ! We have already allocated the power spectrum; let's see if we need to reallocate it
-   ps_shape = shape(PS0)
-   if (.not.(ps_shape(1).ge.nframes .and. ps_shape(2).ge.natmax .and. ps_shape(3).ge.degen .and. ps_shape(4).ge.featsize)) then
-    deallocate(PS0)
-    allocate(PS0(nframes,natmax,degen,featsize))
-   endif
-  endif
+  if (allocated(PS0)) deallocate(PS0)
+  allocate(PS0(nframes,natmax,degen,featsize))
+! if (.not.allocated(PS0)) then
+!  allocate(PS0(nframes,natmax,degen,featsize))
+! else
+!  ! We have already allocated the power spectrum; let's see if we need to reallocate it
+!  ps_shape = shape(PS0)
+!  if (.not.(ps_shape(1).ge.nframes .and. ps_shape(2).ge.natmax .and. ps_shape(3).ge.degen .and. ps_shape(4).ge.featsize)) then
+!   deallocate(PS0)
+!   allocate(PS0(nframes,natmax,degen,featsize))
+!  endif
+! endif
   PS0(:,:,:,:) = (0.d0,0.d0)
 
   ! Get list of components
