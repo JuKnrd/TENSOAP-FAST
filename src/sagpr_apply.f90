@@ -13,7 +13,7 @@ program sagpr_apply
     character(len=2048) initbuffer
     integer, parameter :: MSGLEN=12
     integer t1,t2,cr,ts,tf
-    real*8 rate,mtxbuf(9),cell_h(3,3)
+    real*8 rate,mtxbuf(9),cell_h(3,3),virial(3,3)
     real*8, allocatable :: msgbuffer(:)
     real*8, parameter :: bohrtoangstrom = 0.52917721d0
     logical readnext,use_socket,hasdata
@@ -156,7 +156,6 @@ program sagpr_apply
 
         ! Do prediction
         call predict_frame(rate)
-        write(*,*) prediction_lm
 
         call system_clock(t2)
         write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
@@ -164,10 +163,27 @@ program sagpr_apply
 
         ! We have the data
         hasdata = .true.
-        deallocate(xyz,atname,natoms,msgbuffer,cell)
+        deallocate(xyz,natoms,msgbuffer,cell)
        elseif (trim(header)=='GETFORCE') then
-        write(*,*) 'EXPECTING FORCE'
-        stop
+        ! Now we send all of the information back to the wrapper
+        ! We start with a lot of zeros (there is no contribution to the energy
+        ! or force)
+        allocate(msgbuffer(3*nat))
+        msgbuffer(:) = 0.d0
+        virial(:,:) = 0.d0
+        call writebuffer(socket,"FORCEREADY  ",MSGLEN)
+        call writebuffer(socket,0.d0)
+        call writebuffer(socket,nat)
+        call writebuffer(socket,msgbuffer,3*nat)
+        call writebuffer(socket,reshape(virial,(/9/)),9)
+        ! Send prediction
+        initbuffer = " "
+        write(initbuffer,*) prediction_lm
+        cbuf = len_trim(initbuffer)
+        call writebuffer(socket,cbuf)
+        call writebuffer(socket,initbuffer,cbuf)
+        deallocate(msgbuffer)
+        hasdata = .false.
        else
         write(*,*) 'ERROR: unexpected header ',header
         stop
