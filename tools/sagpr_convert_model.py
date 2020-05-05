@@ -11,7 +11,6 @@ parser.add_argument("-sf",  "--sparse",     type=str,   required=True,          
 parser.add_argument("-w",   "--weights",    type=str,   required=True,                     help="Weights file")
 parser.add_argument("-p0",  "--power0",     type=str,   required=False,                    help="Scalar training power spectrum file")
 parser.add_argument("-sf0", "--sparse0",    type=str,   required=False,                    help="Scalar sparsification file")
-parser.add_argument("-hp",  "--hyperparam", type=str,   required=False,        nargs='+',  help="Hyperparameter string")
 parser.add_argument("-o",   "--outfile",    type=str,   required=True,                     help="Output file")
 parser.add_argument("-n",   "--nmax",       type=int,   default=[-1],          nargs='+',  help="nmax")
 parser.add_argument("-l",   "--lmax",       type=int,   default=[-1],          nargs='+',  help="lmax")

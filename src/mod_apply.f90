@@ -53,7 +53,7 @@ subroutine get_model(model)
   integer i,j,k,l,ncen,nspec
 
    ! Read in power spectrum file(s)
-   open(unit=41,file=trim(adjustl(model))//'.mdl',status='old',access='stream',form='unformatted')
+   open(unit=41,file=trim(adjustl(model)),status='old',access='stream',form='unformatted')
    inquire(unit=41,size=bytes)
    reals = bytes/8
    allocate(raw_model(reals))

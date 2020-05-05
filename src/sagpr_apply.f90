@@ -86,7 +86,9 @@ program sagpr_apply
     rate = real(cr)
 
     ios = 1
-    if (.not. use_socket) open(unit=33,file=ofile)
+    ! Open output file
+    if (.not. use_socket) open(unit=33,file=ofile,access='stream',form='formatted')
+    ! Keep going through input
     do while (ios.ne.0)
      open(unit=73,file='EXIT',status='old',iostat=ios)
      if (ios.ne. 0) then
