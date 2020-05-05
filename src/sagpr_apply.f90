@@ -5,14 +5,18 @@ program sagpr_apply
     implicit none
 
     character(len=100), allocatable :: arg(:),keys(:)
-    integer i,j,k,l,ios,numkeys,port,socket,inet
+    integer i,j,k,l,ios,numkeys,port,socket,inet,cbuf
+    integer nat
     character(len=100) ofile,model,fname,sock_arg(3)
     character(len=1024) hostname
     character(len=12) header
+    character(len=2048) initbuffer
     integer, parameter :: MSGLEN=12
     integer t1,t2,cr,ts,tf
-    real*8 rate
-    logical readnext,use_socket
+    real*8 rate,mtxbuf(9),cell_h(3,3)
+    real*8, allocatable :: msgbuffer(:)
+    real*8, parameter :: bohrtoangstrom = 0.52917721d0
+    logical readnext,use_socket,hasdata
 
 !************************************************************************************
 ! GET COMMAND-LINE ARGUMENTS
@@ -60,7 +64,7 @@ program sagpr_apply
 
     ! Check for arguments that are required
     if (model.eq.'') stop 'ERROR: model file required!'
-    if (fname.eq.'' .and. (.not. use_socket)) stop 'ERROR: file name required!'
+    if (fname.eq.'') stop 'ERROR: file name required!'
 
 !************************************************************************************
 ! GET MODEL
@@ -72,26 +76,23 @@ program sagpr_apply
 ! READ IN DATA AND MAKE PREDICTIONS
 !************************************************************************************
 
-    if (.not. use_socket) then
-     ! Open xyz file
-     open(unit=15,file=trim(adjustl(fname)),status="old",access="stream",form="formatted")
-    else
+    ! Open xyz file
+    open(unit=15,file=trim(adjustl(fname)),status="old",access="stream",form="formatted")
+    if (use_socket) then
+     ! Get atom names
+     call read_frame(15,periodic)
      ! Set up socket
      hostname = trim(adjustl(sock_arg(1)))//achar(0)
      read(sock_arg(2),*) port
      call open_socket(socket,inet,port,hostname)
     endif
 
-!    CALL readbuffer(socket, header, MSGLEN)
-!    write(*,*) MSGLEN
-!    write(*,*) header
-!    stop
-
     ! Initialize the system clock
     call system_clock(count_rate=cr)
     rate = real(cr)
 
     ios = 1
+    hasdata = .false.
     ! Open output file
     if (.not. use_socket) open(unit=33,file=ofile,access='stream',form='formatted')
     ! Keep going through input
@@ -120,12 +121,57 @@ program sagpr_apply
        ! Read from the socket
        call readbuffer(socket,header,MSGLEN)
        if (trim(header)=='STATUS') then
+        ! The wrapper is inquiring what we are doing
+        if (hasdata) then
+         call writebuffer(socket,"HAVEDATA    ",MSGLEN)  ! Signals that we are done computing and can return forces
+        else
+         call writebuffer(socket,"READY       ",MSGLEN)  ! We are idling and eager to compute something
+        endif
        elseif (trim(header)=='INIT') then
+        ! The wrapper is sending an initialization string (which we will ignore)
+        call readbuffer(socket, cbuf)
+        call readbuffer(socket, initbuffer, cbuf)
        elseif (trim(header)=='POSDATA') then
+        ! The wrapper is sending atom positions
+        if (allocated(xyz)) deallocate(xyz,natoms,cell)
+        call readbuffer(socket, mtxbuf, 9)  ! Cell matrix
+        cell_h = reshape(mtxbuf, (/3,3/))
+        cell_h = transpose(cell_h)
+        call readbuffer(socket, mtxbuf, 9)
+        call readbuffer(socket, cbuf)
+        nat = cbuf
+        natmax = nat
+        nframes = 1
+        allocate(xyz(nframes,natmax,3),natoms(nframes),msgbuffer(3*nat),cell(nframes,3,3))
+        natoms(1) = nat
+        call readbuffer(socket, msgbuffer, nat*3) 
+        ! Read in atoms
+        do i=1,nat
+         xyz(1,i,:) = msgbuffer(3*(i-1)+1:3*i) * bohrtoangstrom
+        enddo
+        cell(1,:,:) = cell_h(:,:) * bohrtoangstrom
+
+        ! With all of the necessary data read in, do the prediction
+        call system_clock(t1)
+
+        ! Do prediction
+        call predict_frame(rate)
+        write(*,*) prediction_lm
+
+        call system_clock(t2)
+        write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
+        write(*,*)
+
+        ! We have the data
+        hasdata = .true.
+        deallocate(xyz,atname,natoms,msgbuffer,cell)
        elseif (trim(header)=='GETFORCE') then
+        write(*,*) 'EXPECTING FORCE'
+        stop
+       else
+        write(*,*) 'ERROR: unexpected header ',header
+        stop
        endif
-       write(*,*) header
-       stop
       endif
 
 !      call system_clock(t1)
