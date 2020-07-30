@@ -161,6 +161,7 @@ else:
     pp = np.load(args.power)
     fp = np.load(args.sparse + '_fps.npy')
     am = np.load(args.sparse + '_Amat.npy')
+    nw = len(args.weights)
     weights = [None for k in range(nw)]
     wt = [None for k in range(nw)]
     mv = [0.0 for k in range(nw)]
