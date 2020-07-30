@@ -23,6 +23,12 @@ module apply
  ! Defaults
  integer, parameter :: nmax_default = 8, lmax_default = 6
  real*8, parameter :: rcut_default = 4.d0,sg_default = 0.3d0,rs_default(3) = (/0.d0,0.d0,0.d0/)
+ ! Committee models
+ logical committee
+ integer nw
+ real*8, allocatable :: wt_c(:,:),meanval_c(:),prediction_lm_c(:,:,:)
+ ! Other
+ logical verbose
 
  contains
 
@@ -69,6 +75,10 @@ subroutine get_model(model)
    if (do_scalar) then
     nfeat0 = int(raw_model(7))
     i = 7
+   endif
+   if (committee) then
+    i = i + 1
+    nw = int(raw_model(i))
    endif
    allocate(PS_tr_lam(nmol,1,degen,nfeat))
    do j=1,nmol
@@ -131,13 +141,27 @@ subroutine get_model(model)
    endif
 
    ! Get weights
-   i = i + 1
-   meanval = raw_model(i)
-   allocate(wt(nmol*degen))
-   do j=1,nmol*degen
+   if (committee) then
+    allocate(meanval_c(nw),wt_c(nmol*degen,nw))
+    do k=1,nw
+     i = i + 1
+     meanval_c(k) = raw_model(i)
+    enddo
+    do k=1,nw
+     do j=1,nmol*degen
+      i = i + 1
+      wt_c(j,k) = raw_model(i)
+     enddo
+    enddo
+   else
     i = i + 1
-    wt(j) = raw_model(i)
-   enddo
+    meanval = raw_model(i)
+    allocate(wt(nmol*degen))
+    do j=1,nmol*degen
+     i = i + 1
+     wt(j) = raw_model(i)
+    enddo
+   endif
 
    ! Get hyperparameters
    i = i + 1
@@ -247,7 +271,7 @@ subroutine read_fifo(un,periodic,model)
     read(c1,*) cell(i,1,1),cell(i,1,2),cell(i,1,3),cell(i,2,1),cell(i,2,2),cell(i,2,3),cell(i,3,1),cell(i,3,2),cell(i,3,3)
    enddo
   endif
-  write(*,*) 'Got input frame with ',nat,'atoms'
+  if (verbose) write(*,*) 'Got input frame with ',nat,'atoms'
 
 end subroutine
 
@@ -265,7 +289,7 @@ subroutine read_frame(un,periodic)
    nframes = 1
    read(un,'(A)',iostat=ios) line
    if (ios.ne.0) then
-    write(*,*) 'End-of-file detected'
+    if (verbose) write(*,*) 'End-of-file detected'
     stop
    endif
    read(line,*,iostat=ios) nat
@@ -301,7 +325,7 @@ subroutine read_frame(un,periodic)
     read(c1,*) cell(i,1,1),cell(i,1,2),cell(i,1,3),cell(i,2,1),cell(i,2,2),cell(i,2,3),cell(i,3,1),cell(i,3,2),cell(i,3,3)
    enddo
   endif
-  write(*,*) 'Got input frame with ',nat,'atoms'
+  if (verbose) write(*,*) 'Got input frame with ',nat,'atoms'
 
 end subroutine
 
@@ -353,7 +377,7 @@ subroutine read_xyz(fname,periodic)
        read(31,*) atname(k,j),(xyz(k,j,ii),ii=1,3)
       enddo
      else
-      write(*,*) 'At frame ',k,':'
+      if (verbose) write(*,*) 'At frame ',k,':'
       stop 'ERROR: there should be an atom number here!'
      endif
     enddo
@@ -394,18 +418,18 @@ subroutine predict_frame(rate)
      call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
      &     ncut,sparsification,rs,periodic,.true.)
      call system_clock(tf)
-     write(*,'(A,F6.3,A)') 'Got PS in',(tf-ts)/rate,' s'
+     if (verbose) write(*,'(A,F6.3,A)') 'Got PS in',(tf-ts)/rate,' s'
     else
      call system_clock(ts)
      call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
      &     ncut,sparsification,rs,periodic,.true.)
      call system_clock(tf)
-     write(*,'(A,I2,A,F6.3,A)') 'Got L=',lm,' PS in',(tf-ts)/rate,' s'
+     if (verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',lm,' PS in',(tf-ts)/rate,' s'
      call system_clock(ts)
      call do_power_spectrum_scalar(xyz,atname,natoms,cell,nframes,natmax,0,nmax0,lmax0,rcut0,sg0, &
      &     ncut0,sparsification0,rs0,periodic,.true.)
      call system_clock(tf)
-     write(*,'(A,I2,A,F6.3,A)') 'Got L=',0,' PS in',(tf-ts)/rate,' s'
+     if (verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',0,' PS in',(tf-ts)/rate,' s'
     endif
 
     ! Get kernel
@@ -427,15 +451,25 @@ subroutine predict_frame(rate)
      &     nfeat0,nfeat0,natmax,1,dfloat(natoms),natoms_tr,zeta,.false.,degen)
     endif
     call system_clock(tf)
-    write(*,'(A,F6.3,A)') 'Got kernel in ',(tf-ts)/rate,' s'
+    if (verbose) write(*,'(A,F6.3,A)') 'Got kernel in ',(tf-ts)/rate,' s'
 
     ! Get predictions
-    if (allocated(prediction_lm)) deallocate(prediction_lm)
-    allocate(prediction_lm(nmol,degen))
-    if (lm.eq.0) then
-     prediction_lm = do_prediction(ker,wt,meanval,degen,nframes,nmol)
+    if (committee) then
+     if (allocated(prediction_lm_c)) deallocate(prediction_lm_c)
+     allocate(prediction_lm_c(nmol,degen,nw))
+     if (lm.eq.0) then
+      prediction_lm_c = do_prediction_c(ker,wt_c,meanval_c,degen,nframes,nmol,nw)
+     else
+      prediction_lm_c = do_prediction_c(ker_lm,wt_c,meanval_c,degen,nframes,nmol,nw)
+     endif
     else
-     prediction_lm = do_prediction(ker_lm,wt,meanval,degen,nframes,nmol)
+     if (allocated(prediction_lm)) deallocate(prediction_lm)
+     allocate(prediction_lm(nmol,degen))
+     if (lm.eq.0) then
+      prediction_lm = do_prediction(ker,wt,meanval,degen,nframes,nmol)
+     else
+      prediction_lm = do_prediction(ker_lm,wt,meanval,degen,nframes,nmol)
+     endif
     endif
 
 end subroutine

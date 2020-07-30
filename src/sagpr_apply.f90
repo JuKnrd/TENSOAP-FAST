@@ -31,19 +31,23 @@ program sagpr_apply
     arg(nargs+1) = 'NULL'
 
     ! Parse these arguments
-    numkeys = 6
+    numkeys = 8
     allocate(keys(numkeys))
     model = ''
     ofile = 'prediction.out'
     fname = ''
     use_socket = .false.
     inet = 1
-    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','NULL'/)
+    verbose = .false.
+    committee = .false.
+    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-c  ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-m') read(arg(i+1),'(A)') model
      if (arg(i).eq.'-o') read(arg(i+1),'(A)') ofile
      if (arg(i).eq.'-f') read(arg(i+1),'(A)') fname
+     if (arg(i).eq.'-v') verbose=.true.
+     if (arg(i).eq.'-c') committee=.true.
      if (arg(i).eq.'-s') then
       use_socket = .true.
       readnext = .true.
@@ -114,8 +118,8 @@ program sagpr_apply
        flush(33)
 
        call system_clock(t2)
-       write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
-       write(*,*)
+       if (verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
+       if (verbose) write(*,*)
 
       else
        ! Read from the socket
@@ -158,8 +162,8 @@ program sagpr_apply
         call predict_frame(rate)
 
         call system_clock(t2)
-        write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
-        write(*,*)
+        if (verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
+        if (verbose) write(*,*)
 
         ! We have the data
         hasdata = .true.
@@ -202,5 +206,6 @@ program sagpr_apply
     if (allocated(sparsification0)) deallocate(sparsification0,PS_tr_0)
     if (allocated(components)) deallocate(components)
     if (allocated(w3j)) deallocate(w3j)
+    if (committee) deallocate(meanval_c,wt_c)
 
 end program

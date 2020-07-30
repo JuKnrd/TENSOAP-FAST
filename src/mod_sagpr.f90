@@ -51,6 +51,43 @@ module sagpr
  end function
 
 !***************************************************************************************************
+
+ function do_prediction_c(kernel,weights,meanval,degen,nmol,nenv,nw)
+  implicit none
+
+   integer degen,nmol,nenv,nw,i,j,k,l,mu,nu
+   real*8 kernel(nmol,nenv,degen,degen),weights(nenv*degen,nw),meanval(nw),do_prediction_c(nmol,degen,nw)
+   real*8 kte(nmol*degen,nenv*degen),prediction_lm_c(nmol*degen,nw)
+
+   kte(:,:) = 0.d0
+   do i=1,nmol
+    do j=1,nenv
+     do mu=1,degen
+      do nu=1,degen
+       kte((i-1)*degen + mu,(j-1)*degen + nu) = kernel(i,j,mu,nu)
+      enddo
+     enddo
+    enddo
+   enddo
+
+   !$OMP PARALLEL
+   !$OMP WORKSHARE
+   prediction_lm_c = matmul(kte,weights)
+   !$OMP END WORKSHARE
+   !$OMP END PARALLEL
+   l = 0
+   do i=1,nmol
+    do mu=1,degen
+     l = l + 1
+     do k=1,nw
+      do_prediction_c(i,mu,k) = prediction_lm_c(l,k) + meanval(k)
+     enddo
+    enddo
+   enddo
+
+ end function
+
+!***************************************************************************************************
 ! THE FOLLOWING FUNCTION EXISTS FOR CALLING sagpr_predict
 !***************************************************************************************************
 
