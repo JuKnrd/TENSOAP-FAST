@@ -223,7 +223,7 @@ subroutine get_model(model)
    endif
    if (committee) then
     i = i + 1
-    alpha = raw_model(i)
+    alpha = raw_model(i)**0.5
    endif
 
    if (i.ne.reals) stop 'ERROR: different file size to that expected for model!'
