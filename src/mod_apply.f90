@@ -27,6 +27,7 @@ module apply
  logical committee
  integer nw
  real*8, allocatable :: wt_c(:,:),meanval_c(:),prediction_lm_c(:,:,:)
+ real*8 alpha
  ! Other
  logical verbose
 
@@ -219,6 +220,10 @@ subroutine get_model(model)
      i = i + 1
      all_species(int(raw_model(i))) = .true.
     enddo
+   endif
+   if (committee) then
+    i = i + 1
+    alpha = raw_model(i)
    endif
 
    if (i.ne.reals) stop 'ERROR: different file size to that expected for model!'

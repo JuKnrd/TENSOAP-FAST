@@ -114,8 +114,24 @@ program sagpr_apply
        call predict_frame(rate)
 
        ! Print predictions
-       write(33,*) (prediction_lm(1,j),j=1,degen)
-       flush(33)
+       if (committee) then
+        allocate(prediction_lm(1,degen))
+        do i=1,degen
+         do j=1,nw
+          prediction_lm(:,i) = prediction_lm(:,i) + prediction_lm_c(:,i,j)
+         enddo
+         prediction_lm(:,i) = prediction_lm(:,i) / float(nw)
+        enddo
+        do j=1,nw
+         prediction_lm_c(:,:,j) = prediction_lm(:,:) + (alpha * (prediction_lm_c(:,:,j)-prediction_lm(:,:)))
+        enddo
+        deallocate(prediction_lm)
+        write(33,*) ((prediction_lm_c(1,j,k),j=1,degen),k=1,nw)
+        flush(33)
+       else
+        write(33,*) (prediction_lm(1,j),j=1,degen)
+        flush(33)
+       endif
 
        call system_clock(t2)
        if (verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
@@ -206,6 +222,6 @@ program sagpr_apply
     if (allocated(sparsification0)) deallocate(sparsification0,PS_tr_0)
     if (allocated(components)) deallocate(components)
     if (allocated(w3j)) deallocate(w3j)
-    if (committee) deallocate(meanval_c,wt_c)
+    if (committee) deallocate(meanval_c,wt_c,prediction_lm_c)
 
 end program
