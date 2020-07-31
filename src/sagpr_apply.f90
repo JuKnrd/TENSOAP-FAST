@@ -39,15 +39,15 @@ program sagpr_apply
     use_socket = .false.
     inet = 1
     verbose = .false.
-    committee = .false.
-    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-c  ','NULL'/)
+    committee = .true.
+    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-nc ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-m') read(arg(i+1),'(A)') model
      if (arg(i).eq.'-o') read(arg(i+1),'(A)') ofile
      if (arg(i).eq.'-f') read(arg(i+1),'(A)') fname
      if (arg(i).eq.'-v') verbose=.true.
-     if (arg(i).eq.'-c') committee=.true.
+     if (arg(i).eq.'-nc') committee=.false.
      if (arg(i).eq.'-s') then
       use_socket = .true.
       readnext = .true.
@@ -81,7 +81,8 @@ program sagpr_apply
 !************************************************************************************
 
     ! Open xyz file
-    open(unit=15,file=trim(adjustl(fname)),status="old",access="stream",form="formatted")
+    open(unit=15,file=trim(adjustl(fname)),status="old",access="stream",form="formatted",iostat=ios)
+    if (ios.ne.0) stop 'ERROR: input file does not exist!'
     if (use_socket) then
      ! Get atom names
      call read_frame(15,periodic)

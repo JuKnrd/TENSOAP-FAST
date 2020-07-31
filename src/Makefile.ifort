@@ -22,8 +22,7 @@ more: all sagpr_get_PS sagpr_get_kernel sagpr_predict
 
 mkbin:
 	@if [ ! -d ../bin ];then mkdir ../bin;fi
-	@cd ../bin;if [ ! -f sagpr_convert_model ];then ln -s ../tools/sagpr_convert_model.py sagpr_convert_model;fi;cd -
-	@cd ../bin;if [ ! -f sagpr_convert_committee ];then ln -s ../tools/sagpr_convert_committee_py sagpr_convert_committee;fi;cd -
+	@cd ../bin;if [ ! -f sagpr_convert_committee ];then ln -s ../tools/sagpr_convert.py sagpr_convert;fi;cd -
 	@cd ../bin;if [ ! -f sagpr_split_frames ];then ln -s ../tools/sagpr_split_frames.py sagpr_split_frames;fi;cd -
 
 sagpr_get_PS: $(OBJECTS1)

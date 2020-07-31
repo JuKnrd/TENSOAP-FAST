@@ -345,7 +345,8 @@ subroutine read_xyz(fname,periodic)
   logical periodic
 
     ! Read in XYZ file
-    open(unit=31,file=fname,status='old')
+    open(unit=31,file=fname,status='old',iostat=ios)
+    if (ios.ne.0) stop 'ERROR: input file does not exist!'
     nlines = 0
     do
      read(31,*,iostat=ios)

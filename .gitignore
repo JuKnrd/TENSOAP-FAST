@@ -1,0 +1,6 @@
+*.o
+*.mod
+bin/
+install/
+lib/
+src/Makefile
