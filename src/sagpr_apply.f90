@@ -116,6 +116,7 @@ program sagpr_apply
        ! Print predictions
        if (committee) then
         allocate(prediction_lm(1,degen))
+        prediction_lm(:,:) = 0.d0
         do i=1,degen
          do j=1,nw
           prediction_lm(:,i) = prediction_lm(:,i) + prediction_lm_c(:,i,j)
@@ -123,7 +124,7 @@ program sagpr_apply
          prediction_lm(:,i) = prediction_lm(:,i) / float(nw)
         enddo
         do j=1,nw
-         prediction_lm_c(:,:,j) = prediction_lm(:,:) + (alpha * (prediction_lm_c(:,:,j)-prediction_lm(:,:)))
+        ! prediction_lm_c(:,:,j) = prediction_lm(:,:) + (alpha * (prediction_lm_c(:,:,j)-prediction_lm(:,:)))
         enddo
         deallocate(prediction_lm)
         write(33,*) ((prediction_lm_c(1,j,k),j=1,degen),k=1,nw)
