@@ -125,7 +125,7 @@ program sagpr_apply
          prediction_lm(:,i) = prediction_lm(:,i) / float(nw)
         enddo
         do j=1,nw
-        ! prediction_lm_c(:,:,j) = prediction_lm(:,:) + (alpha * (prediction_lm_c(:,:,j)-prediction_lm(:,:)))
+        prediction_lm_c(:,:,j) = prediction_lm(:,:) + (nu * (prediction_lm_c(:,:,j)-prediction_lm(:,:)))
         enddo
         deallocate(prediction_lm)
         write(33,*) ((prediction_lm_c(1,j,k),j=1,degen),k=1,nw)

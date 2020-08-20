@@ -27,7 +27,7 @@ module apply
  logical committee
  integer nw
  real*8, allocatable :: wt_c(:,:),meanval_c(:),prediction_lm_c(:,:,:)
- real*8 alpha
+ real*8 nu
  ! Other
  logical verbose
 
@@ -223,7 +223,7 @@ subroutine get_model(model)
    endif
    if (committee) then
     i = i + 1
-    alpha = raw_model(i)**0.5
+    nu = raw_model(i)**0.5
    endif
 
    if (i.ne.reals) stop 'ERROR: different file size to that expected for model!'
