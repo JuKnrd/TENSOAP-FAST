@@ -14,6 +14,7 @@ if [ ${lval} == 1 ];then
 elif [ ${lval} == 2 ];then
 	fname0=${2}
 	fname2=${3}
+	oname=${4}
 	export degen0=1
 	export degen2=5
 	export ncommittee=$(head -n 1 ${fname0} | awk '{print NF/ENVIRON["degen0"]}')
@@ -27,7 +28,7 @@ elif [ ${lval} == 2 ];then
 		export ii=${i}
 		cat ${fname0} | awk 'BEGIN{dg=ENVIRON["degen0"];ii=ENVIRON["ii"]}{i1=(ii-1)*dg + 1;i2=ii*dg;for (i=i1;i<=i2;i++){printf "%f ",$i};printf "\n"}' > MODEL_${fname0}_${i}
 		cat ${fname2} | awk 'BEGIN{dg=ENVIRON["degen2"];ii=ENVIRON["ii"]}{i1=(ii-1)*dg + 1;i2=ii*dg;for (i=i1;i<=i2;i++){printf "%f ",$i};printf "\n"}' > MODEL_${fname2}_${i}
-		paste MODEL_${fname0}_${i} MODEL_${fname2}_${i} | awk 'BEGIN{f1=(1./3.)**0.5;f2=(3./2.)**0.5}{a0=$1;a2m2=$2;a2m1=$3;a20=$4;a2p1=$5;a2p2=$6;axy=ayx=a2m2;ayz=azy=a2m1;axz=azx=a20;axx=f1*(-a0-a2p1 + f2*a2p2);ayy=f1*(-a0-a2p1 - f2*a2p2);azz=f1*(-a0 + 2*a2p1);printf "%f %f %f %f %f %f %f %f %f\n",axx,axy,axz,ayx,ayy,ayz,azx,azy,azz}'
+		paste MODEL_${fname0}_${i} MODEL_${fname2}_${i} | awk 'BEGIN{f2=(1./2.)**0.5;f3=(1./3.)**0.5;f6=(1./6.)**0.5;f23=(2./3.)**0.5}{a0=$1;a2m2=$2;a2m1=$3;a20=$4;a2p1=$5;a2p2=$6;axy=ayx=f2*a2m2;ayz=azy=f2*a2m1;axz=azx=f2*a20;axx=(-f3*a0 - f6*a2p1 + f2*a2p2);ayy=(-f3*a0 - f6*a2p1 - f2*a2p2);azz=(-f3*a0 + f23*a2p1);printf "%f %f %f %f %f %f %f %f %f\n",axx,axy,axz,ayx,ayy,ayz,azx,azy,azz}' > ${oname}
 	done
 elif [ ${lval} == 0 ];then
 	echo "No conversion needed"
@@ -36,4 +37,4 @@ else
 	echo "This l value is not supported"
 	exit
 fi
-#rm MODEL_*
+rm MODEL_*
