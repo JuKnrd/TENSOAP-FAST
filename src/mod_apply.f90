@@ -91,7 +91,7 @@ subroutine get_model(model)
     enddo
    enddo
    if (do_scalar) then
-    allocate(PS_tr_0(nmol,1,1,nfeat))
+    allocate(PS_tr_0(nmol,1,1,nfeat0))
     do j=1,nmol
      do k=1,nfeat0
       i = i + 1
@@ -434,9 +434,20 @@ subroutine predict_frame(rate)
      call system_clock(ts)
      call do_power_spectrum_scalar(xyz,atname,natoms,cell,nframes,natmax,0,nmax0,lmax0,rcut0,sg0, &
      &     ncut0,sparsification0,rs0,periodic,.true.)
+     write(*,*) 'HERE'
+     write(*,*) shape(PS0)
+     write(*,*) shape(PS)
+     write(*,*) PS(1,1,1,1),PS(1,3,3,10),PS(1,54,2,31)
      call system_clock(tf)
      if (verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',0,' PS in',(tf-ts)/rate,' s'
     endif
+
+    write(*,*)
+    write(*,*) shape(PS_tr_0)
+    write(*,*) shape(PS_tr_lam)
+!    write(*,*) PS_tr_0(1,1,1,1),PS_tr_0(1,3,1,10),PS_tr_0(1,54,1,31)
+!    write(*,*) PS_tr_lam(1,1,1,1),PS_tr_lam(1,3,3,10),PS_tr_lam(1,54,2,31)
+    write(*,*)
 
     ! Get kernel
     if (allocated(natoms_tr)) deallocate(natoms_tr)
@@ -458,6 +469,9 @@ subroutine predict_frame(rate)
     endif
     call system_clock(tf)
     if (verbose) write(*,'(A,F6.3,A)') 'Got kernel in ',(tf-ts)/rate,' s'
+
+    write(*,*) shape(ker_lm)
+    write(*,*) ker_lm(1,1,1,1),ker_lm(1,45,3,1),ker_lm(1,401,5,5),ker_lm(1,530,4,2)
 
     ! Get predictions
     if (committee) then
