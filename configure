@@ -3,7 +3,7 @@
 echo "Configuring SOAPFAST..."
 echo
 compiler=gfortran
-if [ $(command -v ifort | wc -l) -gt 0 ];then
+if [ $(command -v ifort | wc -l) -gt 0 ] && [ "${1}" != "gnu" ];then
 	compiler=ifort
 	echo "Using intel compiler"
 else
