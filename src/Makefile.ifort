@@ -24,6 +24,7 @@ mkbin:
 	@if [ ! -d ../bin ];then mkdir ../bin;fi
 	@cd ../bin;if [ ! -f sagpr_convert_committee ];then ln -s ../tools/sagpr_convert.py sagpr_convert;fi;cd -
 	@cd ../bin;if [ ! -f sagpr_split_frames ];then ln -s ../tools/sagpr_split_frames.py sagpr_split_frames;fi;cd -
+	@cd ../bin;if [ ! -f sagpr_apply_process ];then ln -s ../tools/sagpr_apply_process.sh sagpr_apply_process;fi;cd -
 
 sagpr_get_PS: $(OBJECTS1)
 	$(FF) $(FOPTS) -o ../bin/sagpr_get_PS $(OBJECTS1) $(INCLUDE) $(LD)
