@@ -478,7 +478,8 @@ module sagpr
   if (.not.periodic) then
    nnmax = natmax
   else
-   nnmax = int(1.2d0 * (4.d0 * dacos(-1.d0) / 3.d0) * natmax * rcut * rcut * rcut / maxdet(cell,nframes))
+!   nnmax = int(1.2d0 * (4.d0 * dacos(-1.d0) / 3.d0) * natmax * rcut * rcut * rcut / maxdet(cell,nframes))
+   nnmax = natmax
   endif
 
   ! List indices for atoms of the same species
@@ -870,7 +871,8 @@ module sagpr
   if (.not.periodic) then
    nnmax = natmax
   else
-   nnmax = int(1.2d0 * (4.d0 * dacos(-1.d0) / 3.d0) * natmax * rcut * rcut * rcut / maxdet(cell,nframes))
+!   nnmax = int(1.2d0 * (4.d0 * dacos(-1.d0) / 3.d0) * natmax * rcut * rcut * rcut / maxdet(cell,nframes))
+   nnmax = natmax
   endif
 
   ! List indices for atoms of the same species
