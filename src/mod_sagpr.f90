@@ -469,7 +469,7 @@ module sagpr
   complex*16, allocatable :: om(:,:),ch(:,:)
   real*8, allocatable :: ww(:,:)
   integer cr,ts,tf
-  real*8 rate
+  real*8 rate,dr(3),invcell(3,3),sv(3)
 
   call system_clock(count_rate=cr)
   rate = real(cr)
@@ -479,7 +479,32 @@ module sagpr
    nnmax = natmax
   else
 !   nnmax = int(1.2d0 * (4.d0 * dacos(-1.d0) / 3.d0) * natmax * rcut * rcut * rcut / maxdet(cell,nframes))
-   nnmax = natmax
+!   write(*,*) nnmax
+!   nnmax = natmax
+   nnmax = 0
+   do i=1,nframes
+    ! Invert unit cell
+    invcell(:,:) = cell(i,:,:)
+    lwork = 1000
+    call DGETRF(3,3,invcell,3,ipiv,info)
+    call DGETRI(3,invcell,3,ipiv,work,lwork,info)
+    do j=1,natmax
+     nn = 0
+     do k=1,natmax
+      if (k.ne.j) then
+       dr(:) = xyz(i,j,:) - xyz(i,k,:)
+       sv = matmul(invcell,dr)
+       do l=1,3
+        sv(l) = sv(l) - nint(sv(l))
+       enddo
+       dr = matmul(cell(i,:,:),sv)
+       if (dr(1)*dr(1) + dr(2)*dr(2) + dr(3)*dr(3) .le. rcut*rcut) nn = nn + 1
+      endif
+     enddo
+     nnmax = max(nnmax,nn)
+    enddo
+   enddo
+!   write(*,*) nnmax,natmax
   endif
 
   ! List indices for atoms of the same species
@@ -864,6 +889,7 @@ module sagpr
   complex*16, allocatable :: ot1(:,:),ot2(:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
+  real*8 dr(3),sv(3),invcell(3,3)
 
   if (lm.ne.0) stop 'ERROR: scalar power spectrum has been called with non-scalar argument!'
 
@@ -871,8 +897,34 @@ module sagpr
   if (.not.periodic) then
    nnmax = natmax
   else
-!   nnmax = int(1.2d0 * (4.d0 * dacos(-1.d0) / 3.d0) * natmax * rcut * rcut * rcut / maxdet(cell,nframes))
-   nnmax = natmax
+!   nnmax = int(1.2d0 * (4.d0 * dacos(-1.d0) / 3.d0) * natmax * rcut * rcut *
+!   rcut / maxdet(cell,nframes))
+!   write(*,*) nnmax
+!   nnmax = natmax
+   nnmax = 0
+   do i=1,nframes
+    ! Invert unit cell
+    invcell(:,:) = cell(i,:,:)
+    lwork = 1000
+    call DGETRF(3,3,invcell,3,ipiv,info)
+    call DGETRI(3,invcell,3,ipiv,work,lwork,info)
+    do j=1,natmax
+     nn = 0
+     do k=1,natmax
+      if (k.ne.j) then
+       dr(:) = xyz(i,j,:) - xyz(i,k,:)
+       sv = matmul(invcell,dr)
+       do l=1,3
+        sv(l) = sv(l) - nint(sv(l))
+       enddo
+       dr = matmul(cell(i,:,:),sv)
+       if (dr(1)*dr(1) + dr(2)*dr(2) + dr(3)*dr(3) .le. rcut*rcut) nn = nn + 1
+      endif
+     enddo
+     nnmax = max(nnmax,nn)
+    enddo
+   enddo
+!   write(*,*) nnmax,natmax  
   endif
 
   ! List indices for atoms of the same species
