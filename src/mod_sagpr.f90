@@ -481,6 +481,7 @@ module sagpr
    nnmax = 0
    do i=1,nframes
     ! Invert unit cell
+    cell(i,:,:) = transpose(cell(i,:,:))
     invcell(:,:) = cell(i,:,:)
     lwork = 1000
     call DGETRF(3,3,invcell,3,ipiv,info)
@@ -896,6 +897,7 @@ module sagpr
    nnmax = 0
    do i=1,nframes
     ! Invert unit cell
+!    cell(i,:,:) = transpose(cell(i,:,:))
     invcell(:,:) = cell(i,:,:)
     lwork = 1000
     call DGETRF(3,3,invcell,3,ipiv,info)
@@ -1160,7 +1162,7 @@ module sagpr
    radial_r0 = rs(2)
    radial_m = rs(3)
    rcut2 = rcut*rcut
-   ncell = 2
+   ncell = 0
 
     call system_clock(count_rate=cr)
     rate = real(cr)
@@ -1238,6 +1240,7 @@ module sagpr
    else
 
     ! Invert unit cell
+!    cell = transpose(cell)
     invcell(:,:) = cell(:,:)
     lwork = 1000
     call DGETRF(3,3,invcell,3,ipiv,info)

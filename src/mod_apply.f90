@@ -140,7 +140,7 @@ subroutine get_model(model)
    if (do_scalar) then
     if (ncut0.ne.nfeat0) stop 'ERROR: ncut0 .ne. nfeat0!'
    endif
-
+   
    ! Get weights
    if (committee) then
     allocate(meanval_c(nw),wt_c(nmol*degen,nw))
