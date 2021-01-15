@@ -456,7 +456,7 @@ subroutine predict_frame(rate)
      allocate(PS_atomic(tot_natoms,1,size(PS,3),size(PS,4)))
      k = 1
      do i=1,size(PS,1)
-      PS_atomic(k:k+natoms(i),1,:,:) = PS(i,:,:,:)
+      PS_atomic(k:k+natoms(i),1,:,:) = PS(i,1:natoms(i),:,:)
       k = k + natoms(i)
      enddo
      deallocate(PS)
@@ -467,8 +467,16 @@ subroutine predict_frame(rate)
      natoms(:) = 1
      deallocate(PS_atomic)
      if (do_scalar) then
-      write(*,*) shape(PS0)
-      stop 'THIS FUNCTIONALITY NOT COMPLETE!'
+      allocate(PS0_atomic(tot_natoms,1,size(PS0,3),size(PS0,4)))
+      k = 1
+      do i=1,size(PS0,1)
+       PS0_atomic(k:k+natoms(i),1,:,:) = PS0(i,1:natoms(i),:,:)
+       k = k + natoms(i)
+      enddo
+      deallocate(PS0)
+      allocate(PS0(tot_natoms,1,size(PS0_atomic,3),size(PS0_atomic,4)))
+      PS0(:,:,:,:) = PS0_atomic(:,:,:,:)
+      deallocate(PS0_atomic)
      endif
     endif
 
