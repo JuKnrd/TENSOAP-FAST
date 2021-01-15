@@ -327,7 +327,7 @@ subroutine read_frame(un,periodic)
     c1 = c1(ios+1:len(c1))
     ios = index(c1,'"')
     c1 = c1(1:ios-1)
-    read(c1,*) cell(i,1,1),cell(i,1,2),cell(i,1,3),cell(i,2,1),cell(i,2,2),cell(i,2,3),cell(i,3,1),cell(i,3,2),cell(i,3,3)
+    read(c1,*) cell(i,1,1),cell(i,2,1),cell(i,3,1),cell(i,1,2),cell(i,2,2),cell(i,3,2),cell(i,1,3),cell(i,2,3),cell(i,3,3)
    enddo
   endif
   if (verbose) write(*,*) 'Got input frame with ',nat,'atoms'
