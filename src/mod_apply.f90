@@ -30,6 +30,8 @@ module apply
  real*8 nu
  ! Atomic predictions
  logical atomic
+ integer tot_natoms
+ complex*16, allocatable :: PS_atomic(:,:,:,:),PS0_atomic(:,:,:,:)
  ! Other
  logical verbose
 
@@ -417,9 +419,8 @@ end subroutine
 subroutine predict_frame(rate)
  implicit none
 
-    integer ts,tf,tot_natoms,i,k
+    integer ts,tf,i,k
     real*8 rate
-    complex*16, allocatable :: PS_atomic(:,:,:,:),PS0_atomic(:,:,:,:)
 
     ! Get power spectrum
     if (.not.do_scalar) then
@@ -454,19 +455,19 @@ subroutine predict_frame(rate)
      nframes = tot_natoms
      natmax = 1
      allocate(PS_atomic(tot_natoms,1,size(PS,3),size(PS,4)))
+     ! Populate atomic power spectrum array from original power spectrum
      k = 1
      do i=1,size(PS,1)
       PS_atomic(k:k+natoms(i),1,:,:) = PS(i,1:natoms(i),:,:)
       k = k + natoms(i)
      enddo
+     ! Create new power spectrum array with the corrected shape
      deallocate(PS)
      allocate(PS(tot_natoms,1,size(PS_atomic,3),size(PS_atomic,4)))
      PS(:,:,:,:) = PS_atomic(:,:,:,:)
-     deallocate(natoms)
-     allocate(natoms(tot_natoms))
-     natoms(:) = 1
      deallocate(PS_atomic)
      if (do_scalar) then
+      ! Repeat for scalar power spectrum if appropriate
       allocate(PS0_atomic(tot_natoms,1,size(PS0,3),size(PS0,4)))
       k = 1
       do i=1,size(PS0,1)
@@ -478,6 +479,10 @@ subroutine predict_frame(rate)
       PS0(:,:,:,:) = PS0_atomic(:,:,:,:)
       deallocate(PS0_atomic)
      endif
+     ! Create new number-of-atoms array with the corrected shape
+     deallocate(natoms)
+     allocate(natoms(tot_natoms))
+     natoms(:) = 1
     endif
 
     ! Get kernel
