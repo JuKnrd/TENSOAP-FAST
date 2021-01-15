@@ -472,17 +472,6 @@ subroutine predict_frame(rate)
      endif
     endif
 
-        write(*,*) 'PS',shape(PS)
-        write(*,*) 'PS_tr_lam',shape(PS_tr_lam)
-        write(*,*) 'nframes',nframes
-        write(*,*) 'nmol',nmol
-        write(*,*) 'nfeat',nfeat
-        write(*,*) 'natmax',natmax
-        write(*,*) 'natoms',shape(natoms)
-        ! DEBUG HERE
-        nframes = size(PS,1)
-        natmax = 1
-
     ! Get kernel
     if (allocated(natoms_tr)) deallocate(natoms_tr)
     allocate(natoms_tr(nmol))
@@ -490,7 +479,6 @@ subroutine predict_frame(rate)
     call system_clock(ts)
     if (.not.do_scalar) then
      if (lm.eq.0) then
-        write(*,*) 'DEBUG'
       ker = do_scalar_kernel(real(PS),PS_tr_lam,nframes,nmol,nfeat,nfeat,natmax,1,dfloat(natoms),natoms_tr,zeta,.false.)
      else
       if (zeta.gt.1) stop 'ERROR: zeta>1 has been selected but no scalar power spectrum given!'
@@ -523,8 +511,6 @@ subroutine predict_frame(rate)
       prediction_lm = do_prediction(ker_lm,wt,meanval,degen,nframes,nmol)
      endif
     endif
-
-        write(*,*) shape(prediction_lm_c)
 
 end subroutine
 
