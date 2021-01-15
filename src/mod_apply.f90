@@ -28,6 +28,8 @@ module apply
  integer nw
  real*8, allocatable :: wt_c(:,:),meanval_c(:),prediction_lm_c(:,:,:)
  real*8 nu
+ ! Atomic predictions
+ logical atomic
  ! Other
  logical verbose
 
@@ -415,8 +417,9 @@ end subroutine
 subroutine predict_frame(rate)
  implicit none
 
-    integer ts,tf
+    integer ts,tf,tot_natoms,i,k
     real*8 rate
+    complex*16, allocatable :: PS_atomic(:,:,:,:),PS0_atomic(:,:,:,:)
 
     ! Get power spectrum
     if (.not.do_scalar) then
@@ -438,6 +441,48 @@ subroutine predict_frame(rate)
      if (verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',0,' PS in',(tf-ts)/rate,' s'
     endif
 
+    ! If we have asked for atomic predictions, we need to convert to atomic
+    ! power spectra
+    if (atomic) then
+     ! Here, rather than using the fact that we know what these quantities are,
+     ! we will instead use the size function -- so as to make this agnostic of
+     ! what we know (a good direction for future code)
+     tot_natoms = 0
+     do i=1,size(PS,1)
+      tot_natoms = tot_natoms + natoms(i)
+     enddo
+     nframes = tot_natoms
+     natmax = 1
+     allocate(PS_atomic(tot_natoms,1,size(PS,3),size(PS,4)))
+     k = 1
+     do i=1,size(PS,1)
+      PS_atomic(k:k+natoms(i),1,:,:) = PS(i,:,:,:)
+      k = k + natoms(i)
+     enddo
+     deallocate(PS)
+     allocate(PS(tot_natoms,1,size(PS_atomic,3),size(PS_atomic,4)))
+     PS(:,:,:,:) = PS_atomic(:,:,:,:)
+     deallocate(natoms)
+     allocate(natoms(tot_natoms))
+     natoms(:) = 1
+     deallocate(PS_atomic)
+     if (do_scalar) then
+      write(*,*) shape(PS0)
+      stop 'THIS FUNCTIONALITY NOT COMPLETE!'
+     endif
+    endif
+
+        write(*,*) 'PS',shape(PS)
+        write(*,*) 'PS_tr_lam',shape(PS_tr_lam)
+        write(*,*) 'nframes',nframes
+        write(*,*) 'nmol',nmol
+        write(*,*) 'nfeat',nfeat
+        write(*,*) 'natmax',natmax
+        write(*,*) 'natoms',shape(natoms)
+        ! DEBUG HERE
+        nframes = size(PS,1)
+        natmax = 1
+
     ! Get kernel
     if (allocated(natoms_tr)) deallocate(natoms_tr)
     allocate(natoms_tr(nmol))
@@ -445,6 +490,7 @@ subroutine predict_frame(rate)
     call system_clock(ts)
     if (.not.do_scalar) then
      if (lm.eq.0) then
+        write(*,*) 'DEBUG'
       ker = do_scalar_kernel(real(PS),PS_tr_lam,nframes,nmol,nfeat,nfeat,natmax,1,dfloat(natoms),natoms_tr,zeta,.false.)
      else
       if (zeta.gt.1) stop 'ERROR: zeta>1 has been selected but no scalar power spectrum given!'
@@ -477,6 +523,8 @@ subroutine predict_frame(rate)
       prediction_lm = do_prediction(ker_lm,wt,meanval,degen,nframes,nmol)
      endif
     endif
+
+        write(*,*) shape(prediction_lm_c)
 
 end subroutine
 

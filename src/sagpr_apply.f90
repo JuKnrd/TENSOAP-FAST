@@ -40,7 +40,8 @@ program sagpr_apply
     inet = 1
     verbose = .false.
     committee = .true.
-    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-nc ','NULL'/)
+    atomic = .false.
+    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-nc ','-a  ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-m') read(arg(i+1),'(A)') model
@@ -48,6 +49,7 @@ program sagpr_apply
      if (arg(i).eq.'-f') read(arg(i+1),'(A)') fname
      if (arg(i).eq.'-v') verbose=.true.
      if (arg(i).eq.'-nc') committee=.false.
+     if (arg(i).eq.'-a') atomic=.true.
      if (arg(i).eq.'-s') then
       use_socket = .true.
       readnext = .true.
@@ -115,8 +117,12 @@ program sagpr_apply
        call predict_frame(rate)
 
        ! Print predictions
+       if (atomic) then
+        write(33,*) size(prediction_lm_c,1)
+        write(33,*) '#'
+       endif
        if (committee) then
-        allocate(prediction_lm(1,degen))
+        allocate(prediction_lm(size(prediction_lm_c,1),degen))
         prediction_lm(:,:) = 0.d0
         do i=1,degen
          do j=1,nw
@@ -125,13 +131,17 @@ program sagpr_apply
          prediction_lm(:,i) = prediction_lm(:,i) / float(nw)
         enddo
         do j=1,nw
-        prediction_lm_c(:,:,j) = prediction_lm(:,:) + (nu * (prediction_lm_c(:,:,j)-prediction_lm(:,:)))
+         prediction_lm_c(:,:,j) = prediction_lm(:,:) + (nu * (prediction_lm_c(:,:,j)-prediction_lm(:,:)))
         enddo
         deallocate(prediction_lm)
-        write(33,*) ((prediction_lm_c(1,j,k),j=1,degen),k=1,nw)
+        do l=1,size(prediction_lm_c,1)
+         write(33,*) ((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
+        enddo
         flush(33)
        else
-        write(33,*) (prediction_lm(1,j),j=1,degen)
+        do l=1,size(prediction_lm_c,1)
+         write(33,*) (prediction_lm(1,j),j=1,degen)
+        enddo
         flush(33)
        endif
 
