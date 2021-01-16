@@ -48,7 +48,11 @@ program sagpr_apply
      if (arg(i).eq.'-o') read(arg(i+1),'(A)') ofile
      if (arg(i).eq.'-f') read(arg(i+1),'(A)') fname
      if (arg(i).eq.'-v') verbose=.true.
-     if (arg(i).eq.'-nc') committee=.false.
+     if (arg(i).eq.'-nc') then 
+      committee=.false.
+      write(*,*) 'WARNING: single models are a deprecated feature; the correct way to use this is to create a committee-of-one'
+      write(*,*) '         this feature will be removed in later versions'
+     endif
      if (arg(i).eq.'-a') atomic=.true.
      if (arg(i).eq.'-s') then
       use_socket = .true.
@@ -71,6 +75,11 @@ program sagpr_apply
     ! Check for arguments that are required
     if (model.eq.'') stop 'ERROR: model file required!'
     if (fname.eq.'') stop 'ERROR: file name required!'
+
+    ! Sockets will not be compatible with non-committee models, so throw an error
+    if (use_socket .and. .not.committee) then
+     stop 'ERROR: socket calculations are not compatible with non-committee models!'
+    endif
 
 !************************************************************************************
 ! GET MODEL
@@ -219,9 +228,11 @@ program sagpr_apply
         call writebuffer(socket,nat)
         call writebuffer(socket,msgbuffer,3*nat)
         call writebuffer(socket,reshape(virial,(/9/)),9)
-        ! Send prediction
+        ! Send prediction; we will send only the prediction for the entire
+        ! frame, rather than for each atom (the latter will be stored in an
+        ! output file)
         initbuffer = " "
-        write(initbuffer,*) prediction_lm
+        write(initbuffer,*) ((sum(prediction_lm_c(:,j,k)),j=1,degen),k=1,nw)
         cbuf = len_trim(initbuffer)
         call writebuffer(socket,cbuf)
         call writebuffer(socket,initbuffer,cbuf)
