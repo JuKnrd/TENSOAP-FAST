@@ -32,6 +32,7 @@ module apply
  logical atomic
  integer tot_natoms
  complex*16, allocatable :: PS_atomic(:,:,:,:),PS0_atomic(:,:,:,:)
+ real*8, allocatable :: natoms_at(:)
  ! Other
  logical verbose
 
@@ -454,11 +455,12 @@ subroutine predict_frame(rate)
      enddo
      nframes = tot_natoms
      natmax = 1
-     allocate(PS_atomic(tot_natoms,1,size(PS,3),size(PS,4)))
+     allocate(PS_atomic(tot_natoms,1,size(PS,3),size(PS,4)),natoms_at(tot_natoms))
      ! Populate atomic power spectrum array from original power spectrum
      k = 1
      do i=1,size(PS,1)
       PS_atomic(k:k+natoms(i),1,:,:) = PS(i,1:natoms(i),:,:)
+      natoms_at(k:k+natoms(i)) = natoms(i)
       k = k + natoms(i)
      enddo
      ! Create new power spectrum array with the corrected shape
@@ -523,6 +525,21 @@ subroutine predict_frame(rate)
      else
       prediction_lm = do_prediction(ker_lm,wt,meanval,degen,nframes,nmol)
      endif
+    endif
+
+    if (atomic) then
+     ! Rescale predictions by the number of atoms, so that they are related to
+     ! the frame predictions by a summation
+     if (committee) then
+      do i=1,size(prediction_lm_c,1)
+       prediction_lm_c(i,:,:) = prediction_lm_c(i,:,:) / natoms_at(i)
+      enddo
+     else
+      do i=1,size(prediction_lm_c,1)
+       prediction_lm(i,:) = prediction_lm(i,:) / natoms_at(i)
+      enddo
+     endif
+     deallocate(natoms_at)
     endif
 
 end subroutine
