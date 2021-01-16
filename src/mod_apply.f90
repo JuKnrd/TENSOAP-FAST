@@ -33,6 +33,7 @@ module apply
  integer tot_natoms
  complex*16, allocatable :: PS_atomic(:,:,:,:),PS0_atomic(:,:,:,:)
  real*8, allocatable :: natoms_at(:)
+ character(len=4), allocatable :: atname_at(:)
  ! Other
  logical verbose
 
@@ -455,12 +456,14 @@ subroutine predict_frame(rate)
      enddo
      nframes = tot_natoms
      natmax = 1
-     allocate(PS_atomic(tot_natoms,1,size(PS,3),size(PS,4)),natoms_at(tot_natoms))
+     if (allocated(atname_at)) deallocate(atname_at)
+     allocate(PS_atomic(tot_natoms,1,size(PS,3),size(PS,4)),natoms_at(tot_natoms),atname_at(tot_natoms))
      ! Populate atomic power spectrum array from original power spectrum
      k = 1
      do i=1,size(PS,1)
       PS_atomic(k:k+natoms(i),1,:,:) = PS(i,1:natoms(i),:,:)
       natoms_at(k:k+natoms(i)) = natoms(i)
+      atname_at(k:k+natoms(i)) = atname(i,1:natoms(i))
       k = k + natoms(i)
      enddo
      ! Create new power spectrum array with the corrected shape

@@ -135,12 +135,20 @@ program sagpr_apply
         enddo
         deallocate(prediction_lm)
         do l=1,size(prediction_lm_c,1)
-         write(33,*) ((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
+         if (.not. atomic) then
+          write(33,*) ((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
+         else
+          write(33,*) atname_at(l),((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
+         endif
         enddo
         flush(33)
        else
         do l=1,size(prediction_lm_c,1)
-         write(33,*) (prediction_lm(1,j),j=1,degen)
+         if (.not. atomic) then
+          write(33,*) (prediction_lm(l,j),j=1,degen)
+         else
+          write(33,*) atname_at(l),((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
+         endif
         enddo
         flush(33)
        endif
@@ -235,5 +243,6 @@ program sagpr_apply
     if (allocated(components)) deallocate(components)
     if (allocated(w3j)) deallocate(w3j)
     if (committee) deallocate(meanval_c,wt_c,prediction_lm_c)
+    if (allocated(atname_at)) deallocate(atname_at)
 
 end program
