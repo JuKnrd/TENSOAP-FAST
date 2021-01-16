@@ -481,7 +481,6 @@ module sagpr
    nnmax = 0
    do i=1,nframes
     ! Invert unit cell
-    cell(i,:,:) = transpose(cell(i,:,:))
     invcell(:,:) = cell(i,:,:)
     lwork = 1000
     call DGETRF(3,3,invcell,3,ipiv,info)
@@ -896,8 +895,7 @@ module sagpr
   else
    nnmax = 0
    do i=1,nframes
-    ! Invert unit cell; it will already have been transposed earlier on, so we
-    ! don't do it here
+    ! Invert unit cell
     invcell(:,:) = cell(i,:,:)
     lwork = 1000
     call DGETRF(3,3,invcell,3,ipiv,info)
@@ -1240,7 +1238,6 @@ module sagpr
    else
 
     ! Invert unit cell
-!    cell = transpose(cell)
     invcell(:,:) = cell(:,:)
     lwork = 1000
     call DGETRF(3,3,invcell,3,ipiv,info)
