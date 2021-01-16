@@ -118,8 +118,11 @@ program sagpr_apply
 
        ! Print predictions
        if (atomic) then
+        if (.not.committee) then
+         stop 'ERROR: non-committee models are a deprecated feature and should not be used with atomic predictions!'
+        endif
         write(33,*) size(prediction_lm_c,1)
-        write(33,*) '#'
+        write(33,*) '# Total',((sum(prediction_lm_c(:,j,k)),j=1,degen),k=1,nw)
        endif
        if (committee) then
         allocate(prediction_lm(size(prediction_lm_c,1),degen))
