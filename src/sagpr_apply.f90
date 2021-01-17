@@ -111,6 +111,7 @@ program sagpr_apply
     hasdata = .false.
     ! Open output file
     if (.not. use_socket) open(unit=33,file=ofile,access='stream',form='formatted')
+    if (use_socket .and. atomic) open(unit=33,file=ofile,access='stream',form='formatted')
     ! Keep going through input
     do while (ios.ne.0)
      open(unit=73,file='EXIT',status='old',iostat=ios)
@@ -228,6 +229,19 @@ program sagpr_apply
         call writebuffer(socket,nat)
         call writebuffer(socket,msgbuffer,3*nat)
         call writebuffer(socket,reshape(virial,(/9/)),9)
+        ! Rescale committee predictions about their mean
+        allocate(prediction_lm(size(prediction_lm_c,1),degen))
+        prediction_lm(:,:) = 0.d0
+        do i=1,degen
+         do j=1,nw
+          prediction_lm(:,i) = prediction_lm(:,i) + prediction_lm_c(:,i,j)
+         enddo
+         prediction_lm(:,i) = prediction_lm(:,i) / float(nw)
+        enddo
+        do j=1,nw
+         prediction_lm_c(:,:,j) = prediction_lm(:,:) + (nu * (prediction_lm_c(:,:,j)-prediction_lm(:,:)))
+        enddo
+        deallocate(prediction_lm)
         ! Send prediction; we will send only the prediction for the entire
         ! frame, rather than for each atom (the latter will be stored in an
         ! output file)
@@ -236,6 +250,15 @@ program sagpr_apply
         cbuf = len_trim(initbuffer)
         call writebuffer(socket,cbuf)
         call writebuffer(socket,initbuffer,cbuf)
+        ! If we are doing atomic predictions, also print them to a file
+        if (atomic) then
+         write(33,*) size(prediction_lm_c,1)
+         write(33,*) '# Total',((sum(prediction_lm_c(:,j,k)),j=1,degen),k=1,nw)
+         do l=1,size(prediction_lm_c,1)
+          write(33,*)  atname_at(l),((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
+         enddo
+         flush(33)
+        endif
         deallocate(msgbuffer)
         hasdata = .false.
        else
