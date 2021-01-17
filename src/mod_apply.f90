@@ -24,7 +24,6 @@ module apply
  integer, parameter :: nmax_default = 8, lmax_default = 6
  real*8, parameter :: rcut_default = 4.d0,sg_default = 0.3d0,rs_default(3) = (/0.d0,0.d0,0.d0/)
  ! Committee models
- logical committee
  integer nw
  real*8, allocatable :: wt_c(:,:),meanval_c(:),prediction_lm_c(:,:,:)
  real*8 nu
@@ -83,10 +82,8 @@ subroutine get_model(model)
     nfeat0 = int(raw_model(7))
     i = 7
    endif
-   if (committee) then
-    i = i + 1
-    nw = int(raw_model(i))
-   endif
+   i = i + 1
+   nw = int(raw_model(i))
    allocate(PS_tr_lam(nmol,1,degen,nfeat))
    do j=1,nmol
     do k=1,degen
@@ -148,27 +145,17 @@ subroutine get_model(model)
    endif
    
    ! Get weights
-   if (committee) then
-    allocate(meanval_c(nw),wt_c(nmol*degen,nw))
-    do k=1,nw
-     i = i + 1
-     meanval_c(k) = raw_model(i)
-    enddo
-    do k=1,nw
-     do j=1,nmol*degen
-      i = i + 1
-      wt_c(j,k) = raw_model(i)
-     enddo
-    enddo
-   else
+   allocate(meanval_c(nw),wt_c(nmol*degen,nw))
+   do k=1,nw
     i = i + 1
-    meanval = raw_model(i)
-    allocate(wt(nmol*degen))
+    meanval_c(k) = raw_model(i)
+   enddo
+   do k=1,nw
     do j=1,nmol*degen
      i = i + 1
-     wt(j) = raw_model(i)
+     wt_c(j,k) = raw_model(i)
     enddo
-   endif
+   enddo
 
    ! Get hyperparameters
    i = i + 1
@@ -227,10 +214,8 @@ subroutine get_model(model)
      all_species(int(raw_model(i))) = .true.
     enddo
    endif
-   if (committee) then
-    i = i + 1
-    nu = raw_model(i)**0.5
-   endif
+   i = i + 1
+   nu = raw_model(i)**0.5
 
    if (i.ne.reals) stop 'ERROR: different file size to that expected for model!'
 
@@ -512,36 +497,20 @@ subroutine predict_frame(rate)
     if (verbose) write(*,'(A,F6.3,A)') 'Got kernel in ',(tf-ts)/rate,' s'
 
     ! Get predictions
-    if (committee) then
-     if (allocated(prediction_lm_c)) deallocate(prediction_lm_c)
-     allocate(prediction_lm_c(nmol,degen,nw))
-     if (lm.eq.0) then
-      prediction_lm_c = do_prediction_c(ker,wt_c,meanval_c,degen,nframes,nmol,nw)
-     else
-      prediction_lm_c = do_prediction_c(ker_lm,wt_c,meanval_c,degen,nframes,nmol,nw)
-     endif
+    if (allocated(prediction_lm_c)) deallocate(prediction_lm_c)
+    allocate(prediction_lm_c(nmol,degen,nw))
+    if (lm.eq.0) then
+     prediction_lm_c = do_prediction_c(ker,wt_c,meanval_c,degen,nframes,nmol,nw)
     else
-     if (allocated(prediction_lm)) deallocate(prediction_lm)
-     allocate(prediction_lm(nmol,degen))
-     if (lm.eq.0) then
-      prediction_lm = do_prediction(ker,wt,meanval,degen,nframes,nmol)
-     else
-      prediction_lm = do_prediction(ker_lm,wt,meanval,degen,nframes,nmol)
-     endif
+     prediction_lm_c = do_prediction_c(ker_lm,wt_c,meanval_c,degen,nframes,nmol,nw)
     endif
 
     if (atomic) then
      ! Rescale predictions by the number of atoms, so that they are related to
      ! the frame predictions by a summation
-     if (committee) then
-      do i=1,size(prediction_lm_c,1)
-       prediction_lm_c(i,:,:) = prediction_lm_c(i,:,:) / natoms_at(i)
-      enddo
-     else
-      do i=1,size(prediction_lm_c,1)
-       prediction_lm(i,:) = prediction_lm(i,:) / natoms_at(i)
-      enddo
-     endif
+     do i=1,size(prediction_lm_c,1)
+      prediction_lm_c(i,:,:) = prediction_lm_c(i,:,:) / natoms_at(i)
+     enddo
      deallocate(natoms_at)
     endif
 
