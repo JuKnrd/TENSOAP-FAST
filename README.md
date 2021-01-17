@@ -28,7 +28,7 @@ It is also possible to use this program in combination with i-PI (https://github
 
 # Committee Models
 
-Later versions of TENSOAP-FAST are able to use committee models to make predictions (for backwards compatibility, it can also use models produced by earlier versions of this code using `sagpr_convert_model`; to do this, the `-nc` flag should given to `sagpr_apply`). To use a committee model, the `-w` flag of `sagpr_convert` should be given a *list* of weights files (e.g. `-w WEIGHTS.*.npy`), and if a calibration factor is desired, this is specified by the `-a` flag.
+Later versions of TENSOAP-FAST are able to use committee models to make predictions. To use a committee model, the `-w` flag of `sagpr_convert` should be given a *list* of weights files (e.g. `-w WEIGHTS.*.npy`), and if a calibration factor is desired, this is specified by the `-a` flag.
 
 # Maintenance
 
