@@ -1,5 +1,8 @@
 *.o
 *.mod
+*.out
+*.txt
+*.sw*
 bin/
 install/
 lib/

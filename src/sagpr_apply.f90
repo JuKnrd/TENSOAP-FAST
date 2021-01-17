@@ -39,16 +39,14 @@ program sagpr_apply
     use_socket = .false.
     inet = 1
     verbose = .false.
-    committee = .true.
     atomic = .false.
-    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-nc ','-a  ','NULL'/)
+    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-a  ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-m') read(arg(i+1),'(A)') model
      if (arg(i).eq.'-o') read(arg(i+1),'(A)') ofile
      if (arg(i).eq.'-f') read(arg(i+1),'(A)') fname
      if (arg(i).eq.'-v') verbose=.true.
-     if (arg(i).eq.'-nc') committee=.false.
      if (arg(i).eq.'-a') atomic=.true.
      if (arg(i).eq.'-s') then
       use_socket = .true.
@@ -102,6 +100,7 @@ program sagpr_apply
     hasdata = .false.
     ! Open output file
     if (.not. use_socket) open(unit=33,file=ofile,access='stream',form='formatted')
+    if (use_socket .and. atomic) open(unit=33,file=ofile,access='stream',form='formatted')
     ! Keep going through input
     do while (ios.ne.0)
      open(unit=73,file='EXIT',status='old',iostat=ios)
@@ -119,39 +118,28 @@ program sagpr_apply
        ! Print predictions
        if (atomic) then
         write(33,*) size(prediction_lm_c,1)
-        write(33,*) '#'
+        write(33,*) '# Total',((sum(prediction_lm_c(:,j,k)),j=1,degen),k=1,nw)
        endif
-       if (committee) then
-        allocate(prediction_lm(size(prediction_lm_c,1),degen))
-        prediction_lm(:,:) = 0.d0
-        do i=1,degen
-         do j=1,nw
-          prediction_lm(:,i) = prediction_lm(:,i) + prediction_lm_c(:,i,j)
-         enddo
-         prediction_lm(:,i) = prediction_lm(:,i) / float(nw)
-        enddo
+       allocate(prediction_lm(size(prediction_lm_c,1),degen))
+       prediction_lm(:,:) = 0.d0
+       do i=1,degen
         do j=1,nw
-         prediction_lm_c(:,:,j) = prediction_lm(:,:) + (nu * (prediction_lm_c(:,:,j)-prediction_lm(:,:)))
+         prediction_lm(:,i) = prediction_lm(:,i) + prediction_lm_c(:,i,j)
         enddo
-        deallocate(prediction_lm)
-        do l=1,size(prediction_lm_c,1)
-         if (.not. atomic) then
-          write(33,*) ((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
-         else
-          write(33,*) atname_at(l),((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
-         endif
-        enddo
-        flush(33)
-       else
-        do l=1,size(prediction_lm_c,1)
-         if (.not. atomic) then
-          write(33,*) (prediction_lm(l,j),j=1,degen)
-         else
-          write(33,*) atname_at(l),((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
-         endif
-        enddo
-        flush(33)
-       endif
+        prediction_lm(:,i) = prediction_lm(:,i) / float(nw)
+       enddo
+       do j=1,nw
+        prediction_lm_c(:,:,j) = prediction_lm(:,:) + (nu * (prediction_lm_c(:,:,j)-prediction_lm(:,:)))
+       enddo
+       deallocate(prediction_lm)
+       do l=1,size(prediction_lm_c,1)
+        if (.not. atomic) then
+         write(33,*) ((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
+        else
+         write(33,*) atname_at(l),((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
+        endif
+       enddo
+       flush(33)
 
        call system_clock(t2)
        if (verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
@@ -216,12 +204,36 @@ program sagpr_apply
         call writebuffer(socket,nat)
         call writebuffer(socket,msgbuffer,3*nat)
         call writebuffer(socket,reshape(virial,(/9/)),9)
-        ! Send prediction
+        ! Rescale committee predictions about their mean
+        allocate(prediction_lm(size(prediction_lm_c,1),degen))
+        prediction_lm(:,:) = 0.d0
+        do i=1,degen
+         do j=1,nw
+          prediction_lm(:,i) = prediction_lm(:,i) + prediction_lm_c(:,i,j)
+         enddo
+         prediction_lm(:,i) = prediction_lm(:,i) / float(nw)
+        enddo
+        do j=1,nw
+         prediction_lm_c(:,:,j) = prediction_lm(:,:) + (nu * (prediction_lm_c(:,:,j)-prediction_lm(:,:)))
+        enddo
+        deallocate(prediction_lm)
+        ! Send prediction; we will send only the prediction for the entire
+        ! frame, rather than for each atom (the latter will be stored in an
+        ! output file)
         initbuffer = " "
-        write(initbuffer,*) prediction_lm
+        write(initbuffer,*) ((sum(prediction_lm_c(:,j,k)),j=1,degen),k=1,nw)
         cbuf = len_trim(initbuffer)
         call writebuffer(socket,cbuf)
         call writebuffer(socket,initbuffer,cbuf)
+        ! If we are doing atomic predictions, also print them to a file
+        if (atomic) then
+         write(33,*) size(prediction_lm_c,1)
+         write(33,*) '# Total',((sum(prediction_lm_c(:,j,k)),j=1,degen),k=1,nw)
+         do l=1,size(prediction_lm_c,1)
+          write(33,*)  atname_at(l),((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
+         enddo
+         flush(33)
+        endif
         deallocate(msgbuffer)
         hasdata = .false.
        else
@@ -242,7 +254,7 @@ program sagpr_apply
     if (allocated(sparsification0)) deallocate(sparsification0,PS_tr_0)
     if (allocated(components)) deallocate(components)
     if (allocated(w3j)) deallocate(w3j)
-    if (committee) deallocate(meanval_c,wt_c,prediction_lm_c)
+    if (allocated(meanval_c)) deallocate(meanval_c,wt_c,prediction_lm_c)
     if (allocated(atname_at)) deallocate(atname_at)
 
 end program
