@@ -117,23 +117,26 @@ program sagpr_apply
        ! Do prediction
        call predict_frame(GPR,rate)
 
+       ! Rescale predictions about the mean
+       call rescale_predictions(GPR)
+
        ! Print predictions
        if (GPR%atomic) then
         write(33,*) size(GPR%prediction_lm_c,1)
         write(33,*) '# Total',((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
        endif
-       allocate(GPR%prediction_lm(size(GPR%prediction_lm_c,1),GPR%degen))
-       GPR%prediction_lm(:,:) = 0.d0
-       do i=1,GPR%degen
-        do j=1,GPR%nw
-         GPR%prediction_lm(:,i) = GPR%prediction_lm(:,i) + GPR%prediction_lm_c(:,i,j)
-        enddo
-        GPR%prediction_lm(:,i) = GPR%prediction_lm(:,i) / float(GPR%nw)
-       enddo
-       do j=1,GPR%nw
-        GPR%prediction_lm_c(:,:,j) = GPR%prediction_lm(:,:) + (GPR%nu * (GPR%prediction_lm_c(:,:,j)-GPR%prediction_lm(:,:)))
-       enddo
-       deallocate(GPR%prediction_lm)
+!       allocate(GPR%prediction_lm(size(GPR%prediction_lm_c,1),GPR%degen))
+!       GPR%prediction_lm(:,:) = 0.d0
+!       do i=1,GPR%degen
+!        do j=1,GPR%nw
+!         GPR%prediction_lm(:,i) = GPR%prediction_lm(:,i) + GPR%prediction_lm_c(:,i,j)
+!        enddo
+!        GPR%prediction_lm(:,i) = GPR%prediction_lm(:,i) / float(GPR%nw)
+!       enddo
+!       do j=1,GPR%nw
+!        GPR%prediction_lm_c(:,:,j) = GPR%prediction_lm(:,:) + (GPR%nu * (GPR%prediction_lm_c(:,:,j)-GPR%prediction_lm(:,:)))
+!       enddo
+!       deallocate(GPR%prediction_lm)
        do l=1,size(GPR%prediction_lm_c,1)
         if (.not. GPR%atomic) then
          write(33,*) ((GPR%prediction_lm_c(l,j,k),j=1,GPR%degen),k=1,GPR%nw)
@@ -207,18 +210,19 @@ program sagpr_apply
         call writebuffer(socket,msgbuffer,3*nat)
         call writebuffer(socket,reshape(virial,(/9/)),9)
         ! Rescale committee predictions about their mean
-        allocate(GPR%prediction_lm(size(GPR%prediction_lm_c,1),GPR%degen))
-        GPR%prediction_lm(:,:) = 0.d0
-        do i=1,GPR%degen
-         do j=1,GPR%nw
-          GPR%prediction_lm(:,i) = GPR%prediction_lm(:,i) + GPR%prediction_lm_c(:,i,j)
-         enddo
-         GPR%prediction_lm(:,i) = GPR%prediction_lm(:,i) / float(GPR%nw)
-        enddo
-        do j=1,GPR%nw
-         GPR%prediction_lm_c(:,:,j) = GPR%prediction_lm(:,:) + (GPR%nu * (GPR%prediction_lm_c(:,:,j)-GPR%prediction_lm(:,:)))
-        enddo
-        deallocate(GPR%prediction_lm)
+        call rescale_predictions(GPR)
+!        allocate(GPR%prediction_lm(size(GPR%prediction_lm_c,1),GPR%degen))
+!        GPR%prediction_lm(:,:) = 0.d0
+!        do i=1,GPR%degen
+!         do j=1,GPR%nw
+!          GPR%prediction_lm(:,i) = GPR%prediction_lm(:,i) + GPR%prediction_lm_c(:,i,j)
+!         enddo
+!         GPR%prediction_lm(:,i) = GPR%prediction_lm(:,i) / float(GPR%nw)
+!        enddo
+!        do j=1,GPR%nw
+!         GPR%prediction_lm_c(:,:,j) = GPR%prediction_lm(:,:) + (GPR%nu * (GPR%prediction_lm_c(:,:,j)-GPR%prediction_lm(:,:)))
+!        enddo
+!        deallocate(GPR%prediction_lm)
         ! Send prediction; we will send only the prediction for the entire
         ! frame, rather than for each atom (the latter will be stored in an
         ! output file)

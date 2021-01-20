@@ -13,7 +13,7 @@ module apply
   integer, allocatable :: natoms(:)
   integer nframes,nlines,natmax,nmol
   ! Variables for getting models
-  integer nargs,ncut,nfeat,ncut0,nfeat0
+  integer ncut,nfeat,ncut0,nfeat0
   real*8, allocatable :: PS_tr_lam(:,:,:,:),PS_tr_0(:,:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
   real*8, allocatable :: prediction_lm(:,:),wt(:)
   complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
@@ -190,6 +190,30 @@ subroutine predict_frame(this,rate)
      enddo
      deallocate(this%natoms_at)
     endif
+
+end subroutine
+
+!****************************************************************************************************************
+
+subroutine rescale_predictions(this)
+implicit none
+
+    type(SAGPR_Model), intent(inout) :: this
+    integer i,j
+
+    ! Rescale committee predictions about their mean
+    allocate(this%prediction_lm(size(this%prediction_lm_c,1),this%degen))
+    this%prediction_lm(:,:) = 0.d0
+    do i=1,this%degen
+     do j=1,this%nw
+      this%prediction_lm(:,i) = this%prediction_lm(:,i) + this%prediction_lm_c(:,i,j)
+     enddo
+     this%prediction_lm(:,i) = this%prediction_lm(:,i) / float(this%nw)
+    enddo
+    do j=1,this%nw
+     this%prediction_lm_c(:,:,j) = this%prediction_lm(:,:) + (this%nu * (this%prediction_lm_c(:,:,j)-this%prediction_lm(:,:)))
+    enddo
+    deallocate(this%prediction_lm)
 
 end subroutine
 
