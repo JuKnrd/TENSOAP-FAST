@@ -7,7 +7,6 @@ module sagpr
      &     'La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W ','Re','Os','Ir', &
      &     'Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th','Pa','U ','Np','Pu','Am','Cm','Bk','Cf', &
      &     'Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'/)
- complex*16, allocatable :: PS(:,:,:,:),PS0(:,:,:,:)
  integer, allocatable :: components(:,:),components0(:,:)
  real*8 start,finish
  real*8, allocatable :: w3j(:,:,:,:)
@@ -445,11 +444,12 @@ module sagpr
 
 !***************************************************************************************************
 
- subroutine do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
+ subroutine do_power_spectrum(PS,xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
      &     ncut,sparsification,rs,periodic,mult_by_A)
   use SHTOOLS, only: wigner3j
   implicit none
 
+  complex*16, allocatable, intent(inout) :: PS(:,:,:,:)
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l,mu,nu
   integer llmax,ps_shape(4),m,n,nn,jmin,jmax,im,ia,ib,mm
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
@@ -865,11 +865,12 @@ module sagpr
 ! The subroutine below is for building the power spectrum that goes with zeta>1
 !***************************************************************************************************
 
- subroutine do_power_spectrum_scalar(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
+ subroutine do_power_spectrum_scalar(PS0,xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
      &     ncut,sparsification,rs,periodic,mult_by_A)
   use SHTOOLS, only: wigner3j
   implicit none
 
+  complex*16, allocatable, intent(inout) :: PS0(:,:,:,:)
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l
   integer llmax,ps_shape(4),m,n,nn
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
@@ -1089,7 +1090,7 @@ module sagpr
   ! Multiply by A matrix
   if (mult_by_A) then
    do i=1,nframes
-    !$OMP PARALLEL DO SHARED(PS,sparsification) PRIVATE(j,k)
+    !$OMP PARALLEL DO SHARED(PS0,sparsification) PRIVATE(j,k)
     do j=1,natmax
      do k=1,degen
       PS0(i,j,k,:) = matmul(PS0(i,j,k,:),sparsification(2,:,:))

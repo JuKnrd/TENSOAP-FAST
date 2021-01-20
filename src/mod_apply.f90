@@ -15,6 +15,7 @@ module apply
  real*8 meanval
  logical do_scalar
  ! Parameters for PS and kernel building
+ complex*16, allocatable :: PS(:,:,:,:),PS0(:,:,:,:)
  integer lm,nmax,lmax,zeta,degen
  real*8 rcut,sg,rs(3)
  logical periodic
@@ -412,18 +413,18 @@ subroutine predict_frame(rate)
     ! Get power spectrum
     if (.not.do_scalar) then
      call system_clock(ts)
-     call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
+     call do_power_spectrum(PS,xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
      &     ncut,sparsification,rs,periodic,.true.)
      call system_clock(tf)
      if (verbose) write(*,'(A,F6.3,A)') 'Got PS in',(tf-ts)/rate,' s'
     else
      call system_clock(ts)
-     call do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
+     call do_power_spectrum(PS,xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
      &     ncut,sparsification,rs,periodic,.true.)
      call system_clock(tf)
      if (verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',lm,' PS in',(tf-ts)/rate,' s'
      call system_clock(ts)
-     call do_power_spectrum_scalar(xyz,atname,natoms,cell,nframes,natmax,0,nmax0,lmax0,rcut0,sg0, &
+     call do_power_spectrum_scalar(PS0,xyz,atname,natoms,cell,nframes,natmax,0,nmax0,lmax0,rcut0,sg0, &
      &     ncut0,sparsification0,rs0,periodic,.true.)
      call system_clock(tf)
      if (verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',0,' PS in',(tf-ts)/rate,' s'
