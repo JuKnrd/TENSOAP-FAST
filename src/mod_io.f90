@@ -4,13 +4,14 @@ module io
  contains
 
 !****************************************************************************************************************
-subroutine get_model(model)
+subroutine get_model(GPR,model)
  implicit none
 
+  type(SAGPR_Model), intent(inout) :: GPR
   character(len=100) model
   real*8, allocatable, target :: raw_model(:)
   real*8 a1,a2
-  integer i,j,k,l,ncen,nspec
+  integer i,j,k,l,ncen,nspec,reals,bytes
 
    ! Read in power spectrum file(s)
    open(unit=41,file=trim(adjustl(model)),status='old',access='stream',form='unformatted')
@@ -18,152 +19,152 @@ subroutine get_model(model)
    reals = bytes/8
    allocate(raw_model(reals))
    read(41,pos=1) raw_model
-   do_scalar = (raw_model(1).ne.0.d0)
-   lm = int(raw_model(2))
-   degen=2*lm + 1
-   zeta = int(raw_model(3))
-   periodic = (int(raw_model(4)).eq.1)
-   nmol = int(raw_model(5))
-   nfeat = int(raw_model(6))
+   GPR%do_scalar = (raw_model(1).ne.0.d0)
+   GPR%lm = int(raw_model(2))
+   GPR%degen=2*GPR%lm + 1
+   GPR%zeta = int(raw_model(3))
+   GPR%periodic = (int(raw_model(4)).eq.1)
+   GPR%nmol = int(raw_model(5))
+   GPR%nfeat = int(raw_model(6))
    i = 6
-   if (do_scalar) then
-    nfeat0 = int(raw_model(7))
+   if (GPR%do_scalar) then
+    GPR%nfeat0 = int(raw_model(7))
     i = 7
    endif
    i = i + 1
-   nw = int(raw_model(i))
-   allocate(PS_tr_lam(nmol,1,degen,nfeat))
-   do j=1,nmol
-    do k=1,degen
-     do l=1,nfeat
+   GPR%nw = int(raw_model(i))
+   allocate(GPR%PS_tr_lam(GPR%nmol,1,GPR%degen,GPR%nfeat))
+   do j=1,GPR%nmol
+    do k=1,GPR%degen
+     do l=1,GPR%nfeat
       i = i + 1
-      PS_tr_lam(j,1,k,l) = raw_model(i)
+      GPR%PS_tr_lam(j,1,k,l) = raw_model(i)
      enddo
     enddo
    enddo
-   if (do_scalar) then
-    allocate(PS_tr_0(nmol,1,1,nfeat0))
-    do j=1,nmol
-     do k=1,nfeat0
+   if (GPR%do_scalar) then
+    allocate(GPR%PS_tr_0(GPR%nmol,1,1,GPR%nfeat0))
+    do j=1,GPR%nmol
+     do k=1,GPR%nfeat0
       i = i + 1
-      PS_tr_0(j,1,1,k) = raw_model(i)
+      GPR%PS_tr_0(j,1,1,k) = raw_model(i)
      enddo
     enddo
    endif
 
    ! Get sparsification details
    i = i + 1
-   ncut = int(raw_model(i))
-   allocate(sparsification(2,ncut,ncut))
-   do j=1,ncut
+   GPR%ncut = int(raw_model(i))
+   allocate(GPR%sparsification(2,GPR%ncut,GPR%ncut))
+   do j=1,GPR%ncut
     i = i + 1
-    sparsification(1,j,1) = raw_model(i)
+    GPR%sparsification(1,j,1) = raw_model(i)
    enddo
-   do j=1,ncut
-    do k=1,ncut
+   do j=1,GPR%ncut
+    do k=1,GPR%ncut
      i = i + 1
      a1 = raw_model(i)
      i = i + 1
      a2 = raw_model(i)
-     sparsification(2,j,k) = dcmplx(a1,a2)
+     GPR%sparsification(2,j,k) = dcmplx(a1,a2)
     enddo
    enddo
-   if (do_scalar) then
+   if (GPR%do_scalar) then
     i = i + 1
-    ncut0 = int(raw_model(i))
-    allocate(sparsification0(2,ncut0,ncut0))
-    do j=1,ncut0
+    GPR%ncut0 = int(raw_model(i))
+    allocate(GPR%sparsification0(2,GPR%ncut0,GPR%ncut0))
+    do j=1,GPR%ncut0
      i = i + 1
-     sparsification0(1,j,1) = raw_model(i)
+     GPR%sparsification0(1,j,1) = raw_model(i)
     enddo
-    do j=1,ncut0
-     do k=1,ncut0
+    do j=1,GPR%ncut0
+     do k=1,GPR%ncut0
       i = i + 1
       a1 = raw_model(i)
       i = i + 1
       a2 = raw_model(i)
-      sparsification0(2,j,k) = dcmplx(a1,a2)
+      GPR%sparsification0(2,j,k) = dcmplx(a1,a2)
      enddo
     enddo
    endif
 
-   if (ncut.ne.nfeat) stop 'ERROR: ncut .ne. nfeat!'
-   if (do_scalar) then
-    if (ncut0.ne.nfeat0) stop 'ERROR: ncut0 .ne. nfeat0!'
+   if (GPR%ncut.ne.GPR%nfeat) stop 'ERROR: ncut .ne. nfeat!'
+   if (GPR%do_scalar) then
+    if (GPR%ncut0.ne.GPR%nfeat0) stop 'ERROR: ncut0 .ne. nfeat0!'
    endif
    
    ! Get weights
-   allocate(meanval_c(nw),wt_c(nmol*degen,nw))
-   do k=1,nw
+   allocate(GPR%meanval_c(GPR%nw),GPR%wt_c(GPR%nmol*GPR%degen,GPR%nw))
+   do k=1,GPR%nw
     i = i + 1
-    meanval_c(k) = raw_model(i)
+    GPR%meanval_c(k) = raw_model(i)
    enddo
-   do k=1,nw
-    do j=1,nmol*degen
+   do k=1,GPR%nw
+    do j=1,GPR%nmol*GPR%degen
      i = i + 1
-     wt_c(j,k) = raw_model(i)
+     GPR%wt_c(j,k) = raw_model(i)
     enddo
    enddo
 
    ! Get hyperparameters
    i = i + 1
-   nmax = int(raw_model(i))
-   if (nmax.eq.-1) nmax=nmax_default
+   GPR%nmax = int(raw_model(i))
+   if (GPR%nmax.eq.-1) GPR%nmax=nmax_default
    i = i + 1
-   lmax = int(raw_model(i))
-   if (lmax.eq.-1) lmax=lmax_default
+   GPR%lmax = int(raw_model(i))
+   if (GPR%lmax.eq.-1) GPR%lmax=lmax_default
    i = i + 1
-   rcut = raw_model(i)
-   if (rcut.lt.0.d0) rcut=rcut_default
+   GPR%rcut = raw_model(i)
+   if (GPR%rcut.lt.0.d0) GPR%rcut=rcut_default
    i = i + 1
-   sg = raw_model(i)
-   if (sg.lt.0.d0) sg=sg_default
+   GPR%sg = raw_model(i)
+   if (GPR%sg.lt.0.d0) GPR%sg=sg_default
    i = i + 1
-   rs(1) = raw_model(i)
+   GPR%rs(1) = raw_model(i)
    i = i + 1
-   rs(2) = raw_model(i)
+   GPR%rs(2) = raw_model(i)
    i = i + 1
-   rs(3) = raw_model(i)
-   if (rs(3).eq.0.d0) rs=rs_default
-   if (do_scalar) then
+   GPR%rs(3) = raw_model(i)
+   if (GPR%rs(3).eq.0.d0) GPR%rs=rs_default
+   if (GPR%do_scalar) then
     i = i + 1
-    nmax0 = int(raw_model(i))
-    if (nmax0.eq.-1) nmax0=nmax_default
+    GPR%nmax0 = int(raw_model(i))
+    if (GPR%nmax0.eq.-1) GPR%nmax0=nmax_default
     i = i + 1
-    lmax0 = int(raw_model(i))
-    if (lmax0.eq.-1) lmax0=lmax_default
+    GPR%lmax0 = int(raw_model(i))
+    if (GPR%lmax0.eq.-1) GPR%lmax0=lmax_default
     i = i + 1
-    rcut0 = raw_model(i)
-    if (rcut0.lt.0.d0) rcut0=rcut_default
+    GPR%rcut0 = raw_model(i)
+    if (GPR%rcut0.lt.0.d0) GPR%rcut0=rcut_default
     i = i + 1
-    sg0 = raw_model(i)
-    if (sg0.lt.0.d0) sg0=sg_default
+    GPR%sg0 = raw_model(i)
+    if (GPR%sg0.lt.0.d0) GPR%sg0=sg_default
     i = i + 1
-    rs0(1) = raw_model(i)
+    GPR%rs0(1) = raw_model(i)
     i = i + 1
-    rs0(2) = raw_model(i)
+    GPR%rs0(2) = raw_model(i)
     i = i + 1
-    rs0(3) = raw_model(i)
-    if (rs0(3).eq.0.d0) rs0=rs_default
+    GPR%rs0(3) = raw_model(i)
+    if (GPR%rs0(3).eq.0.d0) GPR%rs0=rs_default
    endif
    i = i + 1
    ncen = int(raw_model(i))
    if (ncen.gt.0) then
     do j=1,ncen
      i = i + 1
-     all_centres(int(raw_model(i))) = .true.
+     GPR%all_centres(int(raw_model(i))) = .true.
     enddo
    endif
    i = i + 1
    nspec = int(raw_model(i))
    if (nspec.gt.0) then
-    do j=1,ncen
+    do j=1,nspec
      i = i + 1
-     all_species(int(raw_model(i))) = .true.
+     GPR%all_species(int(raw_model(i))) = .true.
     enddo
    endif
    i = i + 1
-   nu = raw_model(i)**0.5
+   GPR%nu = raw_model(i)**0.5
 
    if (i.ne.reals) stop 'ERROR: different file size to that expected for model!'
 
@@ -171,19 +172,19 @@ end subroutine
 
 !****************************************************************************************************************
 
-subroutine read_frame(un,periodic)
+subroutine read_frame(GPR,un)
  implicit none
 
+  type(SAGPR_Model), intent(inout) :: GPR
   integer ios,un,nat
   character(len=1000) line,c1
   character(len=100) model
   integer i,j,ii
-  logical periodic
 
-   nframes = 1
+   GPR%nframes = 1
    read(un,'(A)',iostat=ios) line
    if (ios.ne.0) then
-    if (verbose) write(*,*) 'End-of-file detected'
+    if (GPR%verbose) write(*,*) 'End-of-file detected'
     stop
    endif
    read(line,*,iostat=ios) nat
@@ -192,34 +193,37 @@ subroutine read_frame(un,periodic)
     write(*,*) 'Non-standard input detected; now stopping'
     stop
    endif
-   natmax = nat
-   if (allocated(xyz)) deallocate(xyz,atname,natoms,comment)
-   allocate(xyz(nframes,natmax,3),atname(nframes,natmax),natoms(nframes),comment(nframes))
-   natoms(1) = nat
-   read(un,'(A)') comment(1)
-   do j=1,natoms(1)
-    read(un,*) atname(1,j),(xyz(1,j,ii),ii=1,3)
+   GPR%natmax = nat
+   if (allocated(GPR%xyz)) deallocate(GPR%xyz,GPR%atname,GPR%natoms,GPR%comment)
+   allocate(GPR%xyz(GPR%nframes,GPR%natmax,3),GPR%atname(GPR%nframes,GPR%natmax), &
+     &     GPR%natoms(GPR%nframes),GPR%comment(GPR%nframes))
+   GPR%natoms(1) = nat
+   read(un,'(A)') GPR%comment(1)
+   do j=1,GPR%natoms(1)
+    read(un,*) GPR%atname(1,j),(GPR%xyz(1,j,ii),ii=1,3)
    enddo
 
   ! Get cell data
-  if (allocated(cell)) deallocate(cell)
-  allocate(cell(nframes,3,3))
-  if (.not.periodic) then
-   cell(:,:,:) = 0.d0
+  if (allocated(GPR%cell)) deallocate(GPR%cell)
+  allocate(GPR%cell(GPR%nframes,3,3))
+  if (.not.GPR%periodic) then
+   GPR%cell(:,:,:) = 0.d0
   else
-   do i=1,nframes
-    ios = index(comment(i),'Lattice')
+   do i=1,GPR%nframes
+    ios = index(GPR%comment(i),'Lattice')
     if (ios.eq.0) stop 'ERROR: input file is not periodic!'
-    c1 = comment(i)
+    c1 = GPR%comment(i)
     c1 = c1(ios:len(c1))
     ios = index(c1,'"')
     c1 = c1(ios+1:len(c1))
     ios = index(c1,'"')
     c1 = c1(1:ios-1)
-    read(c1,*) cell(i,1,1),cell(i,2,1),cell(i,3,1),cell(i,1,2),cell(i,2,2),cell(i,3,2),cell(i,1,3),cell(i,2,3),cell(i,3,3)
+    read(c1,*) GPR%cell(i,1,1),GPR%cell(i,2,1),GPR%cell(i,3,1), &
+     &     GPR%cell(i,1,2),GPR%cell(i,2,2),GPR%cell(i,3,2), &
+     &     GPR%cell(i,1,3),GPR%cell(i,2,3),GPR%cell(i,3,3)
    enddo
   endif
-  if (verbose) write(*,*) 'Got input frame with ',nat,'atoms'
+  if (GPR%verbose) write(*,*) 'Got input frame with ',nat,'atoms'
 
 end subroutine
 

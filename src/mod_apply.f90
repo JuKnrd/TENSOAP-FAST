@@ -1,174 +1,194 @@
 module apply
  use sagpr
 
- ! Variables for getting coordinates
- real*8, allocatable :: xyz(:,:,:),cell(:,:,:)
- character(len=4), allocatable :: atname(:,:)
- character(len=1000), allocatable :: comment(:)
- integer, allocatable :: natoms(:)
- integer nframes,nlines,natmax,nmol
- ! Variables for getting models
- integer nargs,ncut,nfeat,ncut0,nfeat0,reals,bytes
- real*8, allocatable :: PS_tr_lam(:,:,:,:),PS_tr_0(:,:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
- real*8, allocatable :: prediction_lm(:,:),wt(:)
- complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
- real*8 meanval
- logical do_scalar
- ! Parameters for PS and kernel building
- complex*16, allocatable :: PS(:,:,:,:),PS0(:,:,:,:)
- integer, allocatable :: components(:,:),components0(:,:)
- real*8, allocatable :: w3j(:,:,:,:)
- integer lm,nmax,lmax,zeta,degen
- real*8 rcut,sg,rs(3)
- logical periodic
- integer nmax0,lmax0
- real*8 rcut0,sg0,rs0(3)
- logical all_species(nelements),all_centres(nelements)
- ! Defaults
- integer, parameter :: nmax_default = 8, lmax_default = 6
- real*8, parameter :: rcut_default = 4.d0,sg_default = 0.3d0,rs_default(3) = (/0.d0,0.d0,0.d0/)
- ! Committee models
- integer nw
- real*8, allocatable :: wt_c(:,:),meanval_c(:),prediction_lm_c(:,:,:)
- real*8 nu
- ! Atomic predictions
- logical atomic
- integer tot_natoms
- complex*16, allocatable :: PS_atomic(:,:,:,:),PS0_atomic(:,:,:,:)
- real*8, allocatable :: natoms_at(:)
- character(len=4), allocatable :: atname_at(:)
- ! Other
- logical verbose
+  ! Defaults
+  integer, parameter :: nmax_default = 8, lmax_default = 6
+  real*8, parameter :: rcut_default = 4.d0,sg_default = 0.3d0,rs_default(3) = (/0.d0,0.d0,0.d0/)
+
+ type SAGPR_Model
+  ! Variables for getting coordinates
+  real*8, allocatable :: xyz(:,:,:),cell(:,:,:)
+  character(len=4), allocatable :: atname(:,:)
+  character(len=1000), allocatable :: comment(:)
+  integer, allocatable :: natoms(:)
+  integer nframes,nlines,natmax,nmol
+  ! Variables for getting models
+  integer nargs,ncut,nfeat,ncut0,nfeat0
+  real*8, allocatable :: PS_tr_lam(:,:,:,:),PS_tr_0(:,:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)
+  real*8, allocatable :: prediction_lm(:,:),wt(:)
+  complex*16, allocatable :: sparsification(:,:,:),sparsification0(:,:,:)
+  real*8 meanval
+  logical do_scalar
+  ! Parameters for PS and kernel building
+  complex*16, allocatable :: PS(:,:,:,:),PS0(:,:,:,:)
+  integer, allocatable :: components(:,:),components0(:,:)
+  real*8, allocatable :: w3j(:,:,:,:)
+  integer lm,nmax,lmax,zeta,degen
+  real*8 rcut,sg,rs(3)
+  logical periodic
+  integer nmax0,lmax0
+  real*8 rcut0,sg0,rs0(3)
+  logical all_species(nelements),all_centres(nelements)
+  ! Committee models
+  integer nw
+  real*8, allocatable :: wt_c(:,:),meanval_c(:),prediction_lm_c(:,:,:)
+  real*8 nu
+  ! Atomic predictions
+  logical atomic
+  integer tot_natoms
+  complex*16, allocatable :: PS_atomic(:,:,:,:),PS0_atomic(:,:,:,:)
+  real*8, allocatable :: natoms_at(:)
+  character(len=4), allocatable :: atname_at(:)
+  ! Other
+  logical verbose
+ end type SAGPR_Model
 
  contains
 
 !****************************************************************************************************************
-subroutine set_defaults()
+subroutine set_defaults(this)
  implicit none
 
-  lm = 0
-  nmax = nmax_default
-  lmax = lmax_default
-  rcut = rcut_default
-  sg = sg_default
-  all_centres(:) = .false.
-  all_species(:) = .false.
-  rs = rs_default
-  periodic = .false.
-  zeta = 1
+  type(SAGPR_Model), intent(inout) :: this
+
+  this%lm = 0
+  this%nmax = nmax_default
+  this%lmax = lmax_default
+  this%rcut = rcut_default
+  this%sg = sg_default
+  this%all_centres(:) = .false.
+  this%all_species(:) = .false.
+  this%rs = rs_default
+  this%periodic = .false.
+  this%zeta = 1
 
 end subroutine
 
 !****************************************************************************************************************
-subroutine predict_frame(rate)
+subroutine predict_frame(this,rate)
  implicit none
+
+    type(SAGPR_Model), intent(inout) :: this
 
     integer ts,tf,i,k
     real*8 rate
 
     ! Get power spectrum
-    if (.not.do_scalar) then
+    if (.not.this%do_scalar) then
      call system_clock(ts)
-     call do_power_spectrum(PS,components,xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
-     &     ncut,sparsification,rs,periodic,.true.,w3j,all_species,all_centres)
+     call do_power_spectrum(this%PS,this%components,this%xyz,this%atname, &
+     &     this%natoms,this%cell,this%nframes,this%natmax,this%lm,this%nmax, &
+     &     this%lmax,this%rcut,this%sg, &
+     &     this%ncut,this%sparsification,this%rs,this%periodic,.true., &
+     &     this%w3j,this%all_species,this%all_centres)
      call system_clock(tf)
-     if (verbose) write(*,'(A,F6.3,A)') 'Got PS in',(tf-ts)/rate,' s'
+     if (this%verbose) write(*,'(A,F6.3,A)') 'Got PS in',(tf-ts)/rate,' s'
     else
      call system_clock(ts)
-     call do_power_spectrum(PS,components,xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
-     &     ncut,sparsification,rs,periodic,.true.,w3j,all_species,all_centres)
+     call do_power_spectrum(this%PS,this%components,this%xyz,this%atname, &
+     &     this%natoms,this%cell,this%nframes,this%natmax,this%lm,this%nmax, &
+     &     this%lmax,this%rcut,this%sg, &
+     &     this%ncut,this%sparsification,this%rs,this%periodic,.true., &
+     &     this%w3j,this%all_species,this%all_centres)
      call system_clock(tf)
-     if (verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',lm,' PS in',(tf-ts)/rate,' s'
+     if (this%verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',this%lm,' PS in',(tf-ts)/rate,' s'
      call system_clock(ts)
-     call do_power_spectrum_scalar(PS0,components0,xyz,atname,natoms,cell,nframes,natmax,0,nmax0,lmax0,rcut0,sg0, &
-     &     ncut0,sparsification0,rs0,periodic,.true.,all_species,all_centres)
+     call do_power_spectrum_scalar(this%PS0,this%components0,this%xyz,this%atname, &
+     &     this%natoms,this%cell,this%nframes,this%natmax,0,this%nmax0, &
+     &     this%lmax0,this%rcut0,this%sg0, &
+     &     this%ncut0,this%sparsification0,this%rs0,this%periodic,.true., &
+     &     this%all_species,this%all_centres)
      call system_clock(tf)
-     if (verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',0,' PS in',(tf-ts)/rate,' s'
+     if (this%verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',0,' PS in',(tf-ts)/rate,' s'
     endif
 
     ! If we have asked for atomic predictions, we need to convert to atomic
     ! power spectra
-    if (atomic) then
+    if (this%atomic) then
      ! Here, rather than using the fact that we know what these quantities are,
      ! we will instead use the size function -- so as to make this agnostic of
      ! what we know (a good direction for future code)
-     tot_natoms = 0
-     do i=1,size(PS,1)
-      tot_natoms = tot_natoms + natoms(i)
+     this%tot_natoms = 0
+     do i=1,size(this%PS,1)
+      this%tot_natoms = this%tot_natoms + this%natoms(i)
      enddo
-     nframes = tot_natoms
-     natmax = 1
-     if (allocated(atname_at)) deallocate(atname_at)
-     allocate(PS_atomic(tot_natoms,1,size(PS,3),size(PS,4)),natoms_at(tot_natoms),atname_at(tot_natoms))
+     this%nframes = this%tot_natoms
+     this%natmax = 1
+     if (allocated(this%atname_at)) deallocate(this%atname_at)
+     allocate(this%PS_atomic(this%tot_natoms,1,size(this%PS,3), &
+     &     size(this%PS,4)),this%natoms_at(this%tot_natoms),this%atname_at(this%tot_natoms))
      ! Populate atomic power spectrum array from original power spectrum
      k = 1
-     do i=1,size(PS,1)
-      PS_atomic(k:k+natoms(i),1,:,:) = PS(i,1:natoms(i),:,:)
-      natoms_at(k:k+natoms(i)) = natoms(i)
-      atname_at(k:k+natoms(i)) = atname(i,1:natoms(i))
-      k = k + natoms(i)
+     do i=1,size(this%PS,1)
+      this%PS_atomic(k:k+this%natoms(i),1,:,:) = this%PS(i,1:this%natoms(i),:,:)
+      this%natoms_at(k:k+this%natoms(i)) = this%natoms(i)
+      this%atname_at(k:k+this%natoms(i)) = this%atname(i,1:this%natoms(i))
+      k = k + this%natoms(i)
      enddo
      ! Create new power spectrum array with the corrected shape
-     deallocate(PS)
-     allocate(PS(tot_natoms,1,size(PS_atomic,3),size(PS_atomic,4)))
-     PS(:,:,:,:) = PS_atomic(:,:,:,:)
-     deallocate(PS_atomic)
-     if (do_scalar) then
+     deallocate(this%PS)
+     allocate(this%PS(this%tot_natoms,1,size(this%PS_atomic,3),size(this%PS_atomic,4)))
+     this%PS(:,:,:,:) = this%PS_atomic(:,:,:,:)
+     deallocate(this%PS_atomic)
+     if (this%do_scalar) then
       ! Repeat for scalar power spectrum if appropriate
-      allocate(PS0_atomic(tot_natoms,1,size(PS0,3),size(PS0,4)))
+      allocate(this%PS0_atomic(this%tot_natoms,1,size(this%PS0,3),size(this%PS0,4)))
       k = 1
-      do i=1,size(PS0,1)
-       PS0_atomic(k:k+natoms(i),1,:,:) = PS0(i,1:natoms(i),:,:)
-       k = k + natoms(i)
+      do i=1,size(this%PS0,1)
+       this%PS0_atomic(k:k+this%natoms(i),1,:,:) = this%PS0(i,1:this%natoms(i),:,:)
+       k = k + this%natoms(i)
       enddo
-      deallocate(PS0)
-      allocate(PS0(tot_natoms,1,size(PS0_atomic,3),size(PS0_atomic,4)))
-      PS0(:,:,:,:) = PS0_atomic(:,:,:,:)
-      deallocate(PS0_atomic)
+      deallocate(this%PS0)
+      allocate(this%PS0(this%tot_natoms,1,size(this%PS0_atomic,3),size(this%PS0_atomic,4)))
+      this%PS0(:,:,:,:) = this%PS0_atomic(:,:,:,:)
+      deallocate(this%PS0_atomic)
      endif
      ! Create new number-of-atoms array with the corrected shape
-     deallocate(natoms)
-     allocate(natoms(tot_natoms))
-     natoms(:) = 1
+     deallocate(this%natoms)
+     allocate(this%natoms(this%tot_natoms))
+     this%natoms(:) = 1
     endif
 
     ! Get kernel
-    if (allocated(natoms_tr)) deallocate(natoms_tr)
-    allocate(natoms_tr(nmol))
-    natoms_tr(:) = 1.d0
+    if (allocated(this%natoms_tr)) deallocate(this%natoms_tr)
+    allocate(this%natoms_tr(this%nmol))
+    this%natoms_tr(:) = 1.d0
     call system_clock(ts)
-    if (.not.do_scalar) then
-     if (lm.eq.0) then
-      ker = do_scalar_kernel(real(PS),PS_tr_lam,nframes,nmol,nfeat,nfeat,natmax,1,dfloat(natoms),natoms_tr,zeta,.false.)
+    if (.not.this%do_scalar) then
+     if (this%lm.eq.0) then
+      this%ker = do_scalar_kernel(real(this%PS),this%PS_tr_lam,this%nframes,this%nmol, &
+     &     this%nfeat,this%nfeat,this%natmax,1,dfloat(this%natoms),this%natoms_tr,this%zeta,.false.)
      else
-      if (zeta.gt.1) stop 'ERROR: zeta>1 has been selected but no scalar power spectrum given!'
-      ker_lm = do_linear_spherical_kernel(real(PS),PS_tr_lam,nframes,nmol,nfeat,nfeat, &
-       &     natmax,1,dfloat(natoms),natoms_tr,zeta,.false.,degen)
+      if (this%zeta.gt.1) stop 'ERROR: zeta>1 has been selected but no scalar power spectrum given!'
+      this%ker_lm = do_linear_spherical_kernel(real(this%PS),this%PS_tr_lam,this%nframes,this%nmol, &
+       &     this%nfeat,this%nfeat, &
+       &     this%natmax,1,dfloat(this%natoms),this%natoms_tr,this%zeta,.false.,this%degen)
      endif
     else
-     if (lm.eq.0) stop 'ERROR: you have asked for a spherical power spectrum but provided lambda=0!'
-     ker_lm = do_nonlinear_spherical_kernel(real(PS),PS_tr_lam,real(PS0),PS_tr_0,nframes,nmol,nfeat,nfeat, &
-     &     nfeat0,nfeat0,natmax,1,dfloat(natoms),natoms_tr,zeta,.false.,degen)
+     if (this%lm.eq.0) stop 'ERROR: you have asked for a spherical power spectrum but provided lambda=0!'
+     this%ker_lm = do_nonlinear_spherical_kernel(real(this%PS),this%PS_tr_lam,real(this%PS0), &
+     &     this%PS_tr_0,this%nframes,this%nmol,this%nfeat,this%nfeat, &
+     &     this%nfeat0,this%nfeat0,this%natmax,1,dfloat(this%natoms),this%natoms_tr,this%zeta,.false.,this%degen)
     endif
     call system_clock(tf)
-    if (verbose) write(*,'(A,F6.3,A)') 'Got kernel in ',(tf-ts)/rate,' s'
+    if (this%verbose) write(*,'(A,F6.3,A)') 'Got kernel in ',(tf-ts)/rate,' s'
 
     ! Get predictions
-    if (allocated(prediction_lm_c)) deallocate(prediction_lm_c)
-    allocate(prediction_lm_c(nmol,degen,nw))
-    if (lm.eq.0) then
-     prediction_lm_c = do_prediction_c(ker,wt_c,meanval_c,degen,nframes,nmol,nw)
+    if (allocated(this%prediction_lm_c)) deallocate(this%prediction_lm_c)
+    allocate(this%prediction_lm_c(this%nmol,this%degen,this%nw))
+    if (this%lm.eq.0) then
+     this%prediction_lm_c = do_prediction_c(this%ker,this%wt_c,this%meanval_c,this%degen,this%nframes,this%nmol,this%nw)
     else
-     prediction_lm_c = do_prediction_c(ker_lm,wt_c,meanval_c,degen,nframes,nmol,nw)
+     this%prediction_lm_c = do_prediction_c(this%ker_lm,this%wt_c,this%meanval_c,this%degen,this%nframes,this%nmol,this%nw)
     endif
 
-    if (atomic) then
+    if (this%atomic) then
      ! Rescale predictions by the number of atoms, so that they are related to
      ! the frame predictions by a summation
-     do i=1,size(prediction_lm_c,1)
-      prediction_lm_c(i,:,:) = prediction_lm_c(i,:,:) / natoms_at(i)
+     do i=1,size(this%prediction_lm_c,1)
+      this%prediction_lm_c(i,:,:) = this%prediction_lm_c(i,:,:) / this%natoms_at(i)
      enddo
-     deallocate(natoms_at)
+     deallocate(this%natoms_at)
     endif
 
 end subroutine
