@@ -7,11 +7,6 @@ module sagpr
      &     'La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W ','Re','Os','Ir', &
      &     'Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th','Pa','U ','Np','Pu','Am','Cm','Bk','Cf', &
      &     'Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'/)
- complex*16, allocatable :: PS(:,:,:,:),PS0(:,:,:,:)
- integer, allocatable :: components(:,:),components0(:,:)
- real*8 start,finish
- real*8, allocatable :: w3j(:,:,:,:)
- logical all_species(nelements),all_centres(nelements)
 
  contains
 
@@ -445,11 +440,14 @@ module sagpr
 
 !***************************************************************************************************
 
- subroutine do_power_spectrum(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
-     &     ncut,sparsification,rs,periodic,mult_by_A)
+ subroutine do_power_spectrum(PS,components,xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
+     &     ncut,sparsification,rs,periodic,mult_by_A,w3j,all_species,all_centres)
   use SHTOOLS, only: wigner3j
   implicit none
 
+  complex*16, allocatable, intent(inout) :: PS(:,:,:,:)
+  integer, allocatable, intent(inout) :: components(:,:)
+  real*8, allocatable, intent(inout) :: w3j(:,:,:,:)
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l,mu,nu
   integer llmax,ps_shape(4),m,n,nn,jmin,jmax,im,ia,ib,mm
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
@@ -470,6 +468,7 @@ module sagpr
   real*8, allocatable :: ww(:,:)
   integer cr,ts,tf
   real*8 rate,dr(3),invcell(3,3),sv(3)
+  logical all_species(nelements),all_centres(nelements)
 
   call system_clock(count_rate=cr)
   rate = real(cr)
@@ -708,7 +707,7 @@ module sagpr
    allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nspecies,lmax+1,2*lmax+1,nnmax),&
      &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax))
    call initsoap(omega,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
-     &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,rcut,xyz(i,:,:),sigma,orthomatrix)
+     &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,rcut,xyz(i,:,:),sigma,orthomatrix,all_species,all_centres)
 
    ! Compute power spectrum
    if (lm.eq.0) then
@@ -865,11 +864,13 @@ module sagpr
 ! The subroutine below is for building the power spectrum that goes with zeta>1
 !***************************************************************************************************
 
- subroutine do_power_spectrum_scalar(xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
-     &     ncut,sparsification,rs,periodic,mult_by_A)
+ subroutine do_power_spectrum_scalar(PS0,components0,xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
+     &     ncut,sparsification,rs,periodic,mult_by_A,all_species,all_centres)
   use SHTOOLS, only: wigner3j
   implicit none
 
+  complex*16, allocatable, intent(inout) :: PS0(:,:,:,:)
+  integer, allocatable, intent(inout) :: components0(:,:)
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l
   integer llmax,ps_shape(4),m,n,nn
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
@@ -886,6 +887,7 @@ module sagpr
   real*8, allocatable :: orthoradint(:,:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
   real*8 dr(3),sv(3),invcell(3,3)
+  logical all_species(nelements),all_centres(nelements)
 
   if (lm.ne.0) stop 'ERROR: scalar power spectrum has been called with non-scalar argument!'
 
@@ -1055,7 +1057,7 @@ module sagpr
    allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nspecies,lmax+1,2*lmax+1,nnmax),&
      &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax))
    call initsoap(omega,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
-     &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,rcut,xyz(i,:,:),sigma,orthomatrix)
+     &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,rcut,xyz(i,:,:),sigma,orthomatrix,all_species,all_centres)
 
    ! Compute power spectrum
    allocate(omegatrue(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
@@ -1063,7 +1065,7 @@ module sagpr
     omegatrue(:,:,:,l+1,:) = omega(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
    enddo
    if (ncut.gt.0) then
-    !$OMP PARALLEL DO SHARED(components,PS0,omegatrue,ncut,natoms,i) PRIVATE(j,k,ot1,ot2)
+    !$OMP PARALLEL DO SHARED(components0,PS0,omegatrue,ncut,natoms,i) PRIVATE(j,k,ot1,ot2)
     do j=1,ncut
      allocate(ot1(natoms(i),2*lmax+1),ot2(natoms(i),2*lmax+1))
      ot1(:,:) = omegatrue(:,components0(j,1),components0(j,3),components0(j,5),:)
@@ -1089,7 +1091,7 @@ module sagpr
   ! Multiply by A matrix
   if (mult_by_A) then
    do i=1,nframes
-    !$OMP PARALLEL DO SHARED(PS,sparsification) PRIVATE(j,k)
+    !$OMP PARALLEL DO SHARED(PS0,sparsification) PRIVATE(j,k)
     do j=1,natmax
      do k=1,degen
       PS0(i,j,k,:) = matmul(PS0(i,j,k,:),sparsification(2,:,:))
@@ -1137,7 +1139,7 @@ module sagpr
 !***************************************************************************************************
 
  subroutine initsoap(omega,harmonic,orthoradint,natoms,nspecies,nmax,lmax,nnmax,periodic,all_indices,nneighmax, &
-     &     natmax,nsmax,cell,rs,sg,rcut,xyz,sigma,orthomatrix)
+     &     natmax,nsmax,cell,rs,sg,rcut,xyz,sigma,orthomatrix,all_species,all_centres)
   implicit none
 
    integer natoms,nspecies,nmax,lmax,nnmax,natmax,nsmax,iat,ncentype,icentype,icen,cen,n,ispe
@@ -1153,6 +1155,7 @@ module sagpr
    logical periodic
    integer ts,tf,cr
    real*8 rate
+   logical all_species(nelements),all_centres(nelements)
 
    sg2 = sg*sg
    alpha = 1.d0 / (2.d0 * sg2)

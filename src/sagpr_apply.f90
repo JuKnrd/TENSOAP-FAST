@@ -1,11 +1,13 @@
 program sagpr_apply
     use sagpr
     use apply
+    use io
     USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer
     implicit none
 
+    type(SAGPR_Model) :: GPR
     character(len=100), allocatable :: arg(:),keys(:)
-    integer i,j,k,l,ios,numkeys,port,socket,inet,cbuf
+    integer i,j,k,l,ios,numkeys,port,socket,inet,cbuf,nargs
     integer nat
     character(len=100) ofile,model,fname,sock_arg(3)
     character(len=1024) hostname
@@ -38,16 +40,16 @@ program sagpr_apply
     fname = ''
     use_socket = .false.
     inet = 1
-    verbose = .false.
-    atomic = .false.
+    GPR%verbose = .false.
+    GPR%atomic = .false.
     keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-a  ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-m') read(arg(i+1),'(A)') model
      if (arg(i).eq.'-o') read(arg(i+1),'(A)') ofile
      if (arg(i).eq.'-f') read(arg(i+1),'(A)') fname
-     if (arg(i).eq.'-v') verbose=.true.
-     if (arg(i).eq.'-a') atomic=.true.
+     if (arg(i).eq.'-v') GPR%verbose=.true.
+     if (arg(i).eq.'-a') GPR%atomic=.true.
      if (arg(i).eq.'-s') then
       use_socket = .true.
       readnext = .true.
@@ -74,7 +76,7 @@ program sagpr_apply
 ! GET MODEL
 !************************************************************************************
 
-    call get_model(model)
+    call get_model(GPR,model)
 
 !************************************************************************************
 ! READ IN DATA AND MAKE PREDICTIONS
@@ -85,7 +87,7 @@ program sagpr_apply
     if (ios.ne.0) stop 'ERROR: input file does not exist!'
     if (use_socket) then
      ! Get atom names
-     call read_frame(15,periodic)
+     call read_frame(GPR,15)
      ! Set up socket
      hostname = trim(adjustl(sock_arg(1)))//achar(0)
      read(sock_arg(2),*) port
@@ -100,7 +102,7 @@ program sagpr_apply
     hasdata = .false.
     ! Open output file
     if (.not. use_socket) open(unit=33,file=ofile,access='stream',form='formatted')
-    if (use_socket .and. atomic) open(unit=33,file=ofile,access='stream',form='formatted')
+    if (use_socket .and. GPR%atomic) open(unit=33,file=ofile,access='stream',form='formatted')
     ! Keep going through input
     do while (ios.ne.0)
      open(unit=73,file='EXIT',status='old',iostat=ios)
@@ -108,42 +110,22 @@ program sagpr_apply
 
       if (.not. use_socket) then
        ! Read the next frame from xyz file
-       call read_frame(15,periodic)
+       call read_frame(GPR,15)
 
        call system_clock(t1)
 
        ! Do prediction
-       call predict_frame(rate)
+       call predict_frame(GPR,rate)
+
+       ! Rescale predictions about the mean
+       call rescale_predictions(GPR)
 
        ! Print predictions
-       if (atomic) then
-        write(33,*) size(prediction_lm_c,1)
-        write(33,*) '# Total',((sum(prediction_lm_c(:,j,k)),j=1,degen),k=1,nw)
-       endif
-       allocate(prediction_lm(size(prediction_lm_c,1),degen))
-       prediction_lm(:,:) = 0.d0
-       do i=1,degen
-        do j=1,nw
-         prediction_lm(:,i) = prediction_lm(:,i) + prediction_lm_c(:,i,j)
-        enddo
-        prediction_lm(:,i) = prediction_lm(:,i) / float(nw)
-       enddo
-       do j=1,nw
-        prediction_lm_c(:,:,j) = prediction_lm(:,:) + (nu * (prediction_lm_c(:,:,j)-prediction_lm(:,:)))
-       enddo
-       deallocate(prediction_lm)
-       do l=1,size(prediction_lm_c,1)
-        if (.not. atomic) then
-         write(33,*) ((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
-        else
-         write(33,*) atname_at(l),((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
-        endif
-       enddo
-       flush(33)
+       call print_predictions(GPR,33)
 
        call system_clock(t2)
-       if (verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
-       if (verbose) write(*,*)
+       if (GPR%verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
+       if (GPR%verbose) write(*,*)
 
       else
        ! Read from the socket
@@ -161,37 +143,40 @@ program sagpr_apply
         call readbuffer(socket, initbuffer, cbuf)
        elseif (trim(header)=='POSDATA') then
         ! The wrapper is sending atom positions
-        if (allocated(xyz)) deallocate(xyz,natoms,cell)
+        if (allocated(GPR%xyz)) deallocate(GPR%xyz,GPR%natoms,GPR%cell)
         call readbuffer(socket, mtxbuf, 9)  ! Cell matrix
         cell_h = reshape(mtxbuf, (/3,3/))
         cell_h = transpose(cell_h)
         call readbuffer(socket, mtxbuf, 9)
         call readbuffer(socket, cbuf)
         nat = cbuf
-        natmax = nat
-        nframes = 1
-        allocate(xyz(nframes,natmax,3),natoms(nframes),msgbuffer(3*nat),cell(nframes,3,3))
-        natoms(1) = nat
+        GPR%natmax = nat
+        GPR%nframes = 1
+        allocate(GPR%xyz(GPR%nframes,GPR%natmax,3),GPR%natoms(GPR%nframes),msgbuffer(3*nat),GPR%cell(GPR%nframes,3,3))
+        GPR%natoms(1) = nat
         call readbuffer(socket, msgbuffer, nat*3) 
         ! Read in atoms
         do i=1,nat
-         xyz(1,i,:) = msgbuffer(3*(i-1)+1:3*i) * bohrtoangstrom
+         GPR%xyz(1,i,:) = msgbuffer(3*(i-1)+1:3*i) * bohrtoangstrom
         enddo
-        cell(1,:,:) = cell_h(:,:) * bohrtoangstrom
+        GPR%cell(1,:,:) = cell_h(:,:) * bohrtoangstrom
 
         ! With all of the necessary data read in, do the prediction
         call system_clock(t1)
 
         ! Do prediction
-        call predict_frame(rate)
+        call predict_frame(GPR,rate)
+
+        ! Rescale committee predictions about their mean
+        call rescale_predictions(GPR)
 
         call system_clock(t2)
-        if (verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
-        if (verbose) write(*,*)
+        if (GPR%verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
+        if (GPR%verbose) write(*,*)
 
         ! We have the data
         hasdata = .true.
-        deallocate(xyz,natoms,msgbuffer,cell)
+        deallocate(GPR%xyz,GPR%natoms,msgbuffer,GPR%cell)
        elseif (trim(header)=='GETFORCE') then
         ! Now we send all of the information back to the wrapper
         ! We start with a lot of zeros (there is no contribution to the energy
@@ -204,33 +189,20 @@ program sagpr_apply
         call writebuffer(socket,nat)
         call writebuffer(socket,msgbuffer,3*nat)
         call writebuffer(socket,reshape(virial,(/9/)),9)
-        ! Rescale committee predictions about their mean
-        allocate(prediction_lm(size(prediction_lm_c,1),degen))
-        prediction_lm(:,:) = 0.d0
-        do i=1,degen
-         do j=1,nw
-          prediction_lm(:,i) = prediction_lm(:,i) + prediction_lm_c(:,i,j)
-         enddo
-         prediction_lm(:,i) = prediction_lm(:,i) / float(nw)
-        enddo
-        do j=1,nw
-         prediction_lm_c(:,:,j) = prediction_lm(:,:) + (nu * (prediction_lm_c(:,:,j)-prediction_lm(:,:)))
-        enddo
-        deallocate(prediction_lm)
         ! Send prediction; we will send only the prediction for the entire
         ! frame, rather than for each atom (the latter will be stored in an
         ! output file)
         initbuffer = " "
-        write(initbuffer,*) ((sum(prediction_lm_c(:,j,k)),j=1,degen),k=1,nw)
+        write(initbuffer,*) ((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
         cbuf = len_trim(initbuffer)
         call writebuffer(socket,cbuf)
         call writebuffer(socket,initbuffer,cbuf)
         ! If we are doing atomic predictions, also print them to a file
-        if (atomic) then
-         write(33,*) size(prediction_lm_c,1)
-         write(33,*) '# Total',((sum(prediction_lm_c(:,j,k)),j=1,degen),k=1,nw)
-         do l=1,size(prediction_lm_c,1)
-          write(33,*)  atname_at(l),((prediction_lm_c(l,j,k),j=1,degen),k=1,nw)
+        if (GPR%atomic) then
+         write(33,*) size(GPR%prediction_lm_c,1)
+         write(33,*) '# Total',((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
+         do l=1,size(GPR%prediction_lm_c,1)
+          write(33,*)  GPR%atname_at(l),((GPR%prediction_lm_c(l,j,k),j=1,GPR%degen),k=1,GPR%nw)
          enddo
          flush(33)
         endif
@@ -246,15 +218,16 @@ program sagpr_apply
     close(33)
 
     ! Array deallocation
-    if (allocated(xyz)) deallocate(xyz,atname,natoms,comment,sparsification,cell,PS_tr_lam,wt,arg,keys,prediction_lm,PS)
-    if (allocated(natoms_tr)) deallocate(natoms_tr)
-    if (allocated(PS0)) deallocate(PS0)
-    if (allocated(ker)) deallocate(ker)
-    if (allocated(ker_lm)) deallocate(ker_lm)
-    if (allocated(sparsification0)) deallocate(sparsification0,PS_tr_0)
-    if (allocated(components)) deallocate(components)
-    if (allocated(w3j)) deallocate(w3j)
-    if (allocated(meanval_c)) deallocate(meanval_c,wt_c,prediction_lm_c)
-    if (allocated(atname_at)) deallocate(atname_at)
+    if (allocated(GPR%xyz)) deallocate(GPR%xyz,GPR%atname,GPR%natoms,GPR%comment,GPR%sparsification, &
+     &     GPR%cell,GPR%PS_tr_lam,GPR%wt,arg,keys,GPR%prediction_lm,GPR%PS)
+    if (allocated(GPR%natoms_tr)) deallocate(GPR%natoms_tr)
+    if (allocated(GPR%PS0)) deallocate(GPR%PS0)
+    if (allocated(GPR%ker)) deallocate(GPR%ker)
+    if (allocated(GPR%ker_lm)) deallocate(GPR%ker_lm)
+    if (allocated(GPR%sparsification0)) deallocate(GPR%sparsification0,GPR%PS_tr_0)
+    if (allocated(GPR%components)) deallocate(GPR%components)
+    if (allocated(GPR%w3j)) deallocate(GPR%w3j)
+    if (allocated(GPR%meanval_c)) deallocate(GPR%meanval_c,GPR%wt_c,GPR%prediction_lm_c)
+    if (allocated(GPR%atname_at)) deallocate(GPR%atname_at)
 
 end program
