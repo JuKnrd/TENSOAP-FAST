@@ -227,4 +227,28 @@ subroutine read_frame(GPR,un)
 
 end subroutine
 
+!****************************************************************************************************************
+subroutine print_predictions(GPR,un)
+ implicit none
+
+  type(SAGPR_Model), intent(inout) :: GPR
+  integer j,k,l,un
+
+  if (GPR%atomic) then
+   write(un,*) size(GPR%prediction_lm_c,1)
+   write(un,*) '# Total',((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
+  endif
+  do l=1,size(GPR%prediction_lm_c,1)
+   if (.not. GPR%atomic) then
+    write(un,*) ((GPR%prediction_lm_c(l,j,k),j=1,GPR%degen),k=1,GPR%nw)
+   else
+    write(un,*) GPR%atname_at(l),((GPR%prediction_lm_c(l,j,k),j=1,GPR%degen),k=1,GPR%nw)
+   endif
+  enddo
+  flush(un)
+
+end subroutine
+
+!****************************************************************************************************************
+
 end module

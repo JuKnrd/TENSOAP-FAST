@@ -121,18 +121,7 @@ program sagpr_apply
        call rescale_predictions(GPR)
 
        ! Print predictions
-       if (GPR%atomic) then
-        write(33,*) size(GPR%prediction_lm_c,1)
-        write(33,*) '# Total',((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
-       endif
-       do l=1,size(GPR%prediction_lm_c,1)
-        if (.not. GPR%atomic) then
-         write(33,*) ((GPR%prediction_lm_c(l,j,k),j=1,GPR%degen),k=1,GPR%nw)
-        else
-         write(33,*) GPR%atname_at(l),((GPR%prediction_lm_c(l,j,k),j=1,GPR%degen),k=1,GPR%nw)
-        endif
-       enddo
-       flush(33)
+       call print_predictions(GPR,33)
 
        call system_clock(t2)
        if (GPR%verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
