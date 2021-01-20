@@ -16,11 +16,14 @@ module apply
  logical do_scalar
  ! Parameters for PS and kernel building
  complex*16, allocatable :: PS(:,:,:,:),PS0(:,:,:,:)
+ integer, allocatable :: components(:,:),components0(:,:)
+ real*8, allocatable :: w3j(:,:,:,:)
  integer lm,nmax,lmax,zeta,degen
  real*8 rcut,sg,rs(3)
  logical periodic
  integer nmax0,lmax0
  real*8 rcut0,sg0,rs0(3)
+ logical all_species(nelements),all_centres(nelements)
  ! Defaults
  integer, parameter :: nmax_default = 8, lmax_default = 6
  real*8, parameter :: rcut_default = 4.d0,sg_default = 0.3d0,rs_default(3) = (/0.d0,0.d0,0.d0/)
@@ -66,19 +69,19 @@ subroutine predict_frame(rate)
     ! Get power spectrum
     if (.not.do_scalar) then
      call system_clock(ts)
-     call do_power_spectrum(PS,xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
-     &     ncut,sparsification,rs,periodic,.true.)
+     call do_power_spectrum(PS,components,xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
+     &     ncut,sparsification,rs,periodic,.true.,w3j,all_species,all_centres)
      call system_clock(tf)
      if (verbose) write(*,'(A,F6.3,A)') 'Got PS in',(tf-ts)/rate,' s'
     else
      call system_clock(ts)
-     call do_power_spectrum(PS,xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
-     &     ncut,sparsification,rs,periodic,.true.)
+     call do_power_spectrum(PS,components,xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
+     &     ncut,sparsification,rs,periodic,.true.,w3j,all_species,all_centres)
      call system_clock(tf)
      if (verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',lm,' PS in',(tf-ts)/rate,' s'
      call system_clock(ts)
-     call do_power_spectrum_scalar(PS0,xyz,atname,natoms,cell,nframes,natmax,0,nmax0,lmax0,rcut0,sg0, &
-     &     ncut0,sparsification0,rs0,periodic,.true.)
+     call do_power_spectrum_scalar(PS0,components0,xyz,atname,natoms,cell,nframes,natmax,0,nmax0,lmax0,rcut0,sg0, &
+     &     ncut0,sparsification0,rs0,periodic,.true.,all_species,all_centres)
      call system_clock(tf)
      if (verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',0,' PS in',(tf-ts)/rate,' s'
     endif
