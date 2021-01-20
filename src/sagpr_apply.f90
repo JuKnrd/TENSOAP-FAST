@@ -1,6 +1,7 @@
 program sagpr_apply
     use sagpr
     use apply
+    use io
     USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer
     implicit none
 
