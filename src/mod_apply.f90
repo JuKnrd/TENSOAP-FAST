@@ -15,12 +15,6 @@ module apply
  end type Frame_XYZ
 
  type SAGPR_Model
-!  ! Variables for getting coordinates
-!  real*8, allocatable :: xyz(:,:,:),cell(:,:,:)
-!  character(len=4), allocatable :: atname(:,:)
-!  character(len=1000), allocatable :: comment(:)
-!  integer, allocatable :: natoms(:)
-!  integer nframes,nlines,natmax,nmol
   ! Input frame
   type (Frame_XYZ) frames
   ! Variables for getting models
@@ -74,12 +68,12 @@ subroutine set_defaults(this)
   this%zeta = 1
 
 end subroutine
-
 !****************************************************************************************************************
-subroutine predict_frame(this,rate)
+subroutine predict_frame(this,frames,rate)
  implicit none
 
     type(SAGPR_Model), intent(inout) :: this
+    type(Frame_XYZ), intent(inout) :: frames
 
     integer ts,tf,i,k
     real*8 rate
@@ -87,8 +81,8 @@ subroutine predict_frame(this,rate)
     ! Get power spectrum
     if (.not.this%do_scalar) then
      call system_clock(ts)
-     call do_power_spectrum(this%PS,this%components,this%frames%xyz,this%frames%atname, &
-     &     this%frames%natoms,this%frames%cell,this%frames%nframes,this%frames%natmax,this%lm,this%nmax, &
+     call do_power_spectrum(this%PS,this%components,frames%xyz,frames%atname, &
+     &     frames%natoms,frames%cell,frames%nframes,frames%natmax,this%lm,this%nmax, &
      &     this%lmax,this%rcut,this%sg, &
      &     this%ncut,this%sparsification,this%rs,this%periodic,.true., &
      &     this%w3j,this%all_species,this%all_centres)
@@ -96,16 +90,16 @@ subroutine predict_frame(this,rate)
      if (this%verbose) write(*,'(A,F6.3,A)') 'Got PS in',(tf-ts)/rate,' s'
     else
      call system_clock(ts)
-     call do_power_spectrum(this%PS,this%components,this%frames%xyz,this%frames%atname, &
-     &     this%frames%natoms,this%frames%cell,this%frames%nframes,this%frames%natmax,this%lm,this%nmax, &
+     call do_power_spectrum(this%PS,this%components,frames%xyz,frames%atname, &
+     &     frames%natoms,frames%cell,frames%nframes,frames%natmax,this%lm,this%nmax, &
      &     this%lmax,this%rcut,this%sg, &
      &     this%ncut,this%sparsification,this%rs,this%periodic,.true., &
      &     this%w3j,this%all_species,this%all_centres)
      call system_clock(tf)
      if (this%verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',this%lm,' PS in',(tf-ts)/rate,' s'
      call system_clock(ts)
-     call do_power_spectrum_scalar(this%PS0,this%components0,this%frames%xyz,this%frames%atname, &
-     &     this%frames%natoms,this%frames%cell,this%frames%nframes,this%frames%natmax,0,this%nmax0, &
+     call do_power_spectrum_scalar(this%PS0,this%components0,frames%xyz,frames%atname, &
+     &     frames%natoms,frames%cell,frames%nframes,frames%natmax,0,this%nmax0, &
      &     this%lmax0,this%rcut0,this%sg0, &
      &     this%ncut0,this%sparsification0,this%rs0,this%periodic,.true., &
      &     this%all_species,this%all_centres)
@@ -121,20 +115,20 @@ subroutine predict_frame(this,rate)
      ! what we know (a good direction for future code)
      this%tot_natoms = 0
      do i=1,size(this%PS,1)
-      this%tot_natoms = this%tot_natoms + this%frames%natoms(i)
+      this%tot_natoms = this%tot_natoms + frames%natoms(i)
      enddo
-     this%frames%nframes = this%tot_natoms
-     this%frames%natmax = 1
+     frames%nframes = this%tot_natoms
+     frames%natmax = 1
      if (allocated(this%atname_at)) deallocate(this%atname_at)
      allocate(this%PS_atomic(this%tot_natoms,1,size(this%PS,3), &
      &     size(this%PS,4)),this%natoms_at(this%tot_natoms),this%atname_at(this%tot_natoms))
      ! Populate atomic power spectrum array from original power spectrum
      k = 1
      do i=1,size(this%PS,1)
-      this%PS_atomic(k:k+this%frames%natoms(i),1,:,:) = this%PS(i,1:this%frames%natoms(i),:,:)
-      this%natoms_at(k:k+this%frames%natoms(i)) = this%frames%natoms(i)
-      this%atname_at(k:k+this%frames%natoms(i)) = this%frames%atname(i,1:this%frames%natoms(i))
-      k = k + this%frames%natoms(i)
+      this%PS_atomic(k:k+frames%natoms(i),1,:,:) = this%PS(i,1:frames%natoms(i),:,:)
+      this%natoms_at(k:k+frames%natoms(i)) = frames%natoms(i)
+      this%atname_at(k:k+frames%natoms(i)) = frames%atname(i,1:frames%natoms(i))
+      k = k + frames%natoms(i)
      enddo
      ! Create new power spectrum array with the corrected shape
      deallocate(this%PS)
@@ -146,8 +140,8 @@ subroutine predict_frame(this,rate)
       allocate(this%PS0_atomic(this%tot_natoms,1,size(this%PS0,3),size(this%PS0,4)))
       k = 1
       do i=1,size(this%PS0,1)
-       this%PS0_atomic(k:k+this%frames%natoms(i),1,:,:) = this%PS0(i,1:this%frames%natoms(i),:,:)
-       k = k + this%frames%natoms(i)
+       this%PS0_atomic(k:k+frames%natoms(i),1,:,:) = this%PS0(i,1:frames%natoms(i),:,:)
+       k = k + frames%natoms(i)
       enddo
       deallocate(this%PS0)
       allocate(this%PS0(this%tot_natoms,1,size(this%PS0_atomic,3),size(this%PS0_atomic,4)))
@@ -155,9 +149,9 @@ subroutine predict_frame(this,rate)
       deallocate(this%PS0_atomic)
      endif
      ! Create new number-of-atoms array with the corrected shape
-     deallocate(this%frames%natoms)
-     allocate(this%frames%natoms(this%tot_natoms))
-     this%frames%natoms(:) = 1
+     deallocate(frames%natoms)
+     allocate(frames%natoms(this%tot_natoms))
+     frames%natoms(:) = 1
     endif
 
     ! Get kernel
@@ -167,19 +161,19 @@ subroutine predict_frame(this,rate)
     call system_clock(ts)
     if (.not.this%do_scalar) then
      if (this%lm.eq.0) then
-      this%ker = do_scalar_kernel(real(this%PS),this%PS_tr_lam,this%frames%nframes,this%nmol, &
-     &     this%nfeat,this%nfeat,this%frames%natmax,1,dfloat(this%frames%natoms),this%natoms_tr,this%zeta,.false.)
+      this%ker = do_scalar_kernel(real(this%PS),this%PS_tr_lam,frames%nframes,this%nmol, &
+     &     this%nfeat,this%nfeat,frames%natmax,1,dfloat(frames%natoms),this%natoms_tr,this%zeta,.false.)
      else
       if (this%zeta.gt.1) stop 'ERROR: zeta>1 has been selected but no scalar power spectrum given!'
-      this%ker_lm = do_linear_spherical_kernel(real(this%PS),this%PS_tr_lam,this%frames%nframes,this%nmol, &
+      this%ker_lm = do_linear_spherical_kernel(real(this%PS),this%PS_tr_lam,frames%nframes,this%nmol, &
        &     this%nfeat,this%nfeat, &
-       &     this%frames%natmax,1,dfloat(this%frames%natoms),this%natoms_tr,this%zeta,.false.,this%degen)
+       &     frames%natmax,1,dfloat(frames%natoms),this%natoms_tr,this%zeta,.false.,this%degen)
      endif
     else
      if (this%lm.eq.0) stop 'ERROR: you have asked for a spherical power spectrum but provided lambda=0!'
      this%ker_lm = do_nonlinear_spherical_kernel(real(this%PS),this%PS_tr_lam,real(this%PS0), &
-     &     this%PS_tr_0,this%frames%nframes,this%nmol,this%nfeat,this%nfeat, &
-     &     this%nfeat0,this%nfeat0,this%frames%natmax,1,dfloat(this%frames%natoms),this%natoms_tr,this%zeta,.false.,this%degen)
+     &     this%PS_tr_0,frames%nframes,this%nmol,this%nfeat,this%nfeat, &
+     &     this%nfeat0,this%nfeat0,frames%natmax,1,dfloat(frames%natoms),this%natoms_tr,this%zeta,.false.,this%degen)
     endif
     call system_clock(tf)
     if (this%verbose) write(*,'(A,F6.3,A)') 'Got kernel in ',(tf-ts)/rate,' s'
@@ -188,10 +182,10 @@ subroutine predict_frame(this,rate)
     if (allocated(this%prediction_lm_c)) deallocate(this%prediction_lm_c)
     allocate(this%prediction_lm_c(this%nmol,this%degen,this%nw))
     if (this%lm.eq.0) then
-     this%prediction_lm_c = do_prediction_c(this%ker,this%wt_c,this%meanval_c,this%degen,this%frames%nframes, &
+     this%prediction_lm_c = do_prediction_c(this%ker,this%wt_c,this%meanval_c,this%degen,frames%nframes, &
      &     this%nmol,this%nw)
     else
-     this%prediction_lm_c = do_prediction_c(this%ker_lm,this%wt_c,this%meanval_c,this%degen,this%frames%nframes, &
+     this%prediction_lm_c = do_prediction_c(this%ker_lm,this%wt_c,this%meanval_c,this%degen,frames%nframes, &
      &     	this%nmol,this%nw)
     endif
 
