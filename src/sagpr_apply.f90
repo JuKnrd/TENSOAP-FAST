@@ -5,6 +5,7 @@ program sagpr_apply
     implicit none
 
     type(SAGPR_Model) :: GPR
+    type(Frame_XYZ) :: frames
     character(len=100), allocatable :: arg(:),keys(:)
     integer i,j,k,l,ios,numkeys,port,socket,inet,cbuf,nargs
     integer nat
@@ -86,7 +87,7 @@ program sagpr_apply
     if (ios.ne.0) stop 'ERROR: input file does not exist!'
     if (use_socket) then
      ! Get atom names
-     call read_frame(GPR%frames,15,GPR%verbose,GPR%periodic)
+     call read_frame(frames,15,GPR%verbose,GPR%periodic)
      ! Set up socket
      hostname = trim(adjustl(sock_arg(1)))//achar(0)
      read(sock_arg(2),*) port
@@ -109,12 +110,12 @@ program sagpr_apply
 
       if (.not. use_socket) then
        ! Read the next frame from xyz file
-       call read_frame(GPR%frames,15,GPR%verbose,GPR%periodic)
+       call read_frame(frames,15,GPR%verbose,GPR%periodic)
 
        call system_clock(t1)
 
        ! Do prediction
-       call predict_frame(GPR,rate)
+       call predict_frame(GPR,frames,rate)
 
        ! Rescale predictions about the mean
        call rescale_predictions(GPR)
@@ -142,30 +143,30 @@ program sagpr_apply
         call readbuffer(socket, initbuffer, cbuf)
        elseif (trim(header)=='POSDATA') then
         ! The wrapper is sending atom positions
-        if (allocated(GPR%frames%xyz)) deallocate(GPR%frames%xyz,GPR%frames%natoms,GPR%frames%cell)
+        if (allocated(frames%xyz)) deallocate(frames%xyz,frames%natoms,frames%cell)
         call readbuffer(socket, mtxbuf, 9)  ! Cell matrix
         cell_h = reshape(mtxbuf, (/3,3/))
         cell_h = transpose(cell_h)
         call readbuffer(socket, mtxbuf, 9)
         call readbuffer(socket, cbuf)
         nat = cbuf
-        GPR%frames%natmax = nat
-        GPR%frames%nframes = 1
-        allocate(GPR%frames%xyz(GPR%frames%nframes,GPR%frames%natmax,3),GPR%frames%natoms(GPR%frames%nframes), &
-     &     msgbuffer(3*nat),GPR%frames%cell(GPR%frames%nframes,3,3))
-        GPR%frames%natoms(1) = nat
+        frames%natmax = nat
+        frames%nframes = 1
+        allocate(frames%xyz(frames%nframes,frames%natmax,3),frames%natoms(frames%nframes), &
+     &     msgbuffer(3*nat),frames%cell(frames%nframes,3,3))
+        frames%natoms(1) = nat
         call readbuffer(socket, msgbuffer, nat*3) 
         ! Read in atoms
         do i=1,nat
-         GPR%frames%xyz(1,i,:) = msgbuffer(3*(i-1)+1:3*i) * bohrtoangstrom
+         frames%xyz(1,i,:) = msgbuffer(3*(i-1)+1:3*i) * bohrtoangstrom
         enddo
-        GPR%frames%cell(1,:,:) = cell_h(:,:) * bohrtoangstrom
+        frames%cell(1,:,:) = cell_h(:,:) * bohrtoangstrom
 
         ! With all of the necessary data read in, do the prediction
         call system_clock(t1)
 
         ! Do prediction
-        call predict_frame(GPR,rate)
+        call predict_frame(GPR,frames,rate)
 
         ! Rescale committee predictions about their mean
         call rescale_predictions(GPR)
@@ -176,7 +177,7 @@ program sagpr_apply
 
         ! We have the data
         hasdata = .true.
-        deallocate(GPR%frames%xyz,GPR%frames%natoms,msgbuffer,GPR%frames%cell)
+        deallocate(frames%xyz,frames%natoms,msgbuffer,frames%cell)
        elseif (trim(header)=='GETFORCE') then
         ! Now we send all of the information back to the wrapper
         ! We start with a lot of zeros (there is no contribution to the energy
@@ -218,9 +219,9 @@ program sagpr_apply
     close(33)
 
     ! Array deallocation
-    if (allocated(GPR%frames%xyz)) deallocate(GPR%frames%xyz,GPR%frames%atname, &
-     &     GPR%frames%natoms,GPR%frames%comment,GPR%sparsification, &
-     &     GPR%frames%cell,GPR%PS_tr_lam,GPR%wt,arg,keys,GPR%prediction_lm,GPR%PS)
+    if (allocated(frames%xyz)) deallocate(frames%xyz,frames%atname, &
+     &     frames%natoms,frames%comment,GPR%sparsification, &
+     &     frames%cell,GPR%PS_tr_lam,GPR%wt,arg,keys,GPR%prediction_lm,GPR%PS)
     if (allocated(GPR%natoms_tr)) deallocate(GPR%natoms_tr)
     if (allocated(GPR%PS0)) deallocate(GPR%PS0)
     if (allocated(GPR%ker)) deallocate(GPR%ker)

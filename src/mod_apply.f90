@@ -15,8 +15,6 @@ module apply
  end type Frame_XYZ
 
  type SAGPR_Model
-  ! Input frame
-  type (Frame_XYZ) frames
   ! Variables for getting models
   integer ncut,nfeat,ncut0,nfeat0,nmol
   real*8, allocatable :: PS_tr_lam(:,:,:,:),PS_tr_0(:,:,:,:),ker(:,:), ker_lm(:,:,:,:),natoms_tr(:)

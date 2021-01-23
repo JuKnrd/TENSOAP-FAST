@@ -172,7 +172,7 @@ end subroutine
 
 !****************************************************************************************************************
 
-subroutine read_frame(frame,un,verbose,periodic)
+subroutine read_frame(frame,un,vrb,prd)
  implicit none
 
   type(Frame_XYZ), intent(inout) :: frame
@@ -180,7 +180,13 @@ subroutine read_frame(frame,un,verbose,periodic)
   character(len=1000) line,c1
   character(len=100) model
   integer i,j,ii
+  logical, optional :: vrb,prd
   logical verbose,periodic
+
+  verbose = .false.
+  periodic = .false.
+  if (present(vrb)) verbose = vrb
+  if (present(prd)) periodic = prd
 
    frame%nframes = 1
    read(un,'(A)',iostat=ios) line
