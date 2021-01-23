@@ -172,19 +172,26 @@ end subroutine
 
 !****************************************************************************************************************
 
-subroutine read_frame(GPR,un)
+subroutine read_frame(frame,un,vrb,prd)
  implicit none
 
-  type(SAGPR_Model), intent(inout) :: GPR
+  type(Frame_XYZ), intent(inout) :: frame
   integer ios,un,nat
   character(len=1000) line,c1
   character(len=100) model
   integer i,j,ii
+  logical, optional :: vrb,prd
+  logical verbose,periodic
 
-   GPR%nframes = 1
+  verbose = .false.
+  periodic = .false.
+  if (present(vrb)) verbose = vrb
+  if (present(prd)) periodic = prd
+
+   frame%nframes = 1
    read(un,'(A)',iostat=ios) line
    if (ios.ne.0) then
-    if (GPR%verbose) write(*,*) 'End-of-file detected'
+    if (verbose) write(*,*) 'End-of-file detected'
     stop
    endif
    read(line,*,iostat=ios) nat
@@ -193,37 +200,37 @@ subroutine read_frame(GPR,un)
     write(*,*) 'Non-standard input detected; now stopping'
     stop
    endif
-   GPR%natmax = nat
-   if (allocated(GPR%xyz)) deallocate(GPR%xyz,GPR%atname,GPR%natoms,GPR%comment)
-   allocate(GPR%xyz(GPR%nframes,GPR%natmax,3),GPR%atname(GPR%nframes,GPR%natmax), &
-     &     GPR%natoms(GPR%nframes),GPR%comment(GPR%nframes))
-   GPR%natoms(1) = nat
-   read(un,'(A)') GPR%comment(1)
-   do j=1,GPR%natoms(1)
-    read(un,*) GPR%atname(1,j),(GPR%xyz(1,j,ii),ii=1,3)
+   frame%natmax = nat
+   if (allocated(frame%xyz)) deallocate(frame%xyz,frame%atname,frame%natoms,frame%comment)
+   allocate(frame%xyz(frame%nframes,frame%natmax,3),frame%atname(frame%nframes,frame%natmax), &
+     &     frame%natoms(frame%nframes),frame%comment(frame%nframes))
+   frame%natoms(1) = nat
+   read(un,'(A)') frame%comment(1)
+   do j=1,frame%natoms(1)
+    read(un,*) frame%atname(1,j),(frame%xyz(1,j,ii),ii=1,3)
    enddo
 
   ! Get cell data
-  if (allocated(GPR%cell)) deallocate(GPR%cell)
-  allocate(GPR%cell(GPR%nframes,3,3))
-  if (.not.GPR%periodic) then
-   GPR%cell(:,:,:) = 0.d0
+  if (allocated(frame%cell)) deallocate(frame%cell)
+  allocate(frame%cell(frame%nframes,3,3))
+  if (.not.periodic) then
+   frame%cell(:,:,:) = 0.d0
   else
-   do i=1,GPR%nframes
-    ios = index(GPR%comment(i),'Lattice')
+   do i=1,frame%nframes
+    ios = index(frame%comment(i),'Lattice')
     if (ios.eq.0) stop 'ERROR: input file is not periodic!'
-    c1 = GPR%comment(i)
+    c1 = frame%comment(i)
     c1 = c1(ios:len(c1))
     ios = index(c1,'"')
     c1 = c1(ios+1:len(c1))
     ios = index(c1,'"')
     c1 = c1(1:ios-1)
-    read(c1,*) GPR%cell(i,1,1),GPR%cell(i,2,1),GPR%cell(i,3,1), &
-     &     GPR%cell(i,1,2),GPR%cell(i,2,2),GPR%cell(i,3,2), &
-     &     GPR%cell(i,1,3),GPR%cell(i,2,3),GPR%cell(i,3,3)
+    read(c1,*) frame%cell(i,1,1),frame%cell(i,2,1),frame%cell(i,3,1), &
+     &     frame%cell(i,1,2),frame%cell(i,2,2),frame%cell(i,3,2), &
+     &     frame%cell(i,1,3),frame%cell(i,2,3),frame%cell(i,3,3)
    enddo
   endif
-  if (GPR%verbose) write(*,*) 'Got input frame with ',nat,'atoms'
+  if (verbose) write(*,*) 'Got input frame with ',nat,'atoms'
 
 end subroutine
 
