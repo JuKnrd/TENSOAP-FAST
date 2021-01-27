@@ -1,4 +1,4 @@
-# SOAPFAST with FORTRAN
+# TENSOAP with FORTRAN
 
 This code allows the use of models trained using `TENSOAP`/`SOAPFAST`; the key parts of this code needed to apply a symmetry-adapted Gaussian process regression (SA-GPR) model are re-implemented in FORTRAN, making them faster and more parallelizable.
 
@@ -10,7 +10,7 @@ It should be noted that there is no guarantee this code is as optimized as it ca
 
 # Use
 
-In order to use this code, the first thing needed is a model produced using SOAPFAST. There are a couple of requirements:
+In order to use this code, the first thing needed is a model produced using TENSOAP. There are a couple of requirements:
 
 1. Power spectra should be sparsified on spherical harmonic components. This means that there will be two files, with names like `PS_fps.npy` and `PS_Amat.npy` providing sparsification details.
 2. Power spectra should also be sparsified over environments. There will be a single sparsified power spectra, with a name like `PS.npy`
@@ -20,7 +20,7 @@ To create model files, run `/path/to/soapfast_fortran/bin/sagpr_convert -ps PS.n
 
 This will create the file `fname.mdl`, a binary file containing the training power spectrum, sparsification details, weights and hyperparameters.
 
-To use this model, `sagpr_apply` is called as `/path/to/TENSOAP-FAST/bin/sagpr_apply -f file_name.xyz -m fname -o prediction.out`, which uses the model `fname.mdl` to make predictions for `file_name.xyz`, storing them in `prediction.out`. *Note: these moedls can nly be for a single spherical component; a separate prediction must be made for each component.*
+To use this model, `sagpr_apply` is called as `/path/to/TENSOAP-FAST/bin/sagpr_apply -f file_name.xyz -m fname.mdl -o prediction.out`, which uses the model `fname.mdl` to make predictions for `file_name.xyz`, storing them in `prediction.out`. *Note: these models can only be for a single spherical component; a separate prediction must be made for each component.*
 
 # Sockets
 
