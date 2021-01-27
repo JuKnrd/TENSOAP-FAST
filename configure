@@ -3,6 +3,7 @@
 echo "Configuring SOAPFAST..."
 echo
 compiler=gfortran
+export TENSOAP_PREFIX=$(pwd)/install
 if [ $(command -v ifort | wc -l) -gt 0 ] && [ "${1}" != "gnu" ];then
 	compiler=ifort
 	echo "Using intel compiler"
@@ -23,7 +24,8 @@ if [ "${compiler}" == "gfortran" ];then
 		fi
 		echo "Compiling SHTOOLS..."
 		cd install/SHTOOLS
-		make
+		cat Makefile | awk '/PREFIX =/{print "PREFIX =",ENVIRON["TENSOAP_PREFIX"]}!/PREFIX =/{print}' > tmp.make;mv tmp.make Makefile
+		make && make install
 		cd ../../
 		echo "...SHTOOLS compiled"
 	else
@@ -95,8 +97,8 @@ if [ "${compiler}" == "gfortran" ];then
 		cd ../../
 	fi
 	
-	export SHTOOLS_LIB=-L$(pwd)/install/SHTOOLS/lib
-	export SHTOOLS_INC=-I$(pwd)/install/SHTOOLS/modules
+	export SHTOOLS_LIB=-L$(pwd)/install/lib
+	export SHTOOLS_INC=-I$(pwd)/install/include
 	cat src/Makefile.gfortran | awk '/SHTOOLS_LIB=/{printf "SHTOOLS_LIB=%s\n",ENVIRON["SHTOOLS_LIB"]}/SHTOOLS_INCLUDE=/{printf "SHTOOLS_INCLUDE=%s\n",ENVIRON["SHTOOLS_INC"]}/SAGPR_PREFIX=/{printf "SAGPR_PREFIX=%s\n",ENVIRON["USE_PREFIX"]}/BLAS_LIB=/{printf "BLAS_LIB=%s\n",ENVIRON["BLAS_LIB"]}/LAPACK_LIB=/{printf "LAPACK_LIB=%s\n",ENVIRON["LAPACK_LIB"]}!/SHTOOLS_LIB=|SHTOOLS_INCLUDE=|SAGPR_PREFIX=|BLAS_LIB=|LAPACK_LIB=/{print}' > src/Makefile
 
 else
@@ -143,4 +145,5 @@ else
         cat src/Makefile.ifort | awk '/SHTOOLS_LIB=/{printf "SHTOOLS_LIB=%s\n",ENVIRON["SHTOOLS_LIB"]}/SHTOOLS_INCLUDE=/{printf "SHTOOLS_INCLUDE=%s\n",ENVIRON["SHTOOLS_INC"]}/SAGPR_PREFIX=/{printf "SAGPR_PREFIX=%s\n",ENVIRON["USE_PREFIX"]}/BLAS_LIB=/{printf "BLAS_LIB=%s\n",ENVIRON["BLAS_LIB"]}/LAPACK_LIB=/{printf "LAPACK_LIB=%s\n",ENVIRON["LAPACK_LIB"]}/FFTW_LIB=/{printf "FFTW_LIB=%s\n",ENVIRON["FFTW_LIB"]}!/SHTOOLS_LIB=|SHTOOLS_INCLUDE=|SAGPR_PREFIX=|BLAS_LIB=|LAPACK_LIB=|FFTW_LIB=/{print}' > src/Makefile
 fi
 
+echo "The lapack, BLAS and SHTOOLS directories in 'install' can be deleted if necessary"
 echo "Go to src and run the command 'make' to compile the code"
