@@ -1,5 +1,6 @@
 module io
  use apply
+ use F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer
 
  contains
 
@@ -231,6 +232,82 @@ subroutine read_frame(frame,un,vrb,prd)
    enddo
   endif
   if (verbose) write(*,*) 'Got input frame with ',nat,'atoms'
+
+end subroutine
+
+!****************************************************************************************************************
+
+subroutine read_frame_socket(frame,nat,socket)
+implicit none
+
+  type(Frame_XYZ), intent(inout) :: frame
+  integer socket,i,cbuf,nat
+  real*8 mtxbuf(9),cell_h(3,3),virial(3,3)
+  real*8, allocatable :: msgbuffer(:)
+  real*8, parameter :: bohrtoangstrom = 0.52917721d0
+
+  if (allocated(frame%xyz)) deallocate(frame%xyz,frame%natoms,frame%cell)
+  call readbuffer(socket, mtxbuf, 9)  ! Cell matrix
+  cell_h = reshape(mtxbuf, (/3,3/))
+  cell_h = transpose(cell_h)
+  call readbuffer(socket, mtxbuf, 9)
+  call readbuffer(socket, cbuf)
+  nat = cbuf
+  frame%natmax = nat
+  frame%nframes = 1
+  allocate(frame%xyz(frame%nframes,frame%natmax,3),frame%natoms(frame%nframes), &
+     &     msgbuffer(3*nat),frame%cell(frame%nframes,3,3))
+  frame%natoms(1) = nat
+  call readbuffer(socket, msgbuffer, nat*3) 
+  ! Read in atoms
+  do i=1,nat
+   frame%xyz(1,i,:) = msgbuffer(3*(i-1)+1:3*i) * bohrtoangstrom
+  enddo
+  frame%cell(1,:,:) = cell_h(:,:) * bohrtoangstrom
+
+end subroutine
+
+!****************************************************************************************************************
+
+subroutine send_information_socket(GPR,nat,socket)
+implicit none
+
+  type(SAGPR_Model), intent(inout) :: GPR
+  integer socket,cbuf,j,k,l,nat
+  real*8, allocatable :: msgbuffer(:)
+  real*8 virial(3,3)
+  character(len=2048) initbuffer
+  integer, parameter :: MSGLEN=12
+
+  ! Now we send all of the information back to the wrapper
+  ! We start with a lot of zeros (there is no contribution to the energy
+  ! or force)
+  allocate(msgbuffer(3*nat))
+  msgbuffer(:) = 0.d0
+  virial(:,:) = 0.d0
+  call writebuffer(socket,"FORCEREADY  ",MSGLEN)
+  call writebuffer(socket,0.d0)
+  call writebuffer(socket,nat)
+  call writebuffer(socket,msgbuffer,3*nat)
+  call writebuffer(socket,reshape(virial,(/9/)),9)
+  ! Send prediction; we will send only the prediction for the entire
+  ! frame, rather than for each atom (the latter will be stored in an
+  ! output file)
+  initbuffer = " "
+  write(initbuffer,*) ((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
+  cbuf = len_trim(initbuffer)
+  call writebuffer(socket,cbuf)
+  call writebuffer(socket,initbuffer,cbuf)
+  ! If we are doing atomic predictions, also print them to a file
+  if (GPR%atomic) then
+   write(33,*) size(GPR%prediction_lm_c,1)
+   write(33,*) '# Total',((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
+   do l=1,size(GPR%prediction_lm_c,1)
+    write(33,*)  GPR%atname_at(l),((GPR%prediction_lm_c(l,j,k),j=1,GPR%degen),k=1,GPR%nw)
+   enddo
+   flush(33)
+  endif
+  deallocate(msgbuffer)
 
 end subroutine
 
