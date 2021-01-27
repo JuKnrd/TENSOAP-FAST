@@ -24,7 +24,7 @@ if [ "${compiler}" == "gfortran" ];then
 		fi
 		echo "Compiling SHTOOLS..."
 		cd install/SHTOOLS
-		cat Makefile | awk '/PREFIX =/{print "PREFIX =",ENVIRON["TENSOAP_PREFIX"]}!/PREFIX =/{print}' > tmp.make;mv tmp.make Makefile
+		cat Makefile | awk '/PREFIX =/{print "PREFIX =",ENVIRON["TENSOAP_PREFIX"]}!/PREFIX =/{print}' > Makefile.temp;mv Makefile.temp Makefile
 		make && make install
 		cd ../../
 		echo "...SHTOOLS compiled"
@@ -51,7 +51,7 @@ if [ "${compiler}" == "gfortran" ];then
 			tar xvfz blas.tgz;rm blas.tgz;cd BLAS-3.8.0
 			make
 			cd ../
-			mv BLAS-3.8.0/blas_LINUX.a BLAS-3.8.0/libblas.a
+			cp BLAS-3.8.0/blas_LINUX.a lib/libblas.a
 			OWN_BLAS=1
 		fi
 	fi
@@ -72,6 +72,7 @@ if [ "${compiler}" == "gfortran" ];then
 			tar xvfz lapack.tgz;rm lapack.tgz;cd lapack-*
 			cat make.inc.example | sed 's:O2:O3:g' | sed 's:frecursive:frecursive -fPIC:g' > make.inc;make lib
 			cd ../
+			cp lapack-3.9.0/liblapack.a lib/liblapack.a
 			OWN_LAPACK=1
 		fi
 	fi
@@ -86,15 +87,11 @@ if [ "${compiler}" == "gfortran" ];then
 	fi
 	
 	if [ ${OWN_BLAS} -eq 1 ];then
-		cd install/BLAS*
-		export BLAS_LIB=-L$(pwd)
-		cd ../../
+		export BLAS_LIB=-L$(pwd)/install/lib
 	fi
 	
 	if [ ${OWN_LAPACK} -eq 1 ];then
-		cd install/lapack*
-		export LAPACK_LIB=-L$(pwd)
-		cd ../../
+		export LAPACK_LIB=-L$(pwd)/install/lib
 	fi
 	
 	export SHTOOLS_LIB=-L$(pwd)/install/lib
@@ -115,8 +112,8 @@ else
                 fi
                 echo "Compiling SHTOOLS..."
                 cd install/SHTOOLS
-                cat Makefile | awk '/F95 =/{print "F95 = ifort"}!/F95 =/{print}' > Makefile.temp;mv Makefile.temp Makefile
-                make
+                cat Makefile | awk '/F95 =/{print "F95 = ifort"}/PREFIX =/{print "PREFIX =",ENVIRON["TENSOAP_PREFIX"]}!/F95 =|PREFIX =/{print}' > Makefile.temp;mv Makefile.temp Makefile
+                make && make install
                 cd ../../
                 echo "...SHTOOLS compiled"
         else
