@@ -15,9 +15,7 @@ program sagpr_apply
     character(len=2048) initbuffer
     integer, parameter :: MSGLEN=12
     integer t1,t2,cr,ts,tf
-    real*8 rate,mtxbuf(9),cell_h(3,3),virial(3,3)
-    real*8, allocatable :: msgbuffer(:)
-    real*8, parameter :: bohrtoangstrom = 0.52917721d0
+    real*8 rate
     logical readnext,use_socket,hasdata
 
 !************************************************************************************
@@ -143,24 +141,7 @@ program sagpr_apply
         call readbuffer(socket, initbuffer, cbuf)
        elseif (trim(header)=='POSDATA') then
         ! The wrapper is sending atom positions
-        if (allocated(frames%xyz)) deallocate(frames%xyz,frames%natoms,frames%cell)
-        call readbuffer(socket, mtxbuf, 9)  ! Cell matrix
-        cell_h = reshape(mtxbuf, (/3,3/))
-        cell_h = transpose(cell_h)
-        call readbuffer(socket, mtxbuf, 9)
-        call readbuffer(socket, cbuf)
-        nat = cbuf
-        frames%natmax = nat
-        frames%nframes = 1
-        allocate(frames%xyz(frames%nframes,frames%natmax,3),frames%natoms(frames%nframes), &
-     &     msgbuffer(3*nat),frames%cell(frames%nframes,3,3))
-        frames%natoms(1) = nat
-        call readbuffer(socket, msgbuffer, nat*3) 
-        ! Read in atoms
-        do i=1,nat
-         frames%xyz(1,i,:) = msgbuffer(3*(i-1)+1:3*i) * bohrtoangstrom
-        enddo
-        frames%cell(1,:,:) = cell_h(:,:) * bohrtoangstrom
+        call read_frame_socket(frames,nat,socket)
 
         ! With all of the necessary data read in, do the prediction
         call system_clock(t1)
@@ -177,37 +158,10 @@ program sagpr_apply
 
         ! We have the data
         hasdata = .true.
-        deallocate(frames%xyz,frames%natoms,msgbuffer,frames%cell)
+        deallocate(frames%xyz,frames%natoms,frames%cell)
        elseif (trim(header)=='GETFORCE') then
-        ! Now we send all of the information back to the wrapper
-        ! We start with a lot of zeros (there is no contribution to the energy
-        ! or force)
-        allocate(msgbuffer(3*nat))
-        msgbuffer(:) = 0.d0
-        virial(:,:) = 0.d0
-        call writebuffer(socket,"FORCEREADY  ",MSGLEN)
-        call writebuffer(socket,0.d0)
-        call writebuffer(socket,nat)
-        call writebuffer(socket,msgbuffer,3*nat)
-        call writebuffer(socket,reshape(virial,(/9/)),9)
-        ! Send prediction; we will send only the prediction for the entire
-        ! frame, rather than for each atom (the latter will be stored in an
-        ! output file)
-        initbuffer = " "
-        write(initbuffer,*) ((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
-        cbuf = len_trim(initbuffer)
-        call writebuffer(socket,cbuf)
-        call writebuffer(socket,initbuffer,cbuf)
-        ! If we are doing atomic predictions, also print them to a file
-        if (GPR%atomic) then
-         write(33,*) size(GPR%prediction_lm_c,1)
-         write(33,*) '# Total',((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
-         do l=1,size(GPR%prediction_lm_c,1)
-          write(33,*)  GPR%atname_at(l),((GPR%prediction_lm_c(l,j,k),j=1,GPR%degen),k=1,GPR%nw)
-         enddo
-         flush(33)
-        endif
-        deallocate(msgbuffer)
+        ! Send information back to the wrapper
+        call send_information_socket(GPR,nat,socket)
         hasdata = .false.
        else
         write(*,*) 'ERROR: unexpected header ',header
