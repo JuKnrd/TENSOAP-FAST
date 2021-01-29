@@ -7,7 +7,7 @@ program sagpr_apply
     type(SAGPR_Model) :: GPR
     type(Frame_XYZ) :: frames
     character(len=100), allocatable :: arg(:),keys(:)
-    integer i,j,k,l,ios,numkeys,port,socket,inet,cbuf,nargs
+    integer i,j,k,l,ios,numkeys,port,socket,inet,cbuf,nargs,fr
     integer nat
     character(len=100) ofile,model,fname,sock_arg(3)
     character(len=1024) hostname
@@ -98,6 +98,7 @@ program sagpr_apply
 
     ios = 1
     hasdata = .false.
+    fr = 0
     ! Open output file
     if (.not. use_socket) open(unit=33,file=ofile,access='stream',form='formatted')
     if (use_socket .and. GPR%atomic) open(unit=33,file=ofile,access='stream',form='formatted')
@@ -110,6 +111,7 @@ program sagpr_apply
        ! Read the next frame from xyz file
        call read_frame(frames,15,GPR%verbose,GPR%periodic)
 
+       fr = fr + 1
        call system_clock(t1)
 
        ! Do prediction
@@ -123,6 +125,7 @@ program sagpr_apply
 
        call system_clock(t2)
        if (GPR%verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
+       if (GPR%verbose) write(*,'(A,I0)') '===> Frame ',fr
        if (GPR%verbose) write(*,*)
 
       else
