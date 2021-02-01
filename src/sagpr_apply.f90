@@ -9,14 +9,16 @@ program sagpr_apply
     character(len=100), allocatable :: arg(:),keys(:)
     integer i,j,k,l,ios,numkeys,port,socket,inet,cbuf,nargs,fr
     integer nat,s_frame
-    character(len=100) ofile,model,fname,sock_arg(3)
+    character(len=100) ofile,model,fname,sock_arg(3),ifile
     character(len=1024) hostname
     character(len=12) header
     character(len=2048) initbuffer
     integer, parameter :: MSGLEN=12
     integer t1,t2,cr,ts,tf
     real*8 rate
-    logical readnext,use_socket,hasdata
+    logical readnext,use_socket,hasdata,verbose,atomic
+
+namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
 
 !************************************************************************************
 ! GET COMMAND-LINE ARGUMENTS
@@ -33,6 +35,7 @@ program sagpr_apply
     ! Parse these arguments
     numkeys = 8
     allocate(keys(numkeys))
+    ifile = 'tensoap.in'
     model = ''
     ofile = 'prediction.out'
     fname = ''
@@ -41,13 +44,14 @@ program sagpr_apply
     GPR%verbose = .false.
     GPR%atomic = .false.
     s_frame = -1
-    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-a  ','-b  ','NULL'/)
+    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-a  ','-b  ','-i  ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-m') read(arg(i+1),'(A)') model
      if (arg(i).eq.'-o') read(arg(i+1),'(A)') ofile
      if (arg(i).eq.'-f') read(arg(i+1),'(A)') fname
      if (arg(i).eq.'-b') read(arg(i+1),'(I10)') s_frame
+     if (arg(i).eq.'-i') read(arg(i+1),'(A)') ifile
      if (arg(i).eq.'-v') GPR%verbose=.true.
      if (arg(i).eq.'-a') GPR%atomic=.true.
      if (arg(i).eq.'-s') then
@@ -114,7 +118,6 @@ program sagpr_apply
        call read_frame(frames,15,GPR%verbose,GPR%periodic)
 
        fr = fr + 1
-        write(*,*) fr,s_frame
        if (fr.ge.s_frame) then
          call system_clock(t1)
 
