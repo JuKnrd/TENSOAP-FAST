@@ -8,7 +8,7 @@ program sagpr_apply
     type(Frame_XYZ) :: frames
     character(len=100), allocatable :: arg(:),keys(:)
     integer i,j,k,l,ios,numkeys,port,socket,inet,cbuf,nargs,fr
-    integer nat
+    integer nat,s_frame
     character(len=100) ofile,model,fname,sock_arg(3)
     character(len=1024) hostname
     character(len=12) header
@@ -40,12 +40,14 @@ program sagpr_apply
     inet = 1
     GPR%verbose = .false.
     GPR%atomic = .false.
-    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-a  ','NULL'/)
+    s_frame = -1
+    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-a  ','-b  ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-m') read(arg(i+1),'(A)') model
      if (arg(i).eq.'-o') read(arg(i+1),'(A)') ofile
      if (arg(i).eq.'-f') read(arg(i+1),'(A)') fname
+     if (arg(i).eq.'-b') read(arg(i+1),'(I10)') s_frame
      if (arg(i).eq.'-v') GPR%verbose=.true.
      if (arg(i).eq.'-a') GPR%atomic=.true.
      if (arg(i).eq.'-s') then
@@ -112,21 +114,24 @@ program sagpr_apply
        call read_frame(frames,15,GPR%verbose,GPR%periodic)
 
        fr = fr + 1
-       call system_clock(t1)
+        write(*,*) fr,s_frame
+       if (fr.ge.s_frame) then
+         call system_clock(t1)
 
-       ! Do prediction
-       call predict_frame(GPR,frames,rate)
+         ! Do prediction
+         call predict_frame(GPR,frames,rate)
 
-       ! Rescale predictions about the mean
-       call rescale_predictions(GPR)
+         ! Rescale predictions about the mean
+         call rescale_predictions(GPR)
 
-       ! Print predictions
-       call print_predictions(GPR,33)
+         ! Print predictions
+         call print_predictions(GPR,33)
 
-       call system_clock(t2)
-       if (GPR%verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
-       if (GPR%verbose) write(*,'(A,I0)') '===> Frame ',fr
-       if (GPR%verbose) write(*,*)
+         call system_clock(t2)
+         if (GPR%verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
+         if (GPR%verbose) write(*,'(A,I0)') '===> Frame ',fr
+         if (GPR%verbose) write(*,*)
+       endif
 
       else
        ! Read from the socket
