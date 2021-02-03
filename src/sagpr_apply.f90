@@ -16,7 +16,7 @@ program sagpr_apply
     integer, parameter :: MSGLEN=12
     integer t1,t2,cr,ts,tf
     real*8 rate
-    logical readnext,use_socket,hasdata,verbose,atomic
+    logical readnext,use_socket,hasdata,verbose,atomic,exists
 
 namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
 
@@ -106,7 +106,18 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
     hasdata = .false.
     fr = 0
     ! Open output file
-    if (.not. use_socket) open(unit=33,file=ofile,access='stream',form='formatted')
+    if (.not. use_socket) then
+     if (s_frame.le.0) then
+      open(unit=33,file=ofile,access='stream',form='formatted')
+     else
+      inquire(file=ofile,exist=exists)
+      if (exists) then
+       open(unit=33,file=ofile,access='stream',form='formatted',status='old',position='append')
+      else
+       open(unit=33,file=ofile,access='stream',form='formatted')
+      endif
+     endif
+    endif
     if (use_socket .and. GPR%atomic) open(unit=33,file=ofile,access='stream',form='formatted')
     ! Keep going through input
     do while (ios.ne.0)
