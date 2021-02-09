@@ -10,7 +10,7 @@ SHTOOLS_LIB=
 SHTOOLS_INCLUDE=
 LD=$(SHTOOLS_LIB) -lSHTOOLS -lm $(LAPACK_LIB) -llapack $(BLAS_LIB) -lblas
 INCLUDE=$(SHTOOLS_INCLUDE)
-SAGPR_PREFIX=
+SAGPR_PREFIX=/usr/local
 
 OBJECTS1=mod_sagpr.o sagpr_get_PS.o
 OBJECTS2=mod_sagpr.o sagpr_get_kernel.o
@@ -53,11 +53,10 @@ sagpr_apply: $(OBJECTS5)
 %.o: %.f
 	$(FF) $(FOPTS) -c $<
 
-install: all mkinstall
-
-mkinstall:
-	@if [ "$(SAGPR_PREFIX)" != "" ];then mkdir -p $(SAGPR_PREFIX);cp ../bin/sagpr_* $(SAGPR_PREFIX)/;fi
-	@echo "INSTALLED SOAPFAST"
+install: all
+	@mkdir -p $(SAGPR_PREFIX)/{bin,lib}
+	@cp ../bin/* $(SAGPR_PREFIX)/bin
+	@cp ../lib/* $(SAGPR_PREFIX)/lib
 
 check: all mkcheck
 

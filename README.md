@@ -6,6 +6,8 @@ This code allows the use of models trained using `TENSOAP`/`SOAPFAST`; the key p
 
 I have tested this code with `gfortran`, version `7.4.0`, and `ifort`, version `18.0.5`. In order to compile this code, it should suffice to run the `configure` script in the topmost directory. This will search for the required libraries, and compile them from scratch if needed; it will then produce a `Makefile`, so that you can compile the code by running `make` in the `src` directory.
 
+The command `make install` installs the executables and libraries. The default root folder is `/usr/local`; to use a different directory either run the configuration script with the command `SAGPR_PREFIX=/path/to/folder configure` or modify the `SAGPR_PREFIX` variable in the Makefile.
+
 It should be noted that there is no guarantee this code is as optimized as it can be; further, if you already have the required libraries (`BLAS`, `lapack`) on your system these are recommended, rather than compiling your own version.
 
 # Use
