@@ -4,12 +4,13 @@ program sagpr_apply
     USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer
     implicit none
 
-    type(SAGPR_Model) :: GPR
+    type(SAGPR_Model), allocatable :: GPR(:)
     type(Frame_XYZ) :: frames
     character(len=100), allocatable :: arg(:),keys(:)
     integer i,j,k,l,ios,numkeys,port,socket,inet,cbuf,nargs,fr
-    integer nat,s_frame
-    character(len=100) ofile,model,fname,sock_arg(3),ifile
+    integer nat,s_frame,n_mod
+    character(len=100) fname,sock_arg(3),ifile
+    character(len=100), allocatable :: model(:),ofile(:)
     character(len=1024) hostname
     character(len=12) header
     character(len=2048) initbuffer
@@ -32,28 +33,78 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
     enddo
     arg(nargs+1) = 'NULL'
 
-    ! Parse these arguments
+    ! Do a first pass to find the number of input arguments
     numkeys = 8
     allocate(keys(numkeys))
+    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-a  ','-b  ','-i','NULL'/)
+    n_mod = -1
+    do i=1,nargs
+     arg(i) = trim(adjustl(arg(i)))
+     if (arg(i).eq.'-m') then
+      n_mod = 0
+      readnext = .true.
+      do k=i+1,nargs
+       if (readnext) then
+        do j=1,numkeys
+         readnext = readnext.and.(trim(adjustl(arg(k))).ne.trim(adjustl(keys(j))))
+        enddo
+        if (readnext) n_mod = n_mod + 1
+       endif
+      enddo
+     endif
+    enddo
+    if (n_mod.eq.-1) stop 'ERROR: no model given!'
+    allocate(GPR(n_mod),model(n_mod))
+    write(*,*) 'n_mod=',n_mod
+
+    ! Check the number of output files given is also correct
+    l = -1
+    do i=1,nargs
+     arg(i) = trim(adjustl(arg(i)))
+     if (arg(i).eq.'-o') then
+      l = 0
+      readnext = .true.
+      do k=i+1,nargs
+       if (readnext) then
+        do j=1,numkeys
+         readnext = readnext.and.(trim(adjustl(arg(k))).ne.trim(adjustl(keys(l))))
+        enddo
+        if (readnext) l = l + 1
+       endif
+      enddo
+     endif
+    enddo
+    if (l.eq.-1) stop 'ERROR: no output files given!'
+    if (l.ne.n_mod) stop 'ERROR: wrong number of outputs given!'
+    allocate(ofile(n_mod))
+
+    ! Parse these arguments
     ifile = 'tensoap.in'
-    model = ''
-    ofile = 'prediction.out'
+    model(:) = ''
+    ofile(:) = 'prediction.out'
     fname = ''
     use_socket = .false.
     inet = 1
-    GPR%verbose = .false.
-    GPR%atomic = .false.
+    GPR(:)%verbose = .false.
+    GPR(:)%atomic = .false.
     s_frame = -1
-    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-a  ','-b  ','-i  ','NULL'/)
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
-     if (arg(i).eq.'-m') read(arg(i+1),'(A)') model
-     if (arg(i).eq.'-o') read(arg(i+1),'(A)') ofile
+     if (arg(i).eq.'-m') then
+      do k=1,n_mod
+       read(arg(i+k),'(A)') model(k)
+      enddo
+     endif
+     if (arg(i).eq.'-o') then
+      do k=1,n_mod
+       read(arg(i+k),'(A)') ofile(k)
+      enddo
+     endif
      if (arg(i).eq.'-f') read(arg(i+1),'(A)') fname
      if (arg(i).eq.'-b') read(arg(i+1),'(I10)') s_frame
      if (arg(i).eq.'-i') read(arg(i+1),'(A)') ifile
-     if (arg(i).eq.'-v') GPR%verbose=.true.
-     if (arg(i).eq.'-a') GPR%atomic=.true.
+     if (arg(i).eq.'-v') GPR(:)%verbose=.true.
+     if (arg(i).eq.'-a') GPR(:)%atomic=.true.
      if (arg(i).eq.'-s') then
       use_socket = .true.
       readnext = .true.
@@ -73,14 +124,18 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
     deallocate(arg)
 
     ! Check for arguments that are required
-    if (model.eq.'') stop 'ERROR: model file required!'
+    do k=1,n_mod
+     if (model(k).eq.'') stop 'ERROR: model file required!'
+    enddo
     if (fname.eq.'') stop 'ERROR: file name required!'
 
 !************************************************************************************
 ! GET MODEL
 !************************************************************************************
 
-    call get_model(GPR,model)
+    do k=1,n_mod
+     call get_model(GPR(k),model(k))
+    enddo
 
 !************************************************************************************
 ! READ IN DATA AND MAKE PREDICTIONS
@@ -91,7 +146,7 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
     if (ios.ne.0) stop 'ERROR: input file does not exist!'
     if (use_socket) then
      ! Get atom names
-     call read_frame(frames,15,GPR%verbose,GPR%periodic)
+     call read_frame(frames,15,GPR(1)%verbose,GPR(1)%periodic)
      ! Set up socket
      hostname = trim(adjustl(sock_arg(1)))//achar(0)
      read(sock_arg(2),*) port
@@ -118,7 +173,7 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
       endif
      endif
     endif
-    if (use_socket .and. GPR%atomic) open(unit=33,file=ofile,access='stream',form='formatted')
+    if (use_socket .and. GPR(1)%atomic) open(unit=33,file=ofile,access='stream',form='formatted')
     ! Keep going through input
     do while (ios.ne.0)
      open(unit=73,file='EXIT',status='old',iostat=ios)
@@ -126,25 +181,25 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
 
       if (.not. use_socket) then
        ! Read the next frame from xyz file
-       call read_frame(frames,15,GPR%verbose,GPR%periodic)
+       call read_frame(frames,15,GPR(1)%verbose,GPR(1)%periodic)
 
        fr = fr + 1
        if (fr.ge.s_frame) then
          call system_clock(t1)
 
          ! Do prediction
-         call predict_frame(GPR,frames,rate)
+         call predict_frame(GPR(1),frames,rate)
 
          ! Rescale predictions about the mean
-         call rescale_predictions(GPR)
+         call rescale_predictions(GPR(1))
 
          ! Print predictions
-         call print_predictions(GPR,33)
+         call print_predictions(GPR(1),33)
 
          call system_clock(t2)
-         if (GPR%verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
-         if (GPR%verbose) write(*,'(A,I0)') '===> Frame ',fr
-         if (GPR%verbose) write(*,*)
+         if (GPR(1)%verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
+         if (GPR(1)%verbose) write(*,'(A,I0)') '===> Frame ',fr
+         if (GPR(1)%verbose) write(*,*)
        endif
 
       else
@@ -169,21 +224,21 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
         call system_clock(t1)
 
         ! Do prediction
-        call predict_frame(GPR,frames,rate)
+        call predict_frame(GPR(1),frames,rate)
 
         ! Rescale committee predictions about their mean
-        call rescale_predictions(GPR)
+        call rescale_predictions(GPR(1))
 
         call system_clock(t2)
-        if (GPR%verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
-        if (GPR%verbose) write(*,*)
+        if (GPR(1)%verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
+        if (GPR(1)%verbose) write(*,*)
 
         ! We have the data
         hasdata = .true.
         deallocate(frames%xyz,frames%natoms,frames%cell)
        elseif (trim(header)=='GETFORCE') then
         ! Send information back to the wrapper
-        call send_information_socket(GPR,nat,socket)
+        call send_information_socket(GPR(1),nat,socket)
         hasdata = .false.
        else
         write(*,*) 'ERROR: unexpected header ',header
@@ -196,16 +251,19 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
 
     ! Array deallocation
     if (allocated(frames%xyz)) deallocate(frames%xyz,frames%atname, &
-     &     frames%natoms,frames%comment,GPR%sparsification, &
-     &     frames%cell,GPR%PS_tr_lam,GPR%wt,arg,keys,GPR%prediction_lm,GPR%PS)
-    if (allocated(GPR%natoms_tr)) deallocate(GPR%natoms_tr)
-    if (allocated(GPR%PS0)) deallocate(GPR%PS0)
-    if (allocated(GPR%ker)) deallocate(GPR%ker)
-    if (allocated(GPR%ker_lm)) deallocate(GPR%ker_lm)
-    if (allocated(GPR%sparsification0)) deallocate(GPR%sparsification0,GPR%PS_tr_0)
-    if (allocated(GPR%components)) deallocate(GPR%components)
-    if (allocated(GPR%w3j)) deallocate(GPR%w3j)
-    if (allocated(GPR%meanval_c)) deallocate(GPR%meanval_c,GPR%wt_c,GPR%prediction_lm_c)
-    if (allocated(GPR%atname_at)) deallocate(GPR%atname_at)
+     &     frames%natoms,frames%comment,frames%cell)
+    if (allocated(frames%xyz)) deallocate(GPR(1)%PS_tr_lam,GPR(1)%wt,arg,keys,GPR(1)%prediction_lm,GPR(1)%PS,GPR(1)%sparsification)
+    if (allocated(GPR(1)%natoms_tr)) deallocate(GPR(1)%natoms_tr)
+    if (allocated(GPR(1)%PS0)) deallocate(GPR(1)%PS0)
+    if (allocated(GPR(1)%ker)) deallocate(GPR(1)%ker)
+    if (allocated(GPR(1)%ker_lm)) deallocate(GPR(1)%ker_lm)
+    if (allocated(GPR(1)%sparsification0)) deallocate(GPR(1)%sparsification0,GPR(1)%PS_tr_0)
+    if (allocated(GPR(1)%components)) deallocate(GPR(1)%components)
+    if (allocated(GPR(1)%w3j)) deallocate(GPR(1)%w3j)
+    if (allocated(GPR(1)%meanval_c)) deallocate(GPR(1)%meanval_c,GPR(1)%wt_c,GPR(1)%prediction_lm_c)
+    if (allocated(GPR(1)%atname_at)) deallocate(GPR(1)%atname_at)
+    do i=1,n_mod
+     deallocate(GPR,model,ofile)
+    enddo
 
 end program
