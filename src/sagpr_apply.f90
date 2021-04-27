@@ -55,7 +55,6 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
     enddo
     if (n_mod.eq.-1) stop 'ERROR: no model given!'
     allocate(GPR(n_mod),model(n_mod))
-    write(*,*) 'n_mod=',n_mod
 
     ! Check the number of output files given is also correct
     l = -1
@@ -187,19 +186,21 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
        if (fr.ge.s_frame) then
          call system_clock(t1)
 
-         ! Do prediction
-         call predict_frame(GPR(1),frames,rate)
+         do l=1,n_mod
+          ! Do prediction
+          call predict_frame(GPR(l),frames,rate)
 
-         ! Rescale predictions about the mean
-         call rescale_predictions(GPR(1))
+          ! Rescale predictions about the mean
+          call rescale_predictions(GPR(l))
 
-         ! Print predictions
-         call print_predictions(GPR(1),33)
+          ! Print predictions
+          call print_predictions(GPR(l),33)
 
-         call system_clock(t2)
-         if (GPR(1)%verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
-         if (GPR(1)%verbose) write(*,'(A,I0)') '===> Frame ',fr
-         if (GPR(1)%verbose) write(*,*)
+          call system_clock(t2)
+          if (GPR(1)%verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
+          if (GPR(1)%verbose) write(*,'(A,I0)') '===> Frame ',fr
+          if (GPR(1)%verbose) write(*,*)
+         enddo
        endif
 
       else
@@ -223,11 +224,13 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
         ! With all of the necessary data read in, do the prediction
         call system_clock(t1)
 
-        ! Do prediction
-        call predict_frame(GPR(1),frames,rate)
+        do l=1,n_mod
+         ! Do prediction
+         call predict_frame(GPR(l),frames,rate)
 
-        ! Rescale committee predictions about their mean
-        call rescale_predictions(GPR(1))
+         ! Rescale committee predictions about their mean
+         call rescale_predictions(GPR(l))
+        enddo
 
         call system_clock(t2)
         if (GPR(1)%verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
@@ -237,6 +240,7 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
         hasdata = .true.
         deallocate(frames%xyz,frames%natoms,frames%cell)
        elseif (trim(header)=='GETFORCE') then
+        stop 'ERROR: not yet compatible with sockets!'
         ! Send information back to the wrapper
         call send_information_socket(GPR(1),nat,socket)
         hasdata = .false.
