@@ -242,9 +242,8 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
         hasdata = .true.
         deallocate(frames%xyz,frames%natoms,frames%cell)
        elseif (trim(header)=='GETFORCE') then
-        stop 'ERROR: not yet compatible with sockets!'
         ! Send information back to the wrapper
-        call send_information_socket(GPR(1),nat,socket)
+        call send_information_socket(GPR,nat,socket)
         hasdata = .false.
        else
         write(*,*) 'ERROR: unexpected header ',header

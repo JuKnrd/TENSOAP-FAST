@@ -272,8 +272,8 @@ end subroutine
 subroutine send_information_socket(GPR,nat,socket)
 implicit none
 
-  type(SAGPR_Model), intent(inout) :: GPR
-  integer socket,cbuf,j,k,l,nat
+  type(SAGPR_Model), intent(inout) :: GPR(:)
+  integer socket,cbuf,j,k,l,m,nat
   real*8, allocatable :: msgbuffer(:)
   real*8 virial(3,3)
   character(len=2048) initbuffer
@@ -294,19 +294,21 @@ implicit none
   ! frame, rather than for each atom (the latter will be stored in an
   ! output file)
   initbuffer = " "
-  write(initbuffer,*) ((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
+!  write(initbuffer,*) ((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
   cbuf = len_trim(initbuffer)
   call writebuffer(socket,cbuf)
   call writebuffer(socket,initbuffer,cbuf)
   ! If we are doing atomic predictions, also print them to a file
-  if (GPR%atomic) then
-   write(33,*) size(GPR%prediction_lm_c,1)
-   write(33,*) '# Total',((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
-   do l=1,size(GPR%prediction_lm_c,1)
-    write(33,*)  GPR%atname_at(l),((GPR%prediction_lm_c(l,j,k),j=1,GPR%degen),k=1,GPR%nw)
+!  if (GPR%atomic) then
+  do m=1,size(GPR)
+   write(32+m,*) size(GPR(m)%prediction_lm_c,1)
+   write(32+m,*) '# Total',((sum(GPR(m)%prediction_lm_c(:,j,k)),j=1,GPR(m)%degen),k=1,GPR(m)%nw)
+   do l=1,size(GPR(m)%prediction_lm_c,1)
+    write(32+m,*)  GPR(m)%atname_at(l),((GPR(m)%prediction_lm_c(l,j,k),j=1,GPR(m)%degen),k=1,GPR(m)%nw)
    enddo
-   flush(33)
-  endif
+   flush(32+m)
+  enddo
+!  endif
   deallocate(msgbuffer)
 
 end subroutine
