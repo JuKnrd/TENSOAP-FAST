@@ -161,16 +161,18 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
     fr = 0
     ! Open output file
     if (.not. use_socket) then
-     if (s_frame.le.0) then
-      open(unit=33,file=ofile,access='stream',form='formatted')
-     else
-      inquire(file=ofile,exist=exists)
-      if (exists) then
-       open(unit=33,file=ofile,access='stream',form='formatted',status='old',position='append')
+     do l=1,n_mod
+      if (s_frame.le.0) then
+       open(unit=32+l,file=ofile(l),access='stream',form='formatted')
       else
-       open(unit=33,file=ofile,access='stream',form='formatted')
+       inquire(file=ofile(l),exist=exists)
+       if (exists) then
+        open(unit=32+l,file=ofile(l),access='stream',form='formatted',status='old',position='append')
+       else
+        open(unit=32+l,file=ofile(l),access='stream',form='formatted')
+       endif
       endif
-     endif
+     enddo
     endif
     if (use_socket .and. GPR(1)%atomic) open(unit=33,file=ofile,access='stream',form='formatted')
     ! Keep going through input
@@ -194,7 +196,7 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
           call rescale_predictions(GPR(l))
 
           ! Print predictions
-          call print_predictions(GPR(l),33)
+          call print_predictions(GPR(l),32+l)
 
           call system_clock(t2)
           if (GPR(1)%verbose) write(*,'(A,F6.3,A)') '===>Time taken: ',(t2-t1)/rate,' seconds'
