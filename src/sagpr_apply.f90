@@ -66,7 +66,7 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
       do k=i+1,nargs
        if (readnext) then
         do j=1,numkeys
-         readnext = readnext.and.(trim(adjustl(arg(k))).ne.trim(adjustl(keys(l))))
+         readnext = readnext.and.(trim(adjustl(arg(k))).ne.trim(adjustl(keys(j))))
         enddo
         if (readnext) l = l + 1
        endif
