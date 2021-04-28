@@ -118,14 +118,18 @@ subroutine predict_frame(this,frames,rate)
      frames%nframes = this%tot_natoms
      frames%natmax = 1
      if (allocated(this%atname_at)) deallocate(this%atname_at)
+     if (allocated(this%natoms_at)) deallocate(this%natoms_at)
      allocate(this%PS_atomic(this%tot_natoms,1,size(this%PS,3), &
      &     size(this%PS,4)),this%natoms_at(this%tot_natoms),this%atname_at(this%tot_natoms))
+     this%PS_atomic(:,:,:,:) = 0.d0
+     this%natoms_at(:) = 0
+     this%atname_at(:) = ''
      ! Populate atomic power spectrum array from original power spectrum
      k = 1
      do i=1,size(this%PS,1)
       this%PS_atomic(k:k+frames%natoms(i),1,:,:) = this%PS(i,1:frames%natoms(i),:,:)
-      this%natoms_at(k:k+frames%natoms(i)) = frames%natoms(i)
-      this%atname_at(k:k+frames%natoms(i)) = frames%atname(i,1:frames%natoms(i))
+      this%natoms_at(k:k+frames%natoms(i)-1) = frames%natoms(i)
+      this%atname_at(k:k+frames%natoms(i)-1) = frames%atname(i,1:frames%natoms(i))
       k = k + frames%natoms(i)
      enddo
      ! Create new power spectrum array with the corrected shape
@@ -184,7 +188,7 @@ subroutine predict_frame(this,frames,rate)
      &     this%nmol,this%nw)
     else
      this%prediction_lm_c = do_prediction_c(this%ker_lm,this%wt_c,this%meanval_c,this%degen,frames%nframes, &
-     &     	this%nmol,this%nw)
+     &     this%nmol,this%nw)
     endif
 
     if (this%atomic) then
@@ -193,7 +197,6 @@ subroutine predict_frame(this,frames,rate)
      do i=1,size(this%prediction_lm_c,1)
       this%prediction_lm_c(i,:,:) = this%prediction_lm_c(i,:,:) / this%natoms_at(i)
      enddo
-     deallocate(this%natoms_at)
     endif
 
 end subroutine

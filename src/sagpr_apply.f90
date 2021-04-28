@@ -36,7 +36,7 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
     ! Do a first pass to find the number of input arguments
     numkeys = 8
     allocate(keys(numkeys))
-    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-a  ','-b  ','-i','NULL'/)
+    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-a  ','-b  ','-i  ','NULL'/)
     n_mod = -1
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
@@ -174,7 +174,11 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
       endif
      enddo
     endif
-    if (use_socket .and. GPR(1)%atomic) open(unit=33,file=ofile,access='stream',form='formatted')
+    if (use_socket .and. GPR(1)%atomic) then
+     do l=1,n_mod
+      open(unit=32+l,file=ofile(l),access='stream',form='formatted')
+     enddo
+    endif
     ! Keep going through input
     do while (ios.ne.0)
      open(unit=73,file='EXIT',status='old',iostat=ios)

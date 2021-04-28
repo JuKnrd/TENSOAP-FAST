@@ -72,7 +72,7 @@ if [ "${compiler}" == "gfortran" ];then
 			tar xvfz lapack.tgz;rm lapack.tgz;cd lapack-*
 			cat make.inc.example | sed 's:O2:O3:g' | sed 's:frecursive:frecursive -fPIC:g' > make.inc;make lib
 			cd ../
-			cp lapack-3.9.0/liblapack.a lib/liblapack.a
+			cp lapack-*/liblapack.a lib/liblapack.a
 			OWN_LAPACK=1
 		fi
 	fi

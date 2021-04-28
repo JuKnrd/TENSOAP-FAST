@@ -150,6 +150,7 @@ subroutine get_model(GPR,model)
    endif
    i = i + 1
    ncen = int(raw_model(i))
+   GPR%all_centres(:) = .false.
    if (ncen.gt.0) then
     do j=1,ncen
      i = i + 1
@@ -158,6 +159,7 @@ subroutine get_model(GPR,model)
    endif
    i = i + 1
    nspec = int(raw_model(i))
+   GPR%all_species(:) = .false.
    if (nspec.gt.0) then
     do j=1,nspec
      i = i + 1
@@ -189,6 +191,11 @@ subroutine read_frame(frame,un,vrb,prd)
   if (present(vrb)) verbose = vrb
   if (present(prd)) periodic = prd
 
+  if (allocated(frame%xyz)) deallocate(frame%xyz)
+  if (allocated(frame%atname)) deallocate(frame%atname)
+  if (allocated(frame%natoms)) deallocate(frame%natoms)
+  if (allocated(frame%comment)) deallocate(frame%comment)
+
    frame%nframes = 1
    read(un,'(A)',iostat=ios) line
    if (ios.ne.0) then
@@ -202,7 +209,6 @@ subroutine read_frame(frame,un,vrb,prd)
     stop
    endif
    frame%natmax = nat
-   if (allocated(frame%xyz)) deallocate(frame%xyz,frame%atname,frame%natoms,frame%comment)
    allocate(frame%xyz(frame%nframes,frame%natmax,3),frame%atname(frame%nframes,frame%natmax), &
      &     frame%natoms(frame%nframes),frame%comment(frame%nframes))
    frame%natoms(1) = nat
