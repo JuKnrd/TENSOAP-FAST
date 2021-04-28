@@ -73,7 +73,8 @@ subroutine predict_frame(this,frames,rate)
     type(SAGPR_Model), intent(inout) :: this
     type(Frame_XYZ), intent(inout) :: frames
 
-    integer ts,tf,i,k
+    integer ts,tf,i,k,backup_nframes,backup_natmax
+    integer, allocatable :: natoms_backup(:)
     real*8 rate
 
     ! Get power spectrum
@@ -115,6 +116,8 @@ subroutine predict_frame(this,frames,rate)
      do i=1,size(this%PS,1)
       this%tot_natoms = this%tot_natoms + frames%natoms(i)
      enddo
+     backup_nframes = frames%nframes
+     backup_natmax  = frames%natmax
      frames%nframes = this%tot_natoms
      frames%natmax = 1
      if (allocated(this%atname_at)) deallocate(this%atname_at)
@@ -150,6 +153,9 @@ subroutine predict_frame(this,frames,rate)
       this%PS0(:,:,:,:) = this%PS0_atomic(:,:,:,:)
       deallocate(this%PS0_atomic)
      endif
+     ! Store number-of-atoms array to put it back later
+     allocate(natoms_backup(size(frames%natoms)))
+     natoms_backup = frames%natoms
      ! Create new number-of-atoms array with the corrected shape
      deallocate(frames%natoms)
      allocate(frames%natoms(this%tot_natoms))
@@ -197,6 +203,14 @@ subroutine predict_frame(this,frames,rate)
      do i=1,size(this%prediction_lm_c,1)
       this%prediction_lm_c(i,:,:) = this%prediction_lm_c(i,:,:) / this%natoms_at(i)
      enddo
+     ! Set number of atoms equal to backed up version, in case we are applying
+     ! multiple models
+     deallocate(frames%natoms)
+     allocate(frames%natoms(size(natoms_backup)))
+     frames%natoms = natoms_backup
+     deallocate(natoms_backup)
+     frames%nframes = backup_nframes
+     frames%natmax  = backup_natmax
     endif
 
 end subroutine
