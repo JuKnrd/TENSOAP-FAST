@@ -28,7 +28,7 @@ elif [ ${lval} == 2 ];then
 		export ii=${i}
 		cat ${fname0} | awk 'BEGIN{dg=ENVIRON["degen0"];ii=ENVIRON["ii"]}{i1=(ii-1)*dg + 1;i2=ii*dg;for (i=i1;i<=i2;i++){printf "%f ",$i};printf "\n"}' > MODEL_${fname0}_${i}
 		cat ${fname2} | awk 'BEGIN{dg=ENVIRON["degen2"];ii=ENVIRON["ii"]}{i1=(ii-1)*dg + 1;i2=ii*dg;for (i=i1;i<=i2;i++){printf "%f ",$i};printf "\n"}' > MODEL_${fname2}_${i}
-		paste MODEL_${fname0}_${i} MODEL_${fname2}_${i} | awk 'BEGIN{f2=(1./2.)**0.5;f3=(1./3.)**0.5;f6=(1./6.)**0.5;f23=(2./3.)**0.5}{a0=$1;a2m2=$2;a2m1=$3;a20=$4;a2p1=$5;a2p2=$6;axy=ayx=f2*a2m2;ayz=azy=f2*a2m1;axz=azx=f2*a20;axx=(-f3*a0 - f6*a2p1 + f2*a2p2);ayy=(-f3*a0 - f6*a2p1 - f2*a2p2);azz=(-f3*a0 + f23*a2p1);printf "%f %f %f %f %f %f %f %f %f\n",axx,axy,axz,ayx,ayy,ayz,azx,azy,azz}' > ${oname}
+		paste MODEL_${fname0}_${i} MODEL_${fname2}_${i} | awk 'BEGIN{f2=(1./2.)**0.5;f3=(1./3.)**0.5;f6=(1./6.)**0.5;f23=(2./3.)**0.5}{a0=$1;a2m2=$2;a2m1=$3;a20=$5;a2p1=$4;a2p2=$6;axy=ayx=f2*a2m2;ayz=azy=f2*a2m1;axz=azx=f2*a20;axx=(-f3*a0 - f6*a2p1 + f2*a2p2);ayy=(-f3*a0 - f6*a2p1 - f2*a2p2);azz=(-f3*a0 + f23*a2p1);printf "%f %f %f %f %f %f %f %f %f\n",axx,axy,axz,ayx,ayy,ayz,azx,azy,azz}' > ${oname}
 	done
 elif [ ${lval} == 0 ];then
 	echo "No conversion needed"
