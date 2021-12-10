@@ -38,3 +38,4 @@ else
 	echo "This l value is not supported"
 	exit
 fi
+rm MODEL_*
