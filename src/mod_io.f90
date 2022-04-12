@@ -194,8 +194,6 @@ subroutine get_LODE(GPR,lodeparams)
    GPR%LODE_params%sigewald = raw_model(2)
    GPR%LODE_params%radsize  = int(raw_model(3))
    GPR%LODE_params%lebsize  = int(raw_model(4))
-   write(*,*) raw_model
-   write(*,*) GPR%LODE_params%nonorm,GPR%LODE_params%sigewald,GPR%LODE_params%radsize,GPR%LODE_params%lebsize
   endif
 
 end subroutine
