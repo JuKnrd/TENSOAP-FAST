@@ -329,6 +329,7 @@ implicit none
   ! output file)
   initbuffer = " "
 !  write(initbuffer,*) ((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
+  write(initbuffer,*) (((sum(GPR(1)%prediction_lm_c(:,j,k)),j=1,GPR(m)%degen),k=1,GPR(m)%nw),m=1,size(GPR))
   cbuf = len_trim(initbuffer)
   call writebuffer(socket,cbuf)
   call writebuffer(socket,initbuffer,cbuf)

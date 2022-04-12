@@ -1,0 +1,38 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, 
+conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal}] </properties>
+    <trajectory filename='pos' stride='1' format="xyz"> positions{angstrom} </trajectory>
+    <trajectory filename='for' stride='1'> forces{piconewton} </trajectory>
+    <trajectory filename='mu' stride='1'> extras </trajectory>
+  </output>
+  <total_steps>50</total_steps>
+  <prng>
+    <seed>32342</seed>
+  </prng>
+  <ffsocket name='qtip4pf' mode='unix' pbc='false'>
+    <address>driver</address>
+  </ffsocket>
+  <ffsocket mode='unix' pbc='false' name='sagpr'> <address>sagpr</address> <port>31401</port> <latency>0.02</latency> <timeout>400</timeout> </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='pdb'> init.pdb </file>
+      <velocities mode='thermal' units='kelvin'> 298 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='qtip4pf'> </force>
+      <force forcefield='sagpr' weight='1.0'/>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>298</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <thermostat mode='langevin'>
+         <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units='femtosecond'> 0.5</timestep>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>
