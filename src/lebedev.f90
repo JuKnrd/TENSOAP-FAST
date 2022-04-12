@@ -29,7 +29,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -58,12 +59,18 @@
 !cvw    Depending on code, there are 6...48 different but equivalent
 !cvw    points.
 !cvw
-!cvw    code=1:   (0,0,1) etc                                (  6 points)
-!cvw    code=2:   (0,a,a) etc, a=1/sqrt(2)                   ( 12 points)
-!cvw    code=3:   (a,a,a) etc, a=1/sqrt(3)                   (  8 points)
-!cvw    code=4:   (a,a,b) etc, b=sqrt(1-2 a^2)               ( 24 points)
-!cvw    code=5:   (a,b,0) etc, b=sqrt(1-a^2), a input        ( 24 points)
-!cvw    code=6:   (a,b,c) etc, c=sqrt(1-a^2-b^2), a/b input  ( 48 points)
+!cvw    code=1:   (0,0,1) etc                                (  6
+!points)
+!cvw    code=2:   (0,a,a) etc, a=1/sqrt(2)                   ( 12
+!points)
+!cvw    code=3:   (a,a,a) etc, a=1/sqrt(3)                   (  8
+!points)
+!cvw    code=4:   (a,a,b) etc, b=sqrt(1-2 a^2)               ( 24
+!points)
+!cvw    code=5:   (a,b,0) etc, b=sqrt(1-a^2), a input        ( 24
+!points)
+!cvw    code=6:   (a,b,c) etc, c=sqrt(1-a^2-b^2), a/b input  ( 48
+!points)
 !cvw
        goto (1,2,3,4,5,6) code
        write (6,*) 'Gen_Oh: Invalid Code'
@@ -621,7 +628,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -681,7 +689,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -743,7 +752,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -807,7 +817,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -872,7 +883,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -939,7 +951,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -1009,7 +1022,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -1080,7 +1094,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -1154,7 +1169,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -1231,7 +1247,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -1311,7 +1328,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -1394,7 +1412,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -1481,7 +1500,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -1571,7 +1591,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -1665,7 +1686,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -1763,7 +1785,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -1870,7 +1893,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -1992,7 +2016,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -2131,7 +2156,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -2289,7 +2315,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -2468,7 +2495,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -2670,7 +2698,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -2897,7 +2926,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -3151,7 +3181,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -3434,7 +3465,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -3748,7 +3780,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -4095,7 +4128,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -4477,7 +4511,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -4896,7 +4931,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -5354,7 +5390,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -5853,7 +5890,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev
@@ -6395,7 +6433,8 @@
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 50, 1995, pp. 283-286. 
 !chvd
 !chvd   [3] V.I. Lebedev, and A.L. Skorokhodov
-!chvd       "Quadrature formulas of orders 41, 47, and 53 for the sphere"
+!chvd       "Quadrature formulas of orders 41, 47, and 53 for the
+!sphere"
 !chvd       Russian Acad. Sci. Dokl. Math., Vol. 45, 1992, pp. 587-592. 
 !chvd
 !chvd   [4] V.I. Lebedev

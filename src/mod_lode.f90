@@ -1,4 +1,5 @@
 module lode
+ use gauss_legendre
 
  integer, parameter :: nelements = 118
  character(len=2), parameter :: atomic_names(nelements) = (/'H ','He','Li','Be','B ','C ','N ','O ','F ','Ne','Na','Mg','Al','Si', &
@@ -28,7 +29,8 @@ module lode
    real*8 rcut2,rx,ry,rz,r2,rdist,cth,ph,normfact,sigmafact,rv(3),sv(3),rcv(3)
    complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
    real*8 sg,rcut,xyz(natmax,3)
-   real*8, allocatable :: radint(:,:,:,:,:),efact(:,:,:),length(:,:,:)
+   real*8, allocatable :: radint(:,:,:,:,:),efact(:,:,:),length(:,:,:),lebedev_grid(:,:),spherical_grid(:,:)
+   real*8, allocatable :: integration_weights(:),gauss_points(:),gauss_weights(:)
    real*8 sigma(nmax),orthomatrix(nmax,nmax),alpha,sg2,radial_c,radial_r0,radial_m,invcell(3,3)
    integer, allocatable :: nneigh(:,:)
    integer all_indices(nsmax,natmax),nneighmax(nsmax),ipiv(3),info,lwork,work(1000)
@@ -71,11 +73,22 @@ module lode
 !            iat = iat + 1
 !
 !    # Define atomic grid for potential 
-!    #radsize = 50 # number of radial points
 !    gauss_points,gauss_weights = gausslegendre.gauss_legendre.gaulegf(x1=0.0,x2=rcut*2.0,n=radsize)
-!   lebedev_grid = ld(lebsize)
-!    spherical_grid = np.zeros((lebsize*radsize,3),float)
-!    integration_weights = np.zeros((lebsize*radsize),float)
+
+   ! Atomic grid for potential
+   allocate(gauss_points(radsize),gauss_weights(radsize))
+   call gaulegf(0.d0,2.d0*rcut,gauss_points,gauss_weights,radsize)
+
+   ! Get Lebedev grid
+   allocate(lebedev_grid(4,lebsize))
+   lebedev_grid(:,:) = 0.d0
+   call get_lebedev_grid(lebedev_grid,lebsize)
+
+   ! Get spherical grid and integration weights
+   allocate(spherical_grid(lebsize*radsize,3),integration_weights(lebsize*radsize))
+   spherical_grid(:,:) = 0.d0
+   integration_weights(:) = 0.d0
+
 !    igrid = 0
 !    for ir in range(radsize):
 !        r = gauss_points[ir]
@@ -103,32 +116,89 @@ module lode
 !    omega_near = nearfield.nearfield(nat,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,alpha,coordx_near,spherical_grid,orthoradial,harmonics,integration_weights) 
 !    omega_near = np.transpose(omega_near,(4,3,2,1,0))
 !
-!
-!
 !    return omega_near
-!
-!LIB = ctypes.CDLL(os.path.dirname(__file__) + "/lebedev.so")
-!LDNS = [6, 14, 26, 38, 50, 74, 86, 110, 146, 170, 194, 230, 266, 302, 350, 434,
-!        590, 770, 974, 1202, 1454, 1730, 2030, 2354, 2702, 3074, 3470, 3890,
-!        4334, 4802, 5294, 5810]
-!
-!def ld(n):
-!    '''Returns (x, y, z) coordinates along with weight w. Choose among [6, 14, 26, 38, 50, 74, 86, 110, 146, 170, 194, 230, 266, 302, 350, 434, 590, 770, 974, 1202, 1454, 1730, 2030, 2354, 2702, 3074, 3470, 3890, 4334, 4802, 5294, 5810]'''
-!
-!    if n not in LDNS:
-!        raise ValueError("n = {} not supported".format(n))
-!    xyzw = np.zeros((4, n), dtype=np.float64)
-!    c_double_p = ctypes.POINTER(ctypes.c_double)
-!    n_out = ctypes.c_int(0)
-!    getattr(LIB, "ld{:04}_".format(n))(
-!        xyzw[0].ctypes.data_as(c_double_p),
-!        xyzw[1].ctypes.data_as(c_double_p),
-!        xyzw[2].ctypes.data_as(c_double_p),
-!        xyzw[3].ctypes.data_as(c_double_p),
-!        ctypes.byref(n_out))
-!    assert n == n_out.value
-!    return xyzw.T
-!
+
+   deallocate(lebedev_grid,spherical_grid,gauss_points,gauss_weights)
+
+ end subroutine
+
+!***************************************************************************************************
+ subroutine get_lebedev_grid(lebedev_grid,grid_size)
+  implicit none
+
+  ! Get Lebedev integration grid
+  integer grid_size
+  real*8 lebedev_grid(4,grid_size)
+
+  select case (grid_size)
+   case (6)
+    call LD0006(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (14)
+    call LD0014(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (26)
+    call LD0026(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (38)
+    call LD0038(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (50)
+    call LD0050(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (74)
+    call LD0074(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (86) 
+    call LD0086(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size) 
+   case (110)
+    call LD0110(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (146)
+    call LD0146(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (170)
+    call LD0170(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (194)
+    call LD0194(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (230)
+    call LD0230(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (266)
+    call LD0266(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (302)
+    call LD0302(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (350)
+    call LD0350(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (434)
+    call LD0434(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (590)
+    call LD0590(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (770)
+    call LD0770(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (974)
+    call LD0974(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (1202)
+    call LD1202(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (1454)
+    call LD1454(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (1730)
+    call LD1730(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (2030)
+    call LD2030(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (2354)
+    call LD2354(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (2702)
+    call LD2702(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (3074)
+    call LD3074(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (3470)
+    call LD3470(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (3890)
+    call LD3890(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (4334)
+    call LD4334(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (4802)
+    call LD4802(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (5294)
+    call LD5294(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case (5810)
+    call LD5810(lebedev_grid(1,:),lebedev_grid(2,:),lebedev_grid(3,:),lebedev_grid(4,:),grid_size)
+   case default
+    write(*,*) 'ERROR: incorrect Lebedev grid size!',grid_size
+    stop
+  end select
 
  end subroutine
 
