@@ -179,10 +179,23 @@ subroutine get_LODE(GPR,lodeparams)
 
   type(SAGPR_Model), intent(inout) :: GPR
   character(len=100) lodeparams
+  real*8, allocatable, target :: raw_model(:)
+  integer reals,bytes
 
   GPR%isLODE = .false.
   if (trim(adjustl(lodeparams)).ne.'NONE') then
-   write(*,*) 'Loading LODE file'
+   open(unit=12,file=trim(adjustl(lodeparams)),status='old',access='stream',form='unformatted')
+   inquire(unit=12,size=bytes)
+   reals=bytes/8
+   allocate(raw_model(reals))
+   read(12,pos=1) raw_model
+   close(12)
+   GPR%LODE_params%nonorm   = (int(raw_model(1)).eq.1)
+   GPR%LODE_params%sigewald = raw_model(2)
+   GPR%LODE_params%radsize  = int(raw_model(3))
+   GPR%LODE_params%lebsize  = int(raw_model(4))
+   write(*,*) raw_model
+   write(*,*) GPR%LODE_params%nonorm,GPR%LODE_params%sigewald,GPR%LODE_params%radsize,GPR%LODE_params%lebsize
   endif
 
 end subroutine

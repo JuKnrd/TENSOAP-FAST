@@ -23,6 +23,7 @@ more: all sagpr_get_PS sagpr_get_kernel sagpr_predict
 mkbin:
 	@if [ ! -d ../bin ];then mkdir ../bin;fi
 	@cd ../bin;if [ ! -f sagpr_convert ];then ln -s ../tools/sagpr_convert.py sagpr_convert;fi;cd -
+	@cd ../bin;if [ ! -f lode_convert ];then ln -s ../tools/lode_convert.py lode_convert;fi;cd -
 	@cd ../bin;if [ ! -f sagpr_split_frames ];then ln -s ../tools/sagpr_split_frames.py sagpr_split_frames;fi;cd -
 	@cd ../bin;if [ ! -f sagpr_apply_process ];then ln -s ../tools/sagpr_apply_process.sh sagpr_apply_process;fi;cd -
 
