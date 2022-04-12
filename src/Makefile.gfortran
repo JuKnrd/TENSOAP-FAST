@@ -71,7 +71,7 @@ config:
 	@ cd ../;./configure;cd src
 
 clean: 
-	rm -rf *.o *.mod ../bin ../lib
+	rm -rf *.o *.mod */*.o */*.mod ../bin ../lib
 
 distclean:
-	rm -rf *.o *.mod ../bin ../lib ../install
+	rm -rf *.o *.mod */*.o */*.mod ../bin ../lib ../install
