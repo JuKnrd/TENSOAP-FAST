@@ -169,8 +169,6 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
      call get_LODE(GPR(k),lodeparams(k),fixed_cell)
     enddo
 
-    write(*,*) GPR(1)%lode_params%fixed_cell
-
 !************************************************************************************
 ! READ IN DATA AND MAKE PREDICTIONS
 !************************************************************************************
