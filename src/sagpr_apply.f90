@@ -17,7 +17,7 @@ program sagpr_apply
     integer, parameter :: MSGLEN=12
     integer t1,t2,cr,ts,tf
     real*8 rate
-    logical readnext,use_socket,hasdata,verbose,atomic,exists
+    logical readnext,use_socket,hasdata,verbose,atomic,exists,fixed_cell
 
 namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
 
@@ -34,9 +34,9 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
     arg(nargs+1) = 'NULL'
 
     ! Do a first pass to find the number of input arguments
-    numkeys = 8
+    numkeys = 12
     allocate(keys(numkeys))
-    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-a  ','-b  ','-i  ','-l  ','NULL'/)
+    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-a  ','-b  ','-i  ','-l  ','-fc ','NULL'/)
     n_mod = -1
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
@@ -112,6 +112,7 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
     GPR(:)%verbose = .false.
     GPR(:)%atomic = .false.
     s_frame = -1
+    fixed_cell = .false.
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-m') then
@@ -149,6 +150,7 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
       enddo
      endif
      if (arg(i).eq.'-u') inet = 0
+     if (arg(i).eq.'-fc') fixed_cell=.true.
     enddo
     deallocate(arg)
 
@@ -164,8 +166,10 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
 
     do k=1,n_mod
      call get_model(GPR(k),model(k))
-     call get_LODE(GPR(k),lodeparams(k))
+     call get_LODE(GPR(k),lodeparams(k),fixed_cell)
     enddo
+
+    write(*,*) GPR(1)%lode_params%fixed_cell
 
 !************************************************************************************
 ! READ IN DATA AND MAKE PREDICTIONS

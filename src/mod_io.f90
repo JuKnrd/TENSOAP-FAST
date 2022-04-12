@@ -174,13 +174,14 @@ subroutine get_model(GPR,model)
 end subroutine
 
 !****************************************************************************************************************
-subroutine get_LODE(GPR,lodeparams)
+subroutine get_LODE(GPR,lodeparams,fixed_cell)
  implicit none
 
   type(SAGPR_Model), intent(inout) :: GPR
   character(len=100) lodeparams
   real*8, allocatable, target :: raw_model(:)
   integer reals,bytes
+  logical fixed_cell
 
   GPR%isLODE = .false.
   if (trim(adjustl(lodeparams)).ne.'NONE') then
@@ -191,10 +192,11 @@ subroutine get_LODE(GPR,lodeparams)
    allocate(raw_model(reals))
    read(12,pos=1) raw_model
    close(12)
-   GPR%LODE_params%nonorm   = (int(raw_model(1)).eq.1)
-   GPR%LODE_params%sigewald = raw_model(2)
-   GPR%LODE_params%radsize  = int(raw_model(3))
-   GPR%LODE_params%lebsize  = int(raw_model(4))
+   GPR%LODE_params%nonorm     = (int(raw_model(1)).eq.1)
+   GPR%LODE_params%sigewald   = raw_model(2)
+   GPR%LODE_params%radsize    = int(raw_model(3))
+   GPR%LODE_params%lebsize    = int(raw_model(4))
+   GPR%LODE_params%fixed_cell = fixed_cell
   endif
 
 end subroutine
