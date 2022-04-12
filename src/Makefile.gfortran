@@ -12,10 +12,10 @@ LD=$(SHTOOLS_LIB) -lSHTOOLS -lm $(LAPACK_LIB) -llapack $(BLAS_LIB) -lblas
 INCLUDE=$(SHTOOLS_INCLUDE)
 SAGPR_PREFIX=/usr/local
 
-OBJ1=mod_lode.o mod_sagpr.o sagpr_get_PS.o
-OBJ2=mod_lode.o mod_sagpr.o sagpr_get_kernel.o
-OBJ3=mod_lode.o mod_sagpr.o sagpr_predict.o
-OBJ4=mod_lode.o mod_sagpr.o mod_apply.o
+OBJ1=LODE/lebedev.o LODE/gausslegendre.o LODE/mod_lode.o mod_sagpr.o sagpr_get_PS.o
+OBJ2=LODE/lebedev.o LODE/gausslegendre.o LODE/mod_lode.o mod_sagpr.o sagpr_get_kernel.o
+OBJ3=LODE/lebedev.o LODE/gausslegendre.o LODE/mod_lode.o mod_sagpr.o sagpr_predict.o
+OBJ4=LODE/lebedev.o LODE/gausslegendre.o LODE/mod_lode.o mod_sagpr.o mod_apply.o
 OBJ5=sockets.o fsockets.o mod_io.o sagpr_apply.o
 
 all: mkbin libsoapfast sagpr_apply
@@ -47,6 +47,9 @@ sockets.o: sockets.c
 
 sagpr_apply: $(OBJ5)
 	$(FF) $(FOPTS) -o ../bin/sagpr_apply $(OBJ5) -L../lib -lsoapfast $(INCLUDE) $(LD)
+
+LODE/%.o: LODE/%.f90
+	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@
 
 %.o: %.f90 
 	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< 
