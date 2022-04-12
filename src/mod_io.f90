@@ -328,13 +328,11 @@ implicit none
   ! frame, rather than for each atom (the latter will be stored in an
   ! output file)
   initbuffer = " "
-!  write(initbuffer,*) ((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
-  write(initbuffer,*) (((sum(GPR(1)%prediction_lm_c(:,j,k)),j=1,GPR(m)%degen),k=1,GPR(m)%nw),m=1,size(GPR))
+  write(initbuffer,*) (((sum(GPR(m)%prediction_lm_c(:,j,k)),j=1,GPR(m)%degen),k=1,GPR(m)%nw),m=1,size(GPR))
   cbuf = len_trim(initbuffer)
   call writebuffer(socket,cbuf)
   call writebuffer(socket,initbuffer,cbuf)
   ! If we are doing atomic predictions, also print them to a file
-!  if (GPR%atomic) then
   do m=1,size(GPR)
    write(32+m,*) size(GPR(m)%prediction_lm_c,1)
    write(32+m,*) '# Total',((sum(GPR(m)%prediction_lm_c(:,j,k)),j=1,GPR(m)%degen),k=1,GPR(m)%nw)
@@ -347,7 +345,6 @@ implicit none
    enddo
    flush(32+m)
   enddo
-!  endif
   deallocate(msgbuffer)
 
 end subroutine
