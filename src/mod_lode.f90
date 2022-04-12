@@ -71,9 +71,6 @@ module lode
 !                    nneigh_near[iat,ispe] += 1
 !            species[iat] = centype
 !            iat = iat + 1
-!
-!    # Define atomic grid for potential 
-!    gauss_points,gauss_weights = gausslegendre.gauss_legendre.gaulegf(x1=0.0,x2=rcut*2.0,n=radsize)
 
    ! Atomic grid for potential
    allocate(gauss_points(radsize),gauss_weights(radsize))

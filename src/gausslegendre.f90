@@ -46,51 +46,90 @@ subroutine gaulegf(x1, x2, x, w, n)
 end subroutine gaulegf
 
 !----------------------------------------------------------------------------------------!
+ real*8 function plgndr(l,m,x)
+  implicit none
 
-!Numerical Recipes
-!Associated Legendre polynomial
-real(8) function plgndr(l, m, x)
-  integer, intent(in) :: l, m
-  real(8), intent(in) :: x
-  integer :: i, ll
-  real(8) :: fact, oldfact, pll, pmm, pmmp1, omx2
-  real(8), parameter :: pi = 3.14159265359d0
-  
-  pll = 0.0d0
-  !if(m.lt.0.or.m.gt.l.or.abs(x).gt.1.) pause 'bad arguments in plgndr'
-  
-  pmm=1.0d0
-  if (m .gt. 0) then
-    omx2 = (1.d0-x)*(1.d0+x)
+   ! Subroutine from Numerical Recipes in Fortran
+
+   integer l,m
+   real*8 x
+   integer i,ll
+   real*8 fact,pll,pmm,pmmp1,somx2
+   if (m.lt.0.or.m.gt.l.or.abs(x).gt.1) stop 'ERROR: bad arguments in plgndr!'
+   pmm = 1.d0
+   if (m.gt.0) then
+    somx2 = sqrt((1.d0-x)*(1.d0+x))
     fact = 1.d0
-    do i = 1, m
-      pmm = pmm*omx2*fact/(fact+1.d0)
-      fact = fact + 2.d0
-    end do
-  end if
-  
-  pmm = sqrt((2*m + 1)*pmm/(4.d0*pi))
-  if (mod(m, 2) .eq. 1) pmm = -pmm
-  if (l .eq. m) then
-    plgndr = pmm
-  else
-    pmmp1 = x*sqrt(2.d0*m + 3.d0)*pmm
-    if (l .eq. m+1) then
-      plgndr = pmmp1
+    do i=1,m
+     pmm = -pmm*fact*somx2
+     fact = fact + 2.d0
+    enddo
+   endif
+   if (l.eq.m) then
+    plgndr=pmm
+   else
+    pmmp1 = x*(2*m+1)*pmm
+    if (l.eq.m+1) then
+     plgndr = pmmp1
     else
-      oldfact=sqrt(2.d0*m + 3.d0)
-    do ll = m+2, l
-      fact = sqrt((4.d0*ll**2 - 1.d0)/(ll**2-m**2))
-      pll = (x*pmmp1-pmm/oldfact)*fact
-      oldfact = fact
+     do ll=m+2,l 
+      pll=(x*(2*ll-1)*pmmp1-(ll+m-1)*pmm)/(ll-m)
       pmm = pmmp1
       pmmp1 = pll
-    end do
-      plgndr = pll
-    end if
-  end if
+     enddo
+     plgndr = pll
+    endif
+   endif
 
-end function plgndr
+   return
+ end function
+! DMW: I have commented this out as I was already using a version in the code;
+!      this avoids doubly declaring it.
+
+!!Numerical Recipes
+!!Associated Legendre polynomial
+!real(8) function plgndr(l, m, x)
+!  integer, intent(in) :: l, m
+!  real(8), intent(in) :: x
+!  integer :: i, ll
+!  real(8) :: fact, oldfact, pll, pmm, pmmp1, omx2
+!  real(8), parameter :: pi = 3.14159265359d0
+!  
+!  pll = 0.0d0
+!  !if(m.lt.0.or.m.gt.l.or.abs(x).gt.1.) pause 'bad arguments in plgndr'
+!  
+!  pmm=1.0d0
+!  if (m .gt. 0) then
+!    omx2 = (1.d0-x)*(1.d0+x)
+!    fact = 1.d0
+!    do i = 1, m
+!      pmm = pmm*omx2*fact/(fact+1.d0)
+!      fact = fact + 2.d0
+!    end do
+!  end if
+!  
+!  pmm = sqrt((2*m + 1)*pmm/(4.d0*pi))
+!  if (mod(m, 2) .eq. 1) pmm = -pmm
+!  if (l .eq. m) then
+!    plgndr = pmm
+!  else
+!    pmmp1 = x*sqrt(2.d0*m + 3.d0)*pmm
+!    if (l .eq. m+1) then
+!      plgndr = pmmp1
+!    else
+!      oldfact=sqrt(2.d0*m + 3.d0)
+!    do ll = m+2, l
+!      fact = sqrt((4.d0*ll**2 - 1.d0)/(ll**2-m**2))
+!      pll = (x*pmmp1-pmm/oldfact)*fact
+!      oldfact = fact
+!      pmm = pmmp1
+!      pmmp1 = pll
+!    end do
+!      plgndr = pll
+!    end if
+!  end if
+!
+!end function plgndr
 
 !----------------------------------------------------------------------------------------!
 
