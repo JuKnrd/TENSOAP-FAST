@@ -24,6 +24,10 @@ This will create the file `fname.mdl`, a binary file containing the training pow
 
 To use this model, `sagpr_apply` is called as `/path/to/TENSOAP-FAST/bin/sagpr_apply -f file_name.xyz -m fname.mdl -o prediction.out`, which uses the model `fname.mdl` to make predictions for `file_name.xyz`, storing them in `prediction.out`. *Note: these models can only be for a single spherical component; a separate prediction must be made for each component.*
 
+# Examples
+
+In the `examples` subfolder are a few examples that show how different modes of the code work, including sockets, committee models and long-range descriptors. It is recommended that the first-time user begins with the tutorial example, which goes through the process of creating a model with the TENSOAP code, converting it to be used by TENSOAP-FAST and applying the model.
+
 # Sockets
 
 It is also possible to use this program in combination with i-PI (https://github.com/i-PI), which can send configurations to TENSOAP-FAST via a socket interface. An example of this is given by the contents of the `example` folder.

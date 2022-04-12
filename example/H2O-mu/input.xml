@@ -1,12 +1,12 @@
 <simulation verbosity='high'>
   <output prefix='simulation'>
-    <properties stride='20' filename='out'>  [ step, time{picosecond}, 
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, 
 conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal}] </properties>
-    <trajectory filename='pos' stride='20' format="xyz"> positions{angstrom} </trajectory>
-    <trajectory filename='for' stride='20'> forces{piconewton} </trajectory>
-    <trajectory filename='mu' stride='20'> extras </trajectory>
+    <trajectory filename='pos' stride='1' format="xyz"> positions{angstrom} </trajectory>
+    <trajectory filename='for' stride='1'> forces{piconewton} </trajectory>
+    <trajectory filename='mu' stride='1'> extras </trajectory>
   </output>
-  <total_steps>500</total_steps>
+  <total_steps>50</total_steps>
   <prng>
     <seed>32342</seed>
   </prng>

@@ -207,7 +207,8 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
       endif
      enddo
     endif
-    if (use_socket .and. GPR(1)%atomic) then
+!    if (use_socket .and. GPR(1)%atomic) then
+    if (use_socket) then
      do l=1,n_mod
       open(unit=32+l,file=ofile(l),access='stream',form='formatted')
      enddo

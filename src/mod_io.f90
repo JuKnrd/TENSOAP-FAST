@@ -338,7 +338,11 @@ implicit none
    write(32+m,*) size(GPR(m)%prediction_lm_c,1)
    write(32+m,*) '# Total',((sum(GPR(m)%prediction_lm_c(:,j,k)),j=1,GPR(m)%degen),k=1,GPR(m)%nw)
    do l=1,size(GPR(m)%prediction_lm_c,1)
-    write(32+m,*)  GPR(m)%atname_at(l),((GPR(m)%prediction_lm_c(l,j,k),j=1,GPR(m)%degen),k=1,GPR(m)%nw)
+    if (.not. GPR(m)%atomic) then
+     write(32+m,*) ((GPR(m)%prediction_lm_c(l,j,k),j=1,GPR(m)%degen),k=1,GPR(m)%nw)
+    else
+     write(32+m,*) GPR(m)%atname_at(l),((GPR(m)%prediction_lm_c(l,j,k),j=1,GPR(m)%degen),k=1,GPR(m)%nw)
+    endif
    enddo
    flush(32+m)
   enddo
