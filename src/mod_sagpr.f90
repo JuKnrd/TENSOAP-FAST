@@ -1450,19 +1450,19 @@ module sagpr
 
 !***************************************************************************************************
 
- complex*16 function spherical_harmonic(l,m,costheta,phi)
-  implicit none
-
-   integer l,m,mm
-   real*8 costheta,phi
-   complex*16 rawfactor
-
-   mm = abs(m)
-   rawfactor = ((1.d0,0.d0)*cos(m*phi) + (0.d0,1.d0)*sin(m*phi)) * plgndr(l,abs(m),costheta)
-   spherical_harmonic = rawfactor * dsqrt( ((2*l + 1) / (4.d0*dacos(-1.d0)) * fact(l-mm)/fact(l+mm)))
-   if (m.lt.0) spherical_harmonic = spherical_harmonic * (-1.d0)**m
-
- end function
+! complex*16 function spherical_harmonic(l,m,costheta,phi)
+!  implicit none
+!
+!   integer l,m,mm
+!   real*8 costheta,phi
+!   complex*16 rawfactor
+!
+!   mm = abs(m)
+!   rawfactor = ((1.d0,0.d0)*cos(m*phi) + (0.d0,1.d0)*sin(m*phi)) * plgndr(l,abs(m),costheta)
+!   spherical_harmonic = rawfactor * dsqrt( ((2*l + 1) / (4.d0*dacos(-1.d0)) * fact(l-mm)/fact(l+mm)))
+!   if (m.lt.0) spherical_harmonic = spherical_harmonic * (-1.d0)**m
+!
+! end function
 
 !***************************************************************************************************
 
@@ -1506,18 +1506,18 @@ module sagpr
 
 !***************************************************************************************************
 
- real*8 function fact(n)
-  implicit none
-
-   integer n,i
-
-   if (n.lt.0) stop 'ERROR: positive number required for factorial!'
-   fact = 1.d0
-   do i=2,n
-    fact = fact * i
-   enddo
-
- end function
+! real*8 function fact(n)
+!  implicit none
+!
+!   integer n,i
+!
+!   if (n.lt.0) stop 'ERROR: positive number required for factorial!'
+!   fact = 1.d0
+!   do i=2,n
+!    fact = fact * i
+!   enddo
+!
+! end function
 
 !***************************************************************************************************
 

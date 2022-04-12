@@ -25,9 +25,10 @@ module lode
   implicit none
 
    integer natoms,nspecies,nmax,lmax,nnmax,natmax,nsmax,iat,ncentype,icentype,icen,cen,n,ispe
-   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,k,nn,ncell,ia,ib,ic,igrid,ir,ileb
+   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,k,nn,ncell,ia,ib,ic,igrid,ir,ileb,lm
    real*8 rcut2,rx,ry,rz,r2,rdist,cth,ph,normfact,sigmafact,rv(3),sv(3),rcv(3)
    complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
+   complex*16, allocatable :: harmonics(:,:)
    real*8 sg,rcut,xyz(natmax,3),r
    real*8, allocatable :: radint(:,:,:,:,:),efact(:,:,:),length(:,:,:),lebedev_grid(:,:),spherical_grid(:,:)
    real*8, allocatable :: integration_weights(:),gauss_points(:),gauss_weights(:),lr(:),lth(:),lph(:)
@@ -104,14 +105,19 @@ module lode
     lph(i) = datan2(spherical_grid(i,2),spherical_grid(i,1))
    enddo
 
-!
-!    harmonics = np.zeros(((lmax+1)**2,lebsize*radsize),complex) 
-!    lm = 0
-!    for l in range(lmax+1):
-!        for im in range(2*l+1):
-!            harmonics[lm,:] = np.conj(sc.sph_harm(im-l,l,lph[:],lth[:])) 
-!            lm += 1
-!
+   ! Get spherical harmonics array
+   allocate(harmonics((lmax+1)*(lmax+1),lebsize*radsize))
+   harmonics(:,:) = (0.d0,0.d0)
+   lm = 1
+   do l=0,lmax
+    do im=1,2*l+1
+     do i=1,lebsize*radsize
+      harmonics(lm,i) = dconjg(spherical_harmonic(l,im-l,dcos(lth(i)),lph(i)))
+     enddo
+     lm = lm + 1
+    enddo
+   enddo
+
 !    radial = radial_1D_mesh(sigma,nmax,lr,lebsize*radsize)
 !    orthoradial = np.dot(orthomatrix,radial)
 !
@@ -120,7 +126,7 @@ module lode
 !    omega_near = np.transpose(omega_near,(4,3,2,1,0))
 !
 
-   deallocate(lebedev_grid,spherical_grid,gauss_points,gauss_weights,lr,lth,lph)
+   deallocate(lebedev_grid,spherical_grid,gauss_points,gauss_weights,lr,lth,lph,harmonics)
 
  end subroutine
 
