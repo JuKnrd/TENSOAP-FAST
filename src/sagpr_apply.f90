@@ -10,14 +10,14 @@ program sagpr_apply
     integer i,j,k,l,ios,numkeys,port,socket,inet,cbuf,nargs,fr
     integer nat,s_frame,n_mod
     character(len=100) fname,sock_arg(3),ifile
-    character(len=100), allocatable :: model(:),ofile(:)
+    character(len=100), allocatable :: model(:),ofile(:),lodeparams(:)
     character(len=1024) hostname
     character(len=12) header
     character(len=2048) initbuffer
     integer, parameter :: MSGLEN=12
     integer t1,t2,cr,ts,tf
     real*8 rate
-    logical readnext,use_socket,hasdata,verbose,atomic,exists
+    logical readnext,use_socket,hasdata,verbose,atomic,exists,fixed_cell
 
 namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
 
@@ -34,9 +34,9 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
     arg(nargs+1) = 'NULL'
 
     ! Do a first pass to find the number of input arguments
-    numkeys = 8
+    numkeys = 12
     allocate(keys(numkeys))
-    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-a  ','-b  ','-i  ','NULL'/)
+    keys = (/'-m  ','-o  ','-f  ','-s  ','-u  ','-v  ','-a  ','-b  ','-i  ','-l  ','-fc ','NULL'/)
     n_mod = -1
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
@@ -77,6 +77,31 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
     if (l.ne.n_mod) stop 'ERROR: wrong number of outputs given!'
     allocate(ofile(n_mod))
 
+    ! Check number of LODE inputs is either zero or equal to the number of models
+    l = -1
+    do i=1,nargs
+     arg(i) = trim(adjustl(arg(i)))
+     if (arg(i).eq.'-l') then
+      l = 0
+      readnext = .true.
+      do k=i+1,nargs
+       if (readnext) then
+        do j=1,numkeys
+         readnext = readnext.and.(trim(adjustl(arg(k))).ne.trim(adjustl(keys(j))))
+        enddo
+        if (readnext) l = l + 1
+       endif
+      enddo
+     endif
+    enddo
+    if (l.gt.-1 .and. l.ne.n_mod) stop 'ERROR: wrong number of LODE files given!'
+    allocate(lodeparams(n_mod))
+    if (l.eq.-1) then
+     do i=1,n_mod
+      lodeparams(i) = 'NONE'
+     enddo
+    endif
+
     ! Parse these arguments
     ifile = 'tensoap.in'
     model(:) = ''
@@ -87,6 +112,7 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
     GPR(:)%verbose = .false.
     GPR(:)%atomic = .false.
     s_frame = -1
+    fixed_cell = .false.
     do i=1,nargs
      arg(i) = trim(adjustl(arg(i)))
      if (arg(i).eq.'-m') then
@@ -97,6 +123,11 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
      if (arg(i).eq.'-o') then
       do k=1,n_mod
        read(arg(i+k),'(A)') ofile(k)
+      enddo
+     endif
+     if (arg(i).eq.'-l') then
+      do k=1,n_mod
+       read(arg(i+k),'(A)') lodeparams(k)
       enddo
      endif
      if (arg(i).eq.'-f') read(arg(i+1),'(A)') fname
@@ -119,6 +150,7 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
       enddo
      endif
      if (arg(i).eq.'-u') inet = 0
+     if (arg(i).eq.'-fc') fixed_cell=.true.
     enddo
     deallocate(arg)
 
@@ -134,6 +166,7 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
 
     do k=1,n_mod
      call get_model(GPR(k),model(k))
+     call get_LODE(GPR(k),lodeparams(k),fixed_cell)
     enddo
 
 !************************************************************************************
@@ -174,7 +207,8 @@ namelist/input/model,fname,ofile,use_socket,sock_arg,inet,verbose,atomic,s_frame
       endif
      enddo
     endif
-    if (use_socket .and. GPR(1)%atomic) then
+!    if (use_socket .and. GPR(1)%atomic) then
+    if (use_socket) then
      do l=1,n_mod
       open(unit=32+l,file=ofile(l),access='stream',form='formatted')
      enddo

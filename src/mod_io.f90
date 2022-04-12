@@ -174,6 +174,34 @@ subroutine get_model(GPR,model)
 end subroutine
 
 !****************************************************************************************************************
+subroutine get_LODE(GPR,lodeparams,fixed_cell)
+ implicit none
+
+  type(SAGPR_Model), intent(inout) :: GPR
+  character(len=100) lodeparams
+  real*8, allocatable, target :: raw_model(:)
+  integer reals,bytes
+  logical fixed_cell
+
+  GPR%isLODE = .false.
+  if (trim(adjustl(lodeparams)).ne.'NONE') then
+   GPR%isLODE = .true.
+   open(unit=12,file=trim(adjustl(lodeparams)),status='old',access='stream',form='unformatted')
+   inquire(unit=12,size=bytes)
+   reals=bytes/8
+   allocate(raw_model(reals))
+   read(12,pos=1) raw_model
+   close(12)
+   GPR%LODE_params%nonorm     = (int(raw_model(1)).eq.1)
+   GPR%LODE_params%sigewald   = raw_model(2)
+   GPR%LODE_params%radsize    = int(raw_model(3))
+   GPR%LODE_params%lebsize    = int(raw_model(4))
+   GPR%LODE_params%fixed_cell = fixed_cell
+  endif
+
+end subroutine
+
+!****************************************************************************************************************
 
 subroutine read_frame(frame,un,vrb,prd)
  implicit none
@@ -300,21 +328,23 @@ implicit none
   ! frame, rather than for each atom (the latter will be stored in an
   ! output file)
   initbuffer = " "
-!  write(initbuffer,*) ((sum(GPR%prediction_lm_c(:,j,k)),j=1,GPR%degen),k=1,GPR%nw)
+  write(initbuffer,*) (((sum(GPR(m)%prediction_lm_c(:,j,k)),j=1,GPR(m)%degen),k=1,GPR(m)%nw),m=1,size(GPR))
   cbuf = len_trim(initbuffer)
   call writebuffer(socket,cbuf)
   call writebuffer(socket,initbuffer,cbuf)
   ! If we are doing atomic predictions, also print them to a file
-!  if (GPR%atomic) then
   do m=1,size(GPR)
    write(32+m,*) size(GPR(m)%prediction_lm_c,1)
    write(32+m,*) '# Total',((sum(GPR(m)%prediction_lm_c(:,j,k)),j=1,GPR(m)%degen),k=1,GPR(m)%nw)
    do l=1,size(GPR(m)%prediction_lm_c,1)
-    write(32+m,*)  GPR(m)%atname_at(l),((GPR(m)%prediction_lm_c(l,j,k),j=1,GPR(m)%degen),k=1,GPR(m)%nw)
+    if (.not. GPR(m)%atomic) then
+     write(32+m,*) ((GPR(m)%prediction_lm_c(l,j,k),j=1,GPR(m)%degen),k=1,GPR(m)%nw)
+    else
+     write(32+m,*) GPR(m)%atname_at(l),((GPR(m)%prediction_lm_c(l,j,k),j=1,GPR(m)%degen),k=1,GPR(m)%nw)
+    endif
    enddo
    flush(32+m)
   enddo
-!  endif
   deallocate(msgbuffer)
 
 end subroutine

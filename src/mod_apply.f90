@@ -1,5 +1,6 @@
 module apply
  use sagpr
+ use lode
 
   ! Defaults
   integer, parameter :: nmax_default = 8, lmax_default = 6
@@ -42,6 +43,9 @@ module apply
   complex*16, allocatable :: PS_atomic(:,:,:,:),PS0_atomic(:,:,:,:)
   real*8, allocatable :: natoms_at(:)
   character(len=4), allocatable :: atname_at(:)
+  ! LODE model
+  logical isLODE
+  type(LODE_Model) :: LODE_params
   ! Other
   logical verbose
  end type SAGPR_Model
@@ -64,6 +68,7 @@ subroutine set_defaults(this)
   this%rs = rs_default
   this%periodic = .false.
   this%zeta = 1
+  this%isLODE = .false.
 
 end subroutine
 !****************************************************************************************************************
@@ -84,7 +89,7 @@ subroutine predict_frame(this,frames,rate)
      &     frames%natoms,frames%cell,frames%nframes,frames%natmax,this%lm,this%nmax, &
      &     this%lmax,this%rcut,this%sg, &
      &     this%ncut,this%sparsification,this%rs,this%periodic,.true., &
-     &     this%w3j,this%all_species,this%all_centres)
+     &     this%w3j,this%all_species,this%all_centres,this%isLODE,this%LODE_params)
      call system_clock(tf)
      if (this%verbose) write(*,'(A,F6.3,A)') 'Got PS in',(tf-ts)/rate,' s'
     else
@@ -93,7 +98,7 @@ subroutine predict_frame(this,frames,rate)
      &     frames%natoms,frames%cell,frames%nframes,frames%natmax,this%lm,this%nmax, &
      &     this%lmax,this%rcut,this%sg, &
      &     this%ncut,this%sparsification,this%rs,this%periodic,.true., &
-     &     this%w3j,this%all_species,this%all_centres)
+     &     this%w3j,this%all_species,this%all_centres,this%isLODE,this%LODE_params)
      call system_clock(tf)
      if (this%verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',this%lm,' PS in',(tf-ts)/rate,' s'
      call system_clock(ts)
@@ -101,7 +106,7 @@ subroutine predict_frame(this,frames,rate)
      &     frames%natoms,frames%cell,frames%nframes,frames%natmax,0,this%nmax0, &
      &     this%lmax0,this%rcut0,this%sg0, &
      &     this%ncut0,this%sparsification0,this%rs0,this%periodic,.true., &
-     &     this%all_species,this%all_centres)
+     &     this%all_species,this%all_centres,this%isLODE,this%LODE_params)
      call system_clock(tf)
      if (this%verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',0,' PS in',(tf-ts)/rate,' s'
     endif

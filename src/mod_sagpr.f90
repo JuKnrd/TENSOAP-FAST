@@ -1,4 +1,5 @@
 module sagpr
+ use lode
 
  integer, parameter :: nelements = 118
  character(len=2), parameter :: atomic_names(nelements) = (/'H ','He','Li','Be','B ','C ','N ','O ','F ','Ne','Na','Mg','Al','Si', &
@@ -441,7 +442,7 @@ module sagpr
 !***************************************************************************************************
 
  subroutine do_power_spectrum(PS,components,xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
-     &     ncut,sparsification,rs,periodic,mult_by_A,w3j,all_species,all_centres)
+     &     ncut,sparsification,rs,periodic,mult_by_A,w3j,all_species,all_centres,isLODE,LODE_params)
   use SHTOOLS, only: wigner3j
   implicit none
 
@@ -459,7 +460,8 @@ module sagpr
   integer, allocatable :: all_indices(:,:,:),nneighmax(:,:),ncen(:),lvalues(:,:)
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
-  complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),ps_row(:,:,:)
+  complex*16, allocatable :: omega1(:,:,:,:,:),omega2(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:)
+  complex*16, allocatable :: omegatrue2(:,:,:,:,:),ps_row(:,:,:)
   complex*16, allocatable :: ot1(:,:),ot2(:,:)
   complex*16, allocatable :: CC(:,:),inner_mu(:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:),tmp_3j(:)
@@ -468,7 +470,8 @@ module sagpr
   real*8, allocatable :: ww(:,:)
   integer cr,ts,tf
   real*8 rate,dr(3),invcell(3,3),sv(3)
-  logical all_species(nelements),all_centres(nelements)
+  logical all_species(nelements),all_centres(nelements),isLODE
+  type(LODE_Model), intent(in) :: LODE_params
 
   call system_clock(count_rate=cr)
   rate = real(cr)
@@ -704,27 +707,32 @@ module sagpr
   do i=1,nframes
 
    ! Get omega, harmonic and radint matrices
-   allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nspecies,lmax+1,2*lmax+1,nnmax),&
-     &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax))
-   call initsoap(omega,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
+   allocate(omega1(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nspecies,lmax+1,2*lmax+1,nnmax),&
+     &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax),omega2(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
+   call initsoap(omega1,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
      &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,rcut,xyz(i,:,:),sigma,orthomatrix,all_species,all_centres)
+
+   if (.not.isLODE) then
+    omega2 = omega1
+   else
+    stop 'LODE not yet implemented!'
+   endif
 
    ! Compute power spectrum
    if (lm.eq.0) then
     ! Scalar
-    allocate(omegatrue(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
+    allocate(omegatrue(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),omegatrue2(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
     do l=0,lmax
-     omegatrue(:,:,:,l+1,:) = omega(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
+     omegatrue(:,:,:,l+1,:)  = omega1(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
+     omegatrue2(:,:,:,l+1,:) = omega2(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
     enddo
     if (ncut.gt.0) then
-     !$OMP PARALLEL DO SHARED(components,PS,omegatrue,ncut,natoms,i) PRIVATE(j,k,ot1,ot2)
+     !$OMP PARALLEL DO SHARED(components,PS,omegatrue,omegatrue2,ncut,natoms,i) PRIVATE(j,k,ot1,ot2)
      do j=1,ncut
       allocate(ot1(natoms(i),2*lmax+1),ot2(natoms(i),2*lmax+1))
       ot1(:,:) = omegatrue(:,components(j,1),components(j,3),components(j,5),:)
-      ot2(:,:) = omegatrue(:,components(j,2),components(j,4),components(j,5),:)
+      ot2(:,:) = omegatrue2(:,components(j,2),components(j,4),components(j,5),:)
       do k=1,natoms(i)
-!       PS(i,k,1,j) = dot_product(omegatrue(k,components(j,1),components(j,3),components(j,5),:), &
-!     &     omegatrue(k,components(j,2),components(j,4),components(j,5),:))
        PS(i,k,1,j) = dot_product(ot1(k,:),ot2(k,:))
       enddo
       deallocate(ot1,ot2)
@@ -733,13 +741,13 @@ module sagpr
     else
      stop 'ERROR: no sparsification information given; this is not recommended!'
     endif
-    deallocate(omegatrue)
+    deallocate(omegatrue,omegatrue2)
 
    else
      ! Spherical
 
      if (ncut.gt.0) then
-      !$OMP PARALLEL DO SHARED(components,PS,omega,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ww,ch)
+      !$OMP PARALLEL DO SHARED(components,PS,omega1,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ww,ch)
       do j=1,ncut
        allocate(om(natoms(i),2*lmax+1),ww(2*lm+1,2*lmax+1),ch(natoms(i),2*lmax+1))
        ia = components(j,1)
@@ -748,13 +756,8 @@ module sagpr
        mm = components(j,4)
        l1 = components(j,5)
        l2 = components(j,6)
-!       do k=1,2*lm+1
-!        do im=1,2*lmax+1
-!         ww(k,im) = w3j(k,l1+1,l2+1,im)
-!        enddo
-!       enddo
        ww(:,:)  = w3j(:,l1+1,l2+1,:)
-       om(:,:)  = omega(:,ia,nn,l1+1,:)
+       om(:,:)  = omega2(:,ia,nn,l1+1,:)
        do l=1,natoms(i)
         do im=1,2*lmax+1
          ch(l,im) = dot_product(harmonic(l,ib,l2+1,im,:),orthoradint(l,ib,l2+1,mm,:))
@@ -778,7 +781,7 @@ module sagpr
    endif
 
    ! Deallocate
-   deallocate(omega,harmonic,orthoradint)
+   deallocate(omega1,harmonic,orthoradint,omega2)
 
   enddo
 
@@ -865,7 +868,7 @@ module sagpr
 !***************************************************************************************************
 
  subroutine do_power_spectrum_scalar(PS0,components0,xyz,atname,natoms,cell,nframes,natmax,lm,nmax,lmax,rcut,sg, &
-     &     ncut,sparsification,rs,periodic,mult_by_A,all_species,all_centres)
+     &     ncut,sparsification,rs,periodic,mult_by_A,all_species,all_centres,isLODE,LODE_params)
   use SHTOOLS, only: wigner3j
   implicit none
 
@@ -882,12 +885,14 @@ module sagpr
   integer, allocatable :: all_indices(:,:,:),nneighmax(:,:),ncen(:)
   integer, parameter :: lwmax = 10000
   integer info,lwork,work(lwmax)
-  complex*16, allocatable :: omega(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:),ps_row(:,:,:)
+  complex*16, allocatable :: omega1(:,:,:,:,:),omega2(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:)
+  complex*16, allocatable :: omegatrue2(:,:,:,:,:),ps_row(:,:,:)
   complex*16, allocatable :: ot1(:,:),ot2(:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
   real*8 dr(3),sv(3),invcell(3,3)
-  logical all_species(nelements),all_centres(nelements)
+  logical all_species(nelements),all_centres(nelements),isLODE
+  type(LODE_Model), intent(in) :: LODE_params
 
   if (lm.ne.0) stop 'ERROR: scalar power spectrum has been called with non-scalar argument!'
 
@@ -1054,25 +1059,30 @@ module sagpr
   do i=1,nframes
 
    ! Get omega, harmonic and radint matrices
-   allocate(omega(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nspecies,lmax+1,2*lmax+1,nnmax),&
-     &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax))
-   call initsoap(omega,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
+   allocate(omega1(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),harmonic(natoms(i),nspecies,lmax+1,2*lmax+1,nnmax),&
+     &     orthoradint(natoms(i),nspecies,lmax+1,nmax,nnmax),omega2(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
+   call initsoap(omega1,harmonic,orthoradint,natoms(i),nspecies,nmax,lmax,nnmax,periodic,all_indices(i,:,:), &
      &     nneighmax(i,:),natmax,nsmax,cell(i,:,:),rs,sg,rcut,xyz(i,:,:),sigma,orthomatrix,all_species,all_centres)
 
+   if (.not.isLODE) then
+    omega2 = omega1
+   else
+    stop 'LODE not yet implemented!'
+   endif
+
    ! Compute power spectrum
-   allocate(omegatrue(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
+   allocate(omegatrue(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),omegatrue2(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
    do l=0,lmax
-    omegatrue(:,:,:,l+1,:) = omega(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
+    omegatrue(:,:,:,l+1,:)  = omega1(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
+    omegatrue2(:,:,:,l+1,:) = omega2(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
    enddo
    if (ncut.gt.0) then
-    !$OMP PARALLEL DO SHARED(components0,PS0,omegatrue,ncut,natoms,i) PRIVATE(j,k,ot1,ot2)
+    !$OMP PARALLEL DO SHARED(components0,PS0,omegatrue,omegatrue2,ncut,natoms,i) PRIVATE(j,k,ot1,ot2)
     do j=1,ncut
      allocate(ot1(natoms(i),2*lmax+1),ot2(natoms(i),2*lmax+1))
      ot1(:,:) = omegatrue(:,components0(j,1),components0(j,3),components0(j,5),:)
-     ot2(:,:) = omegatrue(:,components0(j,2),components0(j,4),components0(j,5),:)
+     ot2(:,:) = omegatrue2(:,components0(j,2),components0(j,4),components0(j,5),:)
      do k=1,natoms(i)
-!      PS0(i,k,1,j) = dot_product(omegatrue(k,components0(j,1),components0(j,3),components0(j,5),:), &
-!     &     omegatrue(k,components0(j,2),components0(j,4),components0(j,5),:))
       PS0(i,k,1,j) = dot_product(ot1(k,:),ot2(k,:))
      enddo
      deallocate(ot1,ot2)
@@ -1081,10 +1091,10 @@ module sagpr
    else
     stop 'ERROR: no sparsification information given; this is not recommended!'
    endif
-   deallocate(omegatrue)
+   deallocate(omegatrue,omegatrue2)
 
    ! Deallocate
-   deallocate(omega,harmonic,orthoradint)
+   deallocate(omega1,harmonic,orthoradint,omega2)
 
   enddo
 
