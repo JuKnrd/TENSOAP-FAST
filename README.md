@@ -30,7 +30,15 @@ It is also possible to use this program in combination with i-PI (https://github
 
 # Committee Models
 
-Later versions of TENSOAP-FAST are able to use committee models to make predictions. To use a committee model, the `-w` flag of `sagpr_convert` should be given a *list* of weights files (e.g. `-w WEIGHTS.*.npy`), and if a calibration factor is desired, this is specified by the `-a` flag.
+Committee models can also be used to make predictions. To use a committee model, the `-w` flag of `sagpr_convert` should be given a *list* of weights files (e.g. `-w WEIGHTS.*.npy`), and if a calibration factor is desired, this is specified by the `-a` flag.
+
+# Long-Range Descriptors
+
+Later versions of TENSOAP-FAST can use the LODE descriptor for long-range information. In this case, as well as the standard SA-GPR model, an additional model file is needed containing the extra LODE hyperparameters. These are specified using the `-l` flag when running `sagpr_apply`. If the user knows the the unit cell will stay the same with every input frame given to the model, the `-fc` flag can also be used to save time.
+
+# Examples
+
+TO BE WRITTEN
 
 # Maintenance
 

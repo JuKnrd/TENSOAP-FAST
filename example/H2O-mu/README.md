@@ -7,4 +7,4 @@ Where IPI is the base folder of your i-pi code and TNS the base folder of TENSOA
 
 ${IPI}/bin/i-pi input.xml &> ipi.out & sleep 30
 ${IPI}/bin/i-pi-driver -u -h driver -m qtip4pf &> driver.out &
-${TNS}/bin/sagpr_apply -m ${TNS}/models/bulk-water/mu-H2O.mdl -u -s sagpr 31401 -f init.xyz &> sagpr.out
+${TNS}/bin/sagpr_apply -m ${TNS}/models/bulk-water/mu-H2O.mdl -u -s sagpr 31401 -f init.xyz -o prediction.out &> sagpr.out
