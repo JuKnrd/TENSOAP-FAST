@@ -757,7 +757,7 @@ module sagpr
        l1 = components(j,5)
        l2 = components(j,6)
        ww(:,:)  = w3j(:,l1+1,l2+1,:)
-       om(:,:)  = omega1(:,ia,nn,l1+1,:)
+       om(:,:)  = omega2(:,ia,nn,l1+1,:)
        do l=1,natoms(i)
         do im=1,2*lmax+1
          ch(l,im) = dot_product(harmonic(l,ib,l2+1,im,:),orthoradint(l,ib,l2+1,mm,:))
