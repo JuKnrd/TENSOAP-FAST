@@ -174,6 +174,20 @@ subroutine get_model(GPR,model)
 end subroutine
 
 !****************************************************************************************************************
+subroutine get_LODE(GPR,lodeparams)
+ implicit none
+
+  type(SAGPR_Model), intent(inout) :: GPR
+  character(len=100) lodeparams
+
+  GPR%isLODE = .false.
+  if (trim(adjustl(lodeparams)).ne.'NONE') then
+   write(*,*) 'Loading LODE file'
+  endif
+
+end subroutine
+
+!****************************************************************************************************************
 
 subroutine read_frame(frame,un,vrb,prd)
  implicit none

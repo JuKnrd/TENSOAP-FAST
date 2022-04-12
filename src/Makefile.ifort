@@ -26,24 +26,24 @@ mkbin:
 	@cd ../bin;if [ ! -f sagpr_split_frames ];then ln -s ../tools/sagpr_split_frames.py sagpr_split_frames;fi;cd -
 	@cd ../bin;if [ ! -f sagpr_apply_process ];then ln -s ../tools/sagpr_apply_process.sh sagpr_apply_process;fi;cd -
 
-sagpr_get_PS: $(OBJECTS1)
-	$(FF) $(FOPTS) -o ../bin/sagpr_get_PS $(OBJECTS1) $(INCLUDE) $(LD)
+sagpr_get_PS: $(OBJ1)
+	$(FF) $(FOPTS) -o ../bin/sagpr_get_PS $(OBJ1) $(INCLUDE) $(LD)
 
-sagpr_get_kernel: $(OBJECTS2)
-	$(FF) $(FOPTS) -o ../bin/sagpr_get_kernel $(OBJECTS2) $(INCLUDE) $(LD)
+sagpr_get_kernel: $(OBJ2)
+	$(FF) $(FOPTS) -o ../bin/sagpr_get_kernel $(OBJ2) $(INCLUDE) $(LD)
 
-sagpr_predict: $(OBJECTS3)
-	$(FF) $(FOPTS) -o ../bin/sagpr_predict $(OBJECTS3) $(INCLUDE) $(LD)
+sagpr_predict: $(OBJ3)
+	$(FF) $(FOPTS) -o ../bin/sagpr_predict $(OBJ3) $(INCLUDE) $(LD)
 
-libsoapfast: $(OBJECTS4)
+libsoapfast: $(OBJ4)
 	@if [ ! -d ../lib ];then mkdir ../lib;fi
-	ar r ../lib/libsoapfast.a $(OBJECTS4)
+	ar r ../lib/libsoapfast.a $(OBJ4)
 
 sockets.o: sockets.c
 	$(CC) $(COPTS) -c -o sockets.o sockets.c
 
-sagpr_apply: $(OBJECTS5)
-	$(FF) $(FOPTS) -o ../bin/sagpr_apply $(OBJECTS5) -L../lib -lsoapfast $(INCLUDE) $(LD)
+sagpr_apply: $(OBJ5)
+	$(FF) $(FOPTS) -o ../bin/sagpr_apply $(OBJ5) -L../lib -lsoapfast $(INCLUDE) $(LD)
 
 %.o: %.f90 
 	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< 

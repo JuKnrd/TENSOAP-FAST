@@ -1,5 +1,6 @@
 module apply
  use sagpr
+ use lode
 
   ! Defaults
   integer, parameter :: nmax_default = 8, lmax_default = 6
@@ -42,6 +43,9 @@ module apply
   complex*16, allocatable :: PS_atomic(:,:,:,:),PS0_atomic(:,:,:,:)
   real*8, allocatable :: natoms_at(:)
   character(len=4), allocatable :: atname_at(:)
+  ! LODE model
+  logical isLODE
+  type(LODE_Model) :: LODE_params
   ! Other
   logical verbose
  end type SAGPR_Model
@@ -64,6 +68,7 @@ subroutine set_defaults(this)
   this%rs = rs_default
   this%periodic = .false.
   this%zeta = 1
+  this%isLODE = .false.
 
 end subroutine
 !****************************************************************************************************************
