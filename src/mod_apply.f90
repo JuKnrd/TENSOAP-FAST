@@ -89,7 +89,7 @@ subroutine predict_frame(this,frames,rate)
      &     frames%natoms,frames%cell,frames%nframes,frames%natmax,this%lm,this%nmax, &
      &     this%lmax,this%rcut,this%sg, &
      &     this%ncut,this%sparsification,this%rs,this%periodic,.true., &
-     &     this%w3j,this%all_species,this%all_centres)
+     &     this%w3j,this%all_species,this%all_centres,this%isLODE,this%LODE_params)
      call system_clock(tf)
      if (this%verbose) write(*,'(A,F6.3,A)') 'Got PS in',(tf-ts)/rate,' s'
     else
@@ -98,7 +98,7 @@ subroutine predict_frame(this,frames,rate)
      &     frames%natoms,frames%cell,frames%nframes,frames%natmax,this%lm,this%nmax, &
      &     this%lmax,this%rcut,this%sg, &
      &     this%ncut,this%sparsification,this%rs,this%periodic,.true., &
-     &     this%w3j,this%all_species,this%all_centres)
+     &     this%w3j,this%all_species,this%all_centres,this%isLODE,this%LODE_params)
      call system_clock(tf)
      if (this%verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',this%lm,' PS in',(tf-ts)/rate,' s'
      call system_clock(ts)
@@ -106,7 +106,7 @@ subroutine predict_frame(this,frames,rate)
      &     frames%natoms,frames%cell,frames%nframes,frames%natmax,0,this%nmax0, &
      &     this%lmax0,this%rcut0,this%sg0, &
      &     this%ncut0,this%sparsification0,this%rs0,this%periodic,.true., &
-     &     this%all_species,this%all_centres)
+     &     this%all_species,this%all_centres,this%isLODE,this%LODE_params)
      call system_clock(tf)
      if (this%verbose) write(*,'(A,I2,A,F6.3,A)') 'Got L=',0,' PS in',(tf-ts)/rate,' s'
     endif

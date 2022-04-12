@@ -184,6 +184,7 @@ subroutine get_LODE(GPR,lodeparams)
 
   GPR%isLODE = .false.
   if (trim(adjustl(lodeparams)).ne.'NONE') then
+   GPR%isLODE = .true.
    open(unit=12,file=trim(adjustl(lodeparams)),status='old',access='stream',form='unformatted')
    inquire(unit=12,size=bytes)
    reals=bytes/8
