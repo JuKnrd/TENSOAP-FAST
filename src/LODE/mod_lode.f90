@@ -25,12 +25,12 @@ module lode
   implicit none
 
    integer natoms,nspecies,nmax,lmax,nnmax,natmax,nsmax,iat,ncentype,icentype,icen,cen,n,ispe
-   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,k,nn,ncell,ia,ib,ic
+   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,k,nn,ncell,ia,ib,ic,igrid,ir,ileb
    real*8 rcut2,rx,ry,rz,r2,rdist,cth,ph,normfact,sigmafact,rv(3),sv(3),rcv(3)
    complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
-   real*8 sg,rcut,xyz(natmax,3)
+   real*8 sg,rcut,xyz(natmax,3),r
    real*8, allocatable :: radint(:,:,:,:,:),efact(:,:,:),length(:,:,:),lebedev_grid(:,:),spherical_grid(:,:)
-   real*8, allocatable :: integration_weights(:),gauss_points(:),gauss_weights(:)
+   real*8, allocatable :: integration_weights(:),gauss_points(:),gauss_weights(:),lr(:),lth(:),lph(:)
    real*8 sigma(nmax),orthomatrix(nmax,nmax),alpha,sg2,radial_c,radial_r0,radial_m,invcell(3,3)
    integer, allocatable :: nneigh(:,:)
    integer all_indices(nsmax,natmax),nneighmax(nsmax),ipiv(3),info,lwork,work(1000)
@@ -85,19 +85,25 @@ module lode
    allocate(spherical_grid(lebsize*radsize,3),integration_weights(lebsize*radsize))
    spherical_grid(:,:) = 0.d0
    integration_weights(:) = 0.d0
+   igrid = 1
+   do ir=1,radsize
+    r = gauss_points(ir)
+    do ileb=1,lebsize
+     spherical_grid(igrid,:) = r * lebedev_grid(ileb,:)
+     integration_weights(igrid) = 4.d0 * dacos(-1.d0) * r * r * lebedev_grid(ileb,3) * gauss_weights(ir)
+     igrid = igrid + 1
+    enddo
+   enddo
 
-!    igrid = 0
-!    for ir in range(radsize):
-!        r = gauss_points[ir]
-!        for ileb in range(lebsize):
-!            spherical_grid[igrid] = r * lebedev_grid[ileb][:3]
-!            integration_weights[igrid] = 4.0*np.pi * r**2 * lebedev_grid[ileb][3] * gauss_weights[ir] 
-!            igrid += 1
-!
-!    # GET POLAR COORDINATES OVER ATOMIC GRID
-!    lr = np.sqrt(np.sum(spherical_grid**2,axis=1))
-!    lth = np.arccos(spherical_grid[:,2]/lr)
-!    lph = np.arctan2(spherical_grid[:,1],spherical_grid[:,0])
+   ! Get polar coordinates on atomic grid
+   allocate(lr(lebsize*radsize),lth(lebsize*radsize),lph(lebsize*radsize))
+   lr(:) = 0.d0
+   do i=1,lebsize*radsize
+    lr(i) = dot_product(spherical_grid(i,:),spherical_grid(i,:))
+    lth(i) = dacos(spherical_grid(i,3)/lr(i))
+    lph(i) = datan2(spherical_grid(i,2),spherical_grid(i,1))
+   enddo
+
 !
 !    harmonics = np.zeros(((lmax+1)**2,lebsize*radsize),complex) 
 !    lm = 0
@@ -113,9 +119,8 @@ module lode
 !    omega_near = nearfield.nearfield(nat,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,alpha,coordx_near,spherical_grid,orthoradial,harmonics,integration_weights) 
 !    omega_near = np.transpose(omega_near,(4,3,2,1,0))
 !
-!    return omega_near
 
-   deallocate(lebedev_grid,spherical_grid,gauss_points,gauss_weights)
+   deallocate(lebedev_grid,spherical_grid,gauss_points,gauss_weights,lr,lth,lph)
 
  end subroutine
 
