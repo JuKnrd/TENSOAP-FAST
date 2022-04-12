@@ -37,17 +37,10 @@ module lode
    real*8 rate
    logical all_species(nelements),all_centres(nelements)
 
-!from . import gausslegendre,nearfield
-!
-!def direct_potential(nat,nnmax,nspecies,lmax,centers,all_species,nneighmax,atom_indexes,rcut,coords,all_radial,sigma,sg,nmax,orthomatrix,radsize,lebsize):
-!    """return projections of the non-local field on basis functions"""
-!
-!    start = time.time()
-!    alpha = 1.0/(2.0*sg**2)
+   alpha = 0.5d0 / (sg*sg)
 !
 !    species = np.zeros(nat,float)
 !
-!    start1 = time.time()
 !    # process coordinates 
 !    coordx_near = np.zeros((nat,nspecies,nat,3), dtype=float)
 !    nneigh_near = np.zeros((nat,nspecies),int)
@@ -76,15 +69,10 @@ module lode
 !                    nneigh_near[iat,ispe] += 1
 !            species[iat] = centype
 !            iat = iat + 1
-!    #print "processing coordinates :", time.time()-start1, "seconds"
-!
-!    start_near = time.time()
 !
 !    # Define atomic grid for potential 
 !    #radsize = 50 # number of radial points
 !    gauss_points,gauss_weights = gausslegendre.gauss_legendre.gaulegf(x1=0.0,x2=rcut*2.0,n=radsize)
-!    #lebsize = 146 # number of Lebedev points
-!    # Choose among [6, 14, 26, 38, 50, 74, 86, 110, 146, 170, 194, 230, 266, 302, 350, 434, 590, 770, 974, 1202, 1454, 1730, 2030, 2354, 2702, 3074, 3470, 3890, 4334, 4802, 5294, 5810]
 !   lebedev_grid = ld(lebsize)
 !    spherical_grid = np.zeros((lebsize*radsize,3),float)
 !    integration_weights = np.zeros((lebsize*radsize),float)
@@ -113,13 +101,9 @@ module lode
 !
 !    # compute near-field potential and project it onto the atomic basis
 !    omega_near = nearfield.nearfield(nat,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,alpha,coordx_near,spherical_grid,orthoradial,harmonics,integration_weights) 
-!    #print "near-field:", time.time()-start_near, "seconds"
 !    omega_near = np.transpose(omega_near,(4,3,2,1,0))
 !
 !
-!    #print "-----------------------------------------"
-!    print("Direct space potential computed in", time.time()-start, "seconds")
-!    print("")
 !
 !    return omega_near
 !
@@ -145,22 +129,6 @@ module lode
 !    assert n == n_out.value
 !    return xyzw.T
 !
-!def radial_1D_mesh(sigma, nmax, rvec, rsize):
-!    """Evaluate equispaced and normalized radial GTOs over a 1D mesh"""
-!
-!    def rGTO(rval,nval,sigmaval):
-!        """Evaluate radial part of Gaussian type orbitals"""
-!        alphaval = 1.0/(2*(sigmaval)**2)
-!        f = rval**nval*np.exp(-alphaval*(rval)**2)
-!        return f
-!
-!    # COMPUTE PRIMITIVE RADIAL FUNCTIONS
-!    radial = np.zeros((nmax,rsize),dtype=float)
-!    for n in range(nmax):
-!        inner = 0.5*sc.gamma(n+1.5)*(sigma[n]**2)**(n+1.5)
-!        radial[n,:] = rGTO(rvec[:],n,sigma[n])/np.sqrt(inner)
-!
-!    return radial
 
  end subroutine
 
@@ -169,11 +137,17 @@ module lode
   implicit none
 
   ! Evaluate equispaced and normalied radial GTOs over a 1D mesh
-  integer nmax,rvec,rsize,n
-  real*8 sigma(nmax),radial(nmax,rsize),inner
+  integer nmax,rsize,n,r
+  integer rvec(rsize)
+  real*8 sigma(nmax),radial(nmax,rsize),inner,arg,rval
 
   do n=0,nmax-1
    inner = 0.5d0 * gamma(n + 1.5d0) * (sigma(n+1)*sigma(n+1))**(n + 1.5d0)
+   do r=1,rsize
+    rval = rvec(r)
+    arg = -0.5d0 * rval*rval / (sigma(n+1)*sigma(n+1))
+    radial(n+1,r) = (rval**n) * dexp(arg) / dsqrt(inner)
+   enddo
   enddo
   
 

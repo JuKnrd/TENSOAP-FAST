@@ -715,6 +715,9 @@ module sagpr
    if (.not.isLODE) then
     omega2 = omega1
    else
+    call direct_potential(omega2,natoms(i),nspecies,nmax,lmax,nnmax,all_indices(i,:,:), &
+     &     nneighmax(i,:),natmax,nsmax,sg,rcut,xyz(i,:,:),sigma,orthomatrix,all_species, &
+     &     all_centres,LODE_params%radsize,LODE_params%lebsize)
     stop 'LODE not yet implemented!'
    endif
 
@@ -1067,6 +1070,9 @@ module sagpr
    if (.not.isLODE) then
     omega2 = omega1
    else
+    call direct_potential(omega2,natoms(i),nspecies,nmax,lmax,nnmax,all_indices(i,:,:), &
+     &     nneighmax(i,:),natmax,nsmax,sg,rcut,xyz(i,:,:),sigma,orthomatrix,all_species, &
+     &     all_centres,LODE_params%radsize,LODE_params%lebsize)
     stop 'LODE not yet implemented!'
    endif
 
