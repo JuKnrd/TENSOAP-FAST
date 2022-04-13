@@ -42,6 +42,8 @@ module lode
    real*8 rate
    logical all_species(nelements),all_centres(nelements)
 
+	integer a,b,c,d
+
    alpha = 0.5d0 / (sg*sg)
 
    ! Process coordinates
@@ -68,9 +70,9 @@ module lode
          rx = xyz(neigh,1) - xyz(cen,1)
          ry = xyz(neigh,2) - xyz(cen,2)
          rz = xyz(neigh,3) - xyz(cen,3)
-         coordx_near(iat,ispe,n_near,1) = rx
-         coordx_near(iat,ispe,n_near,2) = ry
-         coordx_near(iat,ispe,n_near,3) = rz
+         coordx_near(iat,k,n_near,1) = rx
+         coordx_near(iat,k,n_near,2) = ry
+         coordx_near(iat,k,n_near,3) = rz
          n_near = n_near + 1
          nneigh_near(iat,k) = nneigh_near(iat,k) + 1
         enddo
@@ -80,7 +82,6 @@ module lode
      enddo
     endif
    enddo
-
 !
 !    # process coordinates 
 !    coordx_near = np.zeros((nat,nspecies,nat,3), dtype=float)
@@ -175,6 +176,8 @@ module lode
      enddo
     enddo
    enddo
+
+	write(*,*) 'NORM',norm2(real(omega)),norm2(aimag(omega))
 
    deallocate(lebedev_grid,spherical_grid,gauss_points,gauss_weights,lr,lth,lph,harmonics,radial,orthoradial)
    deallocate(coordx_near,nneigh_near)
