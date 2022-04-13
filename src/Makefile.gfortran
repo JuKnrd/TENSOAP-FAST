@@ -13,11 +13,12 @@ INCLUDE=$(SHTOOLS_INCLUDE)
 SAGPR_PREFIX=/usr/local
 
 LODE=LODE/lebedev.o LODE/gausslegendre.o LODE/nearfield.o LODE/mod_lode.o
-#OBJ1=$(LODE) mod_sagpr.o sagpr_get_PS.o
-#OBJ2=$(LODE) mod_sagpr.o sagpr_get_kernel.o
-#OBJ3=$(LODE) mod_sagpr.o sagpr_predict.o
+SOCK=sockets.o SOCKETS/fsockets.o
+#OBJ1=$(LODE) mod_sagpr.o SOAPFAST/sagpr_get_PS.o
+#OBJ2=$(LODE) mod_sagpr.o SOAPFAST/sagpr_get_kernel.o
+#OBJ3=$(LODE) mod_sagpr.o SOAPFAST/sagpr_predict.o
 OBJ4=$(LODE) mod_sagpr.o mod_apply.o
-OBJ5=sockets.o fsockets.o mod_io.o sagpr_apply.o
+OBJ5=$(SOCK) mod_io.o sagpr_apply.o
 
 all: mkbin libsoapfast sagpr_apply
 
@@ -30,15 +31,6 @@ mkbin:
 	@cd ../bin;if [ ! -f sagpr_split_frames ];then ln -s ../tools/sagpr_split_frames.py sagpr_split_frames;fi;cd - > /dev/null
 	@cd ../bin;if [ ! -f sagpr_apply_process ];then ln -s ../tools/sagpr_apply_process.sh sagpr_apply_process;fi;cd - > /dev/null
 
-sagpr_get_PS: $(OBJ1)
-	$(FF) $(FOPTS) -o ../bin/sagpr_get_PS $(OBJ1) $(INCLUDE) $(LD)
-
-sagpr_get_kernel: $(OBJ2)
-	$(FF) $(FOPTS) -o ../bin/sagpr_get_kernel $(OBJ2) $(INCLUDE) $(LD)
-
-sagpr_predict: $(OBJ3)
-	$(FF) $(FOPTS) -o ../bin/sagpr_predict $(OBJ3) $(INCLUDE) $(LD)
-
 libsoapfast: $(OBJ4)
 	@if [ ! -d ../lib ];then mkdir ../lib;fi
 	ar r ../lib/libsoapfast.a $(OBJ4)
@@ -48,6 +40,9 @@ sockets.o: sockets.c
 
 sagpr_apply: $(OBJ5)
 	$(FF) $(FOPTS) -o ../bin/sagpr_apply $(OBJ5) -L../lib -lsoapfast $(INCLUDE) $(LD)
+
+SOCKETS/%.o: SOCKETS/%.f90
+	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@
 
 LODE/%.o: LODE/%.f90
 	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@
@@ -69,7 +64,7 @@ mkcheck:
 	@cd ../tests/water_monomer_zeta2/;bash run_test.sh
 
 config:
-	@ cd ../;./configure;cd src
+	@cd ../;./configure;cd src
 
 clean: 
 	rm -rf *.o *.mod */*.o */*.mod ../bin ../lib
