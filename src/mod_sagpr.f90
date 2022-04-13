@@ -721,8 +721,8 @@ module sagpr
     ! Scalar
     allocate(omegatrue(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),omegatrue2(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
     do l=0,lmax
-     omegatrue(:,:,:,l+1,:)  = omega1(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
-     omegatrue2(:,:,:,l+1,:) = omega2(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
+     omegatrue(:,:,:,l+1,:)  = omega2(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
+     omegatrue2(:,:,:,l+1,:) = omega1(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
     enddo
     if (ncut.gt.0) then
      !$OMP PARALLEL DO SHARED(components,PS,omegatrue,omegatrue2,ncut,natoms,i) PRIVATE(j,k,ot1,ot2)

@@ -177,8 +177,6 @@ module lode
     enddo
    enddo
 
-	write(*,*) 'NORM',norm2(real(omega)),norm2(aimag(omega))
-
    deallocate(lebedev_grid,spherical_grid,gauss_points,gauss_weights,lr,lth,lph,harmonics,radial,orthoradial)
    deallocate(coordx_near,nneigh_near)
 
