@@ -745,7 +745,7 @@ module sagpr
      ! Spherical
 
      if (ncut.gt.0) then
-      !$OMP PARALLEL DO SHARED(components,PS,omega1,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ww,ch)
+      !$OMP PARALLEL DO SHARED(components,PS,omega1,omega2,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ww,ch)
       do j=1,ncut
        allocate(om(natoms(i),2*lmax+1),ww(2*lm+1,2*lmax+1),ch(natoms(i),2*lmax+1))
        ia = components(j,1)
