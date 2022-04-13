@@ -46,6 +46,8 @@ module lode
 
    ! Process coordinates
    allocate(coordx_near(natoms,nspecies,natoms,3),nneigh_near(natoms,nspecies))
+   coordx_near(:,:,:,:) = 0.d0
+   nneigh_near(:,:) = 0.d0
    iat = 1
    ncentype = count(all_centres)
    ! Loop over species to centre on
@@ -70,7 +72,7 @@ module lode
          coordx_near(iat,ispe,n_near,2) = ry
          coordx_near(iat,ispe,n_near,3) = rz
          n_near = n_near + 1
-         nneigh_near(iat,ispe) = nneigh_near(iat,ispe) + 1
+         nneigh_near(iat,k) = nneigh_near(iat,k) + 1
         enddo
        endif
       enddo
@@ -125,8 +127,8 @@ module lode
    do ir=1,radsize
     r = gauss_points(ir)
     do ileb=1,lebsize
-     spherical_grid(igrid,:) = r * lebedev_grid(ileb,:)
-     integration_weights(igrid) = 4.d0 * dacos(-1.d0) * r * r * lebedev_grid(ileb,3) * gauss_weights(ir)
+     spherical_grid(igrid,:) = r * lebedev_grid(1:3,ileb)
+     integration_weights(igrid) = 4.d0 * dacos(-1.d0) * r * r * lebedev_grid(4,ileb) * gauss_weights(ir)
      igrid = igrid + 1
     enddo
    enddo
@@ -135,7 +137,7 @@ module lode
    allocate(lr(lebsize*radsize),lth(lebsize*radsize),lph(lebsize*radsize))
    lr(:) = 0.d0
    do i=1,lebsize*radsize
-    lr(i) = dot_product(spherical_grid(i,:),spherical_grid(i,:))
+    lr(i) = dsqrt(dot_product(spherical_grid(i,:),spherical_grid(i,:)))
     lth(i) = dacos(spherical_grid(i,3)/lr(i))
     lph(i) = datan2(spherical_grid(i,2),spherical_grid(i,1))
    enddo
@@ -145,9 +147,9 @@ module lode
    harmonics(:,:) = (0.d0,0.d0)
    lm = 1
    do l=0,lmax
-    do im=1,2*l+1
+    do im=-l,l
      do i=1,lebsize*radsize
-      harmonics(lm,i) = dconjg(spherical_harmonic(l,im-l,dcos(lth(i)),lph(i)))
+      harmonics(lm,i) = dconjg(spherical_harmonic(l,im,dcos(lth(i)),lph(i)))
      enddo
      lm = lm + 1
     enddo
