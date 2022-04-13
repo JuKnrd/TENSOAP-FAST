@@ -1,14 +1,6 @@
 module sagpr
  use lode
 
-! integer, parameter :: nelements = 118
-! character(len=2), parameter :: atomic_names(nelements) = (/'H ','He','Li','Be','B ','C ','N ','O ','F ','Ne','Na','Mg','Al','Si', &
-!     &     'P ','S ','Cl','Ar','K ','Ca','Sc','Ti','V ','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br', &
-!     &     'Kr','Rb','Sr','Y ','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I ','Xe','Cs','Ba', &
-!     &     'La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W ','Re','Os','Ir', &
-!     &     'Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th','Pa','U ','Np','Pu','Am','Cm','Bk','Cf', &
-!     &     'Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'/)
-
  contains
 
 !***************************************************************************************************
@@ -715,10 +707,13 @@ module sagpr
    if (.not.isLODE) then
     omega2 = omega1
    else
-    call direct_potential(omega2,natoms(i),nspecies,nmax,lmax,nnmax,all_indices(i,:,:), &
+    if (.not.periodic) then
+     call direct_potential(omega2,natoms(i),nspecies,nmax,lmax,nnmax,all_indices(i,:,:), &
      &     nneighmax(i,:),natmax,nsmax,sg,rcut,xyz(i,:,:),sigma,orthomatrix,all_species, &
      &     all_centres,LODE_params%radsize,LODE_params%lebsize)
-    stop 'LODE not yet implemented!'
+    else
+     stop 'PERIODIC LODE NOT YET IMPLEMENTED!'
+    endif
    endif
 
    ! Compute power spectrum
@@ -1070,10 +1065,13 @@ module sagpr
    if (.not.isLODE) then
     omega2 = omega1
    else
-    call direct_potential(omega2,natoms(i),nspecies,nmax,lmax,nnmax,all_indices(i,:,:), &
+    if (.not.periodic) then
+     call direct_potential(omega2,natoms(i),nspecies,nmax,lmax,nnmax,all_indices(i,:,:), &
      &     nneighmax(i,:),natmax,nsmax,sg,rcut,xyz(i,:,:),sigma,orthomatrix,all_species, &
      &     all_centres,LODE_params%radsize,LODE_params%lebsize)
-    stop 'LODE not yet implemented!'
+    else
+     stop 'PERIODIC LODE NOT YET IMPLEMENTED!'
+    endif
    endif
 
    ! Compute power spectrum
