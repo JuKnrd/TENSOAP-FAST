@@ -33,9 +33,9 @@ module lode
    real*8 sg,rcut,xyz(natmax,3),r
    real*8, allocatable :: radint(:,:,:,:,:),efact(:,:,:),length(:,:,:),lebedev_grid(:,:),spherical_grid(:,:)
    real*8, allocatable :: integration_weights(:),gauss_points(:),gauss_weights(:),lr(:),lth(:),lph(:),radial(:,:)
-   real*8, allocatable :: orthoradial(:,:)
+   real*8, allocatable :: orthoradial(:,:),coordx_near(:,:,:,:)
    real*8 sigma(nmax),orthomatrix(nmax,nmax),alpha,sg2,radial_c,radial_r0,radial_m,invcell(3,3)
-   integer, allocatable :: nneigh(:,:)
+   integer, allocatable :: nneigh_near(:,:)
    integer all_indices(nsmax,natmax),nneighmax(nsmax),ipiv(3),info,lwork,work(1000)
    logical periodic
    integer ts,tf,cr,radsize,lebsize
@@ -127,7 +127,8 @@ module lode
    orthoradial = matmul(orthomatrix,radial)
 
    ! Compute near-field potential and project it onto the atomic basis
-
+   call nearfield(natoms,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,alpha,coordx_near,spherical_grid,orthoradial, &
+     &     harmonics,integration_weights,omega_near)
    do i=1,natoms
     do j=1,nspecies
      do k=1,nmax
@@ -139,12 +140,6 @@ module lode
      enddo
     enddo
    enddo
-
-!
-!    # compute near-field potential and project it onto the atomic basis
-!    omega_near = nearfield.nearfield(nat,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,alpha,coordx_near,spherical_grid,orthoradial,harmonics,integration_weights) 
-!    omega_near = np.transpose(omega_near,(4,3,2,1,0))
-!
 
    deallocate(lebedev_grid,spherical_grid,gauss_points,gauss_weights,lr,lth,lph,harmonics,radial,orthoradial)
 
