@@ -11,10 +11,7 @@ INCLUDE=$(SHTOOLS_INCLUDE)
 SAGPR_PREFIX=/usr/local
 
 LODE=LODE/lebedev.o LODE/gausslegendre.o LODE/nearfield.o LODE/mod_lode.o
-SOCK=sockets.o SOCKETS/fsockets.o
-#OBJ1=$(LODE) mod_sagpr.o SOAPFAST/sagpr_get_PS.o
-#OBJ2=$(LODE) mod_sagpr.o SOAPFAST/sagpr_get_kernel.o
-#OBJ3=$(LODE) mod_sagpr.o SOAPFAST/sagpr_predict.o
+SOCK=SOCKETS/sockets.o SOCKETS/fsockets.o
 OBJ4=$(LODE) mod_sagpr.o mod_apply.o
 OBJ5=$(SOCK) mod_io.o sagpr_apply.o
 
@@ -33,11 +30,11 @@ libsoapfast: $(OBJ4)
 	@if [ ! -d ../lib ];then mkdir ../lib;fi
 	ar r ../lib/libsoapfast.a $(OBJ4)
 
-sockets.o: sockets.c
-	$(CC) $(COPTS) -c -o sockets.o sockets.c
-
 sagpr_apply: $(OBJ5)
 	$(FF) $(FOPTS) -o ../bin/sagpr_apply $(OBJ5) -L../lib -lsoapfast $(INCLUDE) $(LD)
+
+SOCKETS/%.o: SOCKETS/%.c
+	$(CC) $(COPTS) -c -o $@ $<
 
 SOCKETS/%.o: SOCKETS/%.f90
 	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@
