@@ -42,8 +42,6 @@ module lode
    real*8 rate
    logical all_species(nelements),all_centres(nelements)
 
-	integer a,b,c,d
-
    alpha = 0.5d0 / (sg*sg)
 
    ! Process coordinates
@@ -64,11 +62,11 @@ module lode
        if (all_species(ispe)) then
         k = k + 1
         ! Loop over neighbours of that species
-        n_near = 1
+!        n_near = 1
         do ineigh=1,nneighmax(ispe)
          neigh = all_indices(ispe,ineigh)
-         coordx_near(iat,k,n_near,:) = xyz(neigh,:) - xyz(cen,:)
-         n_near = n_near + 1
+         coordx_near(iat,k,ineigh,:) = xyz(neigh,:) - xyz(cen,:)
+!         n_near = n_near + 1
          nneigh_near(iat,k) = nneigh_near(iat,k) + 1
         enddo
        endif
@@ -132,17 +130,6 @@ module lode
    ! Compute near-field potential and project it onto the atomic basis
    call nearfield(natoms,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,alpha,coordx_near,spherical_grid,orthoradial, &
      &     harmonics,integration_weights,omega)
-!   do i=1,natoms
-!    do j=1,nspecies
-!     do k=1,nmax
-!      do l=1,lmax+1
-!       do m=1,2*lmax+1
-!        omega(i,j,k,l,m) = omega_near(m,l,k,j,i)
-!       enddo
-!      enddo
-!     enddo
-!    enddo
-!   enddo
 
    deallocate(lebedev_grid,spherical_grid,gauss_points,gauss_weights,lr,lth,lph,harmonics,radial,orthoradial)
    deallocate(coordx_near,nneigh_near)
