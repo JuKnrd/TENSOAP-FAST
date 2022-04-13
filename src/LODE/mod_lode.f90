@@ -25,7 +25,7 @@ module lode
   implicit none
 
    integer natoms,nspecies,nmax,lmax,nnmax,natmax,nsmax,iat,ncentype,icentype,icen,cen,n,ispe
-   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,k,nn,ncell,ia,ib,ic,igrid,ir,ileb,lm,j,m
+   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,k,nn,ncell,ia,ib,ic,igrid,ir,ileb,lm,j,m,n_near
    real*8 rcut2,rx,ry,rz,r2,rdist,cth,ph,normfact,sigmafact,rv(3),sv(3),rcv(3)
    complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
    complex*16 omega_near(2*lmax+1,lmax+1,nmax,nspecies,natoms)
@@ -43,8 +43,42 @@ module lode
    logical all_species(nelements),all_centres(nelements)
 
    alpha = 0.5d0 / (sg*sg)
-!
-!    species = np.zeros(nat,float)
+
+   ! Process coordinates
+   allocate(coordx_near(natoms,nspecies,natoms,3),nneigh_near(natoms,nspecies))
+   iat = 1
+   ncentype = count(all_centres)
+   ! Loop over species to centre on
+   do icentype=1,nelements
+    if (all_centres(icentype)) then
+     ! Loop over centres of that species
+     do icen=1,nneighmax(icentype)
+      cen = all_indices(icentype,icen)
+      ! Loop over all the species to use as neighbours
+      k = 0
+      do ispe=1,nelements
+       if (all_species(ispe)) then
+        k = k + 1
+        ! Loop over neighbours of that species
+        n_near = 1
+        do ineigh=1,nneighmax(ispe)
+         neigh = all_indices(ispe,ineigh)
+         rx = xyz(neigh,1) - xyz(cen,1)
+         ry = xyz(neigh,2) - xyz(cen,2)
+         rz = xyz(neigh,3) - xyz(cen,3)
+         coordx_near(iat,ispe,n_near,1) = rx
+         coordx_near(iat,ispe,n_near,2) = ry
+         coordx_near(iat,ispe,n_near,3) = rz
+         n_near = n_near + 1
+         nneigh_near(iat,ispe) = nneigh_near(iat,ispe) + 1
+        enddo
+       endif
+      enddo
+      iat = iat + 1
+     enddo
+    endif
+   enddo
+
 !
 !    # process coordinates 
 !    coordx_near = np.zeros((nat,nspecies,nat,3), dtype=float)
@@ -72,7 +106,6 @@ module lode
 !                    coordx_near[iat,ispe,n_near,2] = rz
 !                    n_near += 1
 !                    nneigh_near[iat,ispe] += 1
-!            species[iat] = centype
 !            iat = iat + 1
 
    ! Atomic grid for potential
@@ -142,6 +175,7 @@ module lode
    enddo
 
    deallocate(lebedev_grid,spherical_grid,gauss_points,gauss_weights,lr,lth,lph,harmonics,radial,orthoradial)
+   deallocate(coordx_near,nneigh_near)
 
  end subroutine
 
