@@ -1,14 +1,6 @@
 module sagpr
  use lode
 
- integer, parameter :: nelements = 118
- character(len=2), parameter :: atomic_names(nelements) = (/'H ','He','Li','Be','B ','C ','N ','O ','F ','Ne','Na','Mg','Al','Si', &
-     &     'P ','S ','Cl','Ar','K ','Ca','Sc','Ti','V ','Cr','Mn','Fe','Co','Ni','Cu','Zn','Ga','Ge','As','Se','Br', &
-     &     'Kr','Rb','Sr','Y ','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I ','Xe','Cs','Ba', &
-     &     'La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W ','Re','Os','Ir', &
-     &     'Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th','Pa','U ','Np','Pu','Am','Cm','Bk','Cf', &
-     &     'Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'/)
-
  contains
 
 !***************************************************************************************************
@@ -715,7 +707,13 @@ module sagpr
    if (.not.isLODE) then
     omega2 = omega1
    else
-    stop 'LODE not yet implemented!'
+    if (.not.periodic) then
+     call direct_potential(omega2,natoms(i),nspecies,nmax,lmax,nnmax,all_indices(i,:,:), &
+     &     nneighmax(i,:),natmax,nsmax,sg,rcut,xyz(i,:,:),sigma,orthomatrix,all_species, &
+     &     all_centres,LODE_params%radsize,LODE_params%lebsize)
+    else
+     stop 'PERIODIC LODE NOT YET IMPLEMENTED!'
+    endif
    endif
 
    ! Compute power spectrum
@@ -723,8 +721,8 @@ module sagpr
     ! Scalar
     allocate(omegatrue(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),omegatrue2(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
     do l=0,lmax
-     omegatrue(:,:,:,l+1,:)  = omega1(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
-     omegatrue2(:,:,:,l+1,:) = omega2(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
+     omegatrue(:,:,:,l+1,:)  = omega2(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
+     omegatrue2(:,:,:,l+1,:) = omega1(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
     enddo
     if (ncut.gt.0) then
      !$OMP PARALLEL DO SHARED(components,PS,omegatrue,omegatrue2,ncut,natoms,i) PRIVATE(j,k,ot1,ot2)
@@ -747,7 +745,7 @@ module sagpr
      ! Spherical
 
      if (ncut.gt.0) then
-      !$OMP PARALLEL DO SHARED(components,PS,omega1,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ww,ch)
+      !$OMP PARALLEL DO SHARED(components,PS,omega1,omega2,orthoradint,harmonic,w3j) PRIVATE(j,ia,ib,nn,mm,l1,l2,k,l,im,n,om,ww,ch)
       do j=1,ncut
        allocate(om(natoms(i),2*lmax+1),ww(2*lm+1,2*lmax+1),ch(natoms(i),2*lmax+1))
        ia = components(j,1)
@@ -1067,14 +1065,20 @@ module sagpr
    if (.not.isLODE) then
     omega2 = omega1
    else
-    stop 'LODE not yet implemented!'
+    if (.not.periodic) then
+     call direct_potential(omega2,natoms(i),nspecies,nmax,lmax,nnmax,all_indices(i,:,:), &
+     &     nneighmax(i,:),natmax,nsmax,sg,rcut,xyz(i,:,:),sigma,orthomatrix,all_species, &
+     &     all_centres,LODE_params%radsize,LODE_params%lebsize)
+    else
+     stop 'PERIODIC LODE NOT YET IMPLEMENTED!'
+    endif
    endif
 
    ! Compute power spectrum
    allocate(omegatrue(natoms(i),nspecies,nmax,lmax+1,2*lmax+1),omegatrue2(natoms(i),nspecies,nmax,lmax+1,2*lmax+1))
    do l=0,lmax
-    omegatrue(:,:,:,l+1,:)  = omega1(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
-    omegatrue2(:,:,:,l+1,:) = omega2(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
+    omegatrue(:,:,:,l+1,:)  = omega2(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
+    omegatrue2(:,:,:,l+1,:) = omega1(:,:,:,l+1,:) / dsqrt(dsqrt(2.d0*l+1.d0))
    enddo
    if (ncut.gt.0) then
     !$OMP PARALLEL DO SHARED(components0,PS0,omegatrue,omegatrue2,ncut,natoms,i) PRIVATE(j,k,ot1,ot2)
@@ -1444,74 +1448,74 @@ module sagpr
 
 !***************************************************************************************************
 
- complex*16 function spherical_harmonic(l,m,costheta,phi)
-  implicit none
-
-   integer l,m,mm
-   real*8 costheta,phi
-   complex*16 rawfactor
-
-   mm = abs(m)
-   rawfactor = ((1.d0,0.d0)*cos(m*phi) + (0.d0,1.d0)*sin(m*phi)) * plgndr(l,abs(m),costheta)
-   spherical_harmonic = rawfactor * dsqrt( ((2*l + 1) / (4.d0*dacos(-1.d0)) * fact(l-mm)/fact(l+mm)))
-   if (m.lt.0) spherical_harmonic = spherical_harmonic * (-1.d0)**m
-
- end function
-
-!***************************************************************************************************
-
- real*8 function plgndr(l,m,x)
-  implicit none
-
-   ! Subroutine from Numerical Recipes in Fortran
-
-   integer l,m
-   real*8 x
-   integer i,ll
-   real*8 fact,pll,pmm,pmmp1,somx2
-   if (m.lt.0.or.m.gt.l.or.abs(x).gt.1) stop 'ERROR: bad arguments in plgndr!'
-   pmm = 1.d0
-   if (m.gt.0) then
-    somx2 = sqrt((1.d0-x)*(1.d0+x))
-    fact = 1.d0
-    do i=1,m
-     pmm = -pmm*fact*somx2
-     fact = fact + 2.d0
-    enddo
-   endif
-   if (l.eq.m) then
-    plgndr=pmm
-   else
-    pmmp1 = x*(2*m+1)*pmm
-    if (l.eq.m+1) then
-     plgndr = pmmp1
-    else
-     do ll=m+2,l 
-      pll=(x*(2*ll-1)*pmmp1-(ll+m-1)*pmm)/(ll-m)
-      pmm = pmmp1
-      pmmp1 = pll
-     enddo
-     plgndr = pll
-    endif
-   endif
-
-   return
- end function
+! complex*16 function spherical_harmonic(l,m,costheta,phi)
+!  implicit none
+!
+!   integer l,m,mm
+!   real*8 costheta,phi
+!   complex*16 rawfactor
+!
+!   mm = abs(m)
+!   rawfactor = ((1.d0,0.d0)*cos(m*phi) + (0.d0,1.d0)*sin(m*phi)) * plgndr(l,abs(m),costheta)
+!   spherical_harmonic = rawfactor * dsqrt( ((2*l + 1) / (4.d0*dacos(-1.d0)) * fact(l-mm)/fact(l+mm)))
+!   if (m.lt.0) spherical_harmonic = spherical_harmonic * (-1.d0)**m
+!
+! end function
 
 !***************************************************************************************************
 
- real*8 function fact(n)
-  implicit none
+! real*8 function plgndr(l,m,x)
+!  implicit none
+!
+!   ! Subroutine from Numerical Recipes in Fortran
+!
+!   integer l,m
+!   real*8 x
+!   integer i,ll
+!   real*8 fact,pll,pmm,pmmp1,somx2
+!   if (m.lt.0.or.m.gt.l.or.abs(x).gt.1) stop 'ERROR: bad arguments in plgndr!'
+!   pmm = 1.d0
+!   if (m.gt.0) then
+!    somx2 = sqrt((1.d0-x)*(1.d0+x))
+!    fact = 1.d0
+!    do i=1,m
+!     pmm = -pmm*fact*somx2
+!     fact = fact + 2.d0
+!    enddo
+!   endif
+!   if (l.eq.m) then
+!    plgndr=pmm
+!   else
+!    pmmp1 = x*(2*m+1)*pmm
+!    if (l.eq.m+1) then
+!     plgndr = pmmp1
+!    else
+!     do ll=m+2,l 
+!      pll=(x*(2*ll-1)*pmmp1-(ll+m-1)*pmm)/(ll-m)
+!      pmm = pmmp1
+!      pmmp1 = pll
+!     enddo
+!     plgndr = pll
+!    endif
+!   endif
 
-   integer n,i
+!   return
+! end function
 
-   if (n.lt.0) stop 'ERROR: positive number required for factorial!'
-   fact = 1.d0
-   do i=2,n
-    fact = fact * i
-   enddo
+!***************************************************************************************************
 
- end function
+! real*8 function fact(n)
+!  implicit none
+!
+!   integer n,i
+!
+!   if (n.lt.0) stop 'ERROR: positive number required for factorial!'
+!   fact = 1.d0
+!   do i=2,n
+!    fact = fact * i
+!   enddo
+!
+! end function
 
 !***************************************************************************************************
 
