@@ -12,16 +12,16 @@ LD=$(SHTOOLS_LIB) -lSHTOOLS -lm $(LAPACK_LIB) -llapack $(BLAS_LIB) -lblas
 INCLUDE=$(SHTOOLS_INCLUDE)
 SAGPR_PREFIX=/usr/local
 
-LODE=LODE/lebedev.o LODE/gausslegendre.o LODE/mod_lode.o
-OBJ1=$(LODE) mod_sagpr.o sagpr_get_PS.o
-OBJ2=$(LODE) mod_sagpr.o sagpr_get_kernel.o
-OBJ3=$(LODE) mod_sagpr.o sagpr_predict.o
+LODE=LODE/lebedev.o LODE/gausslegendre.o LODE/nearfield.o LODE/mod_lode.o
+#OBJ1=$(LODE) mod_sagpr.o sagpr_get_PS.o
+#OBJ2=$(LODE) mod_sagpr.o sagpr_get_kernel.o
+#OBJ3=$(LODE) mod_sagpr.o sagpr_predict.o
 OBJ4=$(LODE) mod_sagpr.o mod_apply.o
 OBJ5=sockets.o fsockets.o mod_io.o sagpr_apply.o
 
 all: mkbin libsoapfast sagpr_apply
 
-more: all sagpr_get_PS sagpr_get_kernel sagpr_predict
+#more: all sagpr_get_PS sagpr_get_kernel sagpr_predict
 
 mkbin:
 	@if [ ! -d ../bin ];then mkdir ../bin;fi
