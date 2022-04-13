@@ -67,12 +67,7 @@ module lode
         n_near = 1
         do ineigh=1,nneighmax(ispe)
          neigh = all_indices(ispe,ineigh)
-         rx = xyz(neigh,1) - xyz(cen,1)
-         ry = xyz(neigh,2) - xyz(cen,2)
-         rz = xyz(neigh,3) - xyz(cen,3)
-         coordx_near(iat,k,n_near,1) = rx
-         coordx_near(iat,k,n_near,2) = ry
-         coordx_near(iat,k,n_near,3) = rz
+         coordx_near(iat,k,n_near,:) = xyz(neigh,:) - xyz(cen,:)
          n_near = n_near + 1
          nneigh_near(iat,k) = nneigh_near(iat,k) + 1
         enddo
@@ -82,34 +77,6 @@ module lode
      enddo
     endif
    enddo
-!
-!    # process coordinates 
-!    coordx_near = np.zeros((nat,nspecies,nat,3), dtype=float)
-!    nneigh_near = np.zeros((nat,nspecies),int)
-!    iat = 0
-!    ncentype = len(centers)
-!    # loop over species to center on
-!    for icentype in range(ncentype):
-!        centype = centers[icentype]
-!        # loop over centers of that species
-!        for icen in range(nneighmax[centype]):
-!            cen = atom_indexes[centype,icen]
-!            # loop over all the species to use as neighbours
-!            for ispe in range(nspecies):
-!                spe = all_species[ispe]
-!                # loop over neighbours of that species
-!                n_near = 0
-!                for ineigh in range(nneighmax[spe]):
-!                    neigh = atom_indexes[spe,ineigh]
-!                    rx = coords[neigh,0] - coords[cen,0]
-!                    ry = coords[neigh,1] - coords[cen,1]
-!                    rz = coords[neigh,2] - coords[cen,2]
-!                    coordx_near[iat,ispe,n_near,0] = rx
-!                    coordx_near[iat,ispe,n_near,1] = ry
-!                    coordx_near[iat,ispe,n_near,2] = rz
-!                    n_near += 1
-!                    nneigh_near[iat,ispe] += 1
-!            iat = iat + 1
 
    ! Atomic grid for potential
    allocate(gauss_points(radsize),gauss_weights(radsize))
@@ -164,18 +131,18 @@ module lode
 
    ! Compute near-field potential and project it onto the atomic basis
    call nearfield(natoms,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,alpha,coordx_near,spherical_grid,orthoradial, &
-     &     harmonics,integration_weights,omega_near)
-   do i=1,natoms
-    do j=1,nspecies
-     do k=1,nmax
-      do l=1,lmax+1
-       do m=1,2*lmax+1
-        omega(i,j,k,l,m) = omega_near(m,l,k,j,i)
-       enddo
-      enddo
-     enddo
-    enddo
-   enddo
+     &     harmonics,integration_weights,omega)
+!   do i=1,natoms
+!    do j=1,nspecies
+!     do k=1,nmax
+!      do l=1,lmax+1
+!       do m=1,2*lmax+1
+!        omega(i,j,k,l,m) = omega_near(m,l,k,j,i)
+!       enddo
+!      enddo
+!     enddo
+!    enddo
+!   enddo
 
    deallocate(lebedev_grid,spherical_grid,gauss_points,gauss_weights,lr,lth,lph,harmonics,radial,orthoradial)
    deallocate(coordx_near,nneigh_near)

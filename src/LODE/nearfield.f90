@@ -12,17 +12,8 @@ real*8,dimension(nmax,ngrid):: orthorad
 real*8,dimension(ngrid):: weights 
 real*8,dimension(ngrid,3):: sgrid 
 complex*16,dimension((lmax+1)*(lmax+1),ngrid):: harmonic 
-complex*16,dimension(2*lmax+1,lmax+1,nmax,nspecies,nat):: omega
-!complex*16,dimension(nat,nspecies,nmax,lmax+1,2*lmax+1):: omega
-
-!f2py intent(in) nat,nspecies,nmax,lmax,ngrid,nneigh,alpha,coords,sgrid,orthorad,harmonic,weights 
-!f2py intent(out) omega 
-!f2py depend(nat) nneigh,coords,omega 
-!f2py depend(nspecies) nneigh,coords,omega 
-!f2py depend(nmax) orthorad,omega  
-!f2py depend(lmax) harmonic,omega
-!f2py depend(ngrid) weights,harmonic,orthorad,sgrid 
-
+!complex*16,dimension(2*lmax+1,lmax+1,nmax,nspecies,nat):: omega
+complex*16,dimension(nat,nspecies,nmax,lmax+1,2*lmax+1):: omega
 
 omega = dcmplx(0.d0,0.d0)
 !$OMP PARALLEL DEFAULT(private) &
@@ -42,8 +33,8 @@ do iat=1,nat
             lm = 1
             do l=1,lmax+1
                do im=1,2*(l-1)+1
-                  !omega(iat,ispe,n,l,im) = omega(iat,ispe,n,l,im) + harmonic(lm,igrid) &
-                  omega(im,l,n,ispe,iat) = omega(im,l,n,ispe,iat) + harmonic(lm,igrid) &
+                  omega(iat,ispe,n,l,im) = omega(iat,ispe,n,l,im) + harmonic(lm,igrid) &
+                  !omega(im,l,n,ispe,iat) = omega(im,l,n,ispe,iat) + harmonic(lm,igrid) &
                                                                   * orthorad(n,igrid)  &
                                                                   * weights(igrid) & 
                                                                   * potential 
