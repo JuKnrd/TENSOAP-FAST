@@ -25,13 +25,15 @@ module lode
   implicit none
 
    integer natoms,nspecies,nmax,lmax,nnmax,natmax,nsmax,iat,ncentype,icentype,icen,cen,n,ispe
-   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,k,nn,ncell,ia,ib,ic,igrid,ir,ileb,lm
+   integer ineigh,neigh,lval,im,mval,n1,n2,l,i,k,nn,ncell,ia,ib,ic,igrid,ir,ileb,lm,j,m
    real*8 rcut2,rx,ry,rz,r2,rdist,cth,ph,normfact,sigmafact,rv(3),sv(3),rcv(3)
    complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
+   complex*16 omega_near(2*lmax+1,lmax+1,nmax,nspecies,natoms)
    complex*16, allocatable :: harmonics(:,:)
    real*8 sg,rcut,xyz(natmax,3),r
    real*8, allocatable :: radint(:,:,:,:,:),efact(:,:,:),length(:,:,:),lebedev_grid(:,:),spherical_grid(:,:)
-   real*8, allocatable :: integration_weights(:),gauss_points(:),gauss_weights(:),lr(:),lth(:),lph(:)
+   real*8, allocatable :: integration_weights(:),gauss_points(:),gauss_weights(:),lr(:),lth(:),lph(:),radial(:,:)
+   real*8, allocatable :: orthoradial(:,:)
    real*8 sigma(nmax),orthomatrix(nmax,nmax),alpha,sg2,radial_c,radial_r0,radial_m,invcell(3,3)
    integer, allocatable :: nneigh(:,:)
    integer all_indices(nsmax,natmax),nneighmax(nsmax),ipiv(3),info,lwork,work(1000)
@@ -118,15 +120,33 @@ module lode
     enddo
    enddo
 
-!    radial = radial_1D_mesh(sigma,nmax,lr,lebsize*radsize)
-!    orthoradial = np.dot(orthomatrix,radial)
+   ! Get orthoradial array
+   allocate(radial(nmax,lebsize*radsize))
+   call radial_1D_mesh(radial,sigma,nmax,lr,lebsize*radsize)
+   allocate(orthoradial(nmax,lebsize*radsize))
+   orthoradial = matmul(orthomatrix,radial)
+
+   ! Compute near-field potential and project it onto the atomic basis
+
+   do i=1,natoms
+    do j=1,nspecies
+     do k=1,nmax
+      do l=1,lmax+1
+       do m=1,2*lmax+1
+        omega(i,j,k,l,m) = omega_near(m,l,k,j,i)
+       enddo
+      enddo
+     enddo
+    enddo
+   enddo
+
 !
 !    # compute near-field potential and project it onto the atomic basis
 !    omega_near = nearfield.nearfield(nat,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,alpha,coordx_near,spherical_grid,orthoradial,harmonics,integration_weights) 
 !    omega_near = np.transpose(omega_near,(4,3,2,1,0))
 !
 
-   deallocate(lebedev_grid,spherical_grid,gauss_points,gauss_weights,lr,lth,lph,harmonics)
+   deallocate(lebedev_grid,spherical_grid,gauss_points,gauss_weights,lr,lth,lph,harmonics,radial,orthoradial)
 
  end subroutine
 
@@ -216,7 +236,7 @@ module lode
 
   ! Evaluate equispaced and normalied radial GTOs over a 1D mesh
   integer nmax,rsize,n,r
-  integer rvec(rsize)
+  real*8 rvec(rsize)
   real*8 sigma(nmax),radial(nmax,rsize),inner,arg,rval
 
   do n=0,nmax-1
