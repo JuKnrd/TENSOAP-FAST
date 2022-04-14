@@ -154,25 +154,148 @@ module lode
 
  end subroutine
 !***************************************************************************************************
- subroutine get_Gvectors(this,cell)
+ subroutine get_Gvectors(this,cell,invcell,nmax,lmax,rc,sigma,orthomatrix)
   implicit none
 
-  type(LODE_Model) :: this
-  real*8 cell(3,3)
+   type(LODE_Model) :: this
+   integer nmax,lmax,i,j
+   real*8 cell(3,3),invcell(3,3),radint(lmax+1,nmax),prefacts(nmax,lmax+1)
+   real*8 alphaewald,rc,sigma(nmax),orthomatrix(nmax,nmax)
 
-  ! First, check whether we already have G-vectors allocated
-  if (allocated(this%Gvecs%Gvec)) then
-   ! If the G-vectors have already been allocated, check whether the cell is the same as the previous one
-   write(*,*) 'G VECTORS ALREADY ALLOCATED'
-   if (maxval(abs(cell-this%Gvecs%store_cell)).gt.1.d-8) then
-    write(*,*) 'G VECTORS MUST BE RECALCULATED'
-   else
-    write(*,*) 'G VECTORS ARE OK'
-    return
+   ! First, check whether we already have G-vectors allocated
+   if (allocated(this%Gvecs%Gvec)) then
+    ! If the G-vectors have already been allocated, check whether the cell is the same as the previous one
+    write(*,*) 'G VECTORS ALREADY ALLOCATED'
+    if (maxval(abs(cell-this%Gvecs%store_cell)).gt.1.d-8) then
+     write(*,*) 'G VECTORS MUST BE RECALCULATED'
+    else
+     write(*,*) 'G VECTORS ARE OK'
+     return
+    endif
    endif
-  endif
 
-  write(*,*) 'HAVE TO ALLOCATE G VECTORS'
+   write(*,*) 'HAVE TO ALLOCATE G VECTORS'
+
+   ! Wave-vectors for reciprocal space calculation
+   this%Gvecs%Gcut = 2.d0 * dacos(-1.d0) / (2.d0 * this%sigewald)
+   ! Allocate default for visualization grid
+   allocate(this%Gvecs%nside(256,256,256))
+   ! Get inverse cell
+   do i=1,3
+    do j=1,3
+     this%Gvecs%icell(i,j) = invcell(i,j) * 2.d0 * dacos(-1.d0)
+    enddo
+   enddo
+  
+
+
+!                 # wave-vectors for reciprocal space calculation
+!                 G,Gx,iGx,iGmx,nG,irad = gvectors.ggen(invcell[0],invcell[1],invcell[2],nside,Gcut)
+!                 if nside[0]/2 <= irad[0] or nside[1]/2 <= irad[1] or nside[2]/2 <= irad[2]:
+!                     print("ERROR: G-ellipsoid covers more points than half of the box side: decrease Gcut or use more grid points for 3D visualization")
+!                     sys.exit(0)
+!                 # G moduli of the semi-sphere x>0
+!                 Gval = np.zeros(nG,float)
+!                 Gval = G[:nG]
+!                 # G vectors of the semi-sphere x>0
+!                 Gvec = np.zeros((nG,3),float)
+!                 Gvec = Gx[:,:nG].T
+!                 # G vector indexes of the semi-sphere x>0
+!                 iGvec = np.zeros((nG,3),int)
+!                 iGvec = iGx[:,:nG].T
+!                 # G vector indexes of the semi-sphere x<0
+!                 imGvec = np.zeros((nG,3),int)
+!                 imGvec = iGmx[:,:nG].T
+
+
+
+   ! Compute Fourier integrals for the cell
+   alphaewald = 0.5d0 / (this%sigewald*this%sigewald)
+   allocate(this%Gvecs%orthoradint(lmax+1,nmax,this%Gvecs%nG),this%Gvecs%harmonics(this%Gvecs%nG,(lmax+1)*(lmax+1))) 
+   call fourier_integrals(this%Gvecs%nG,nmax,lmax,alphaewald,rc,sigma,this%Gvecs%Gval,this%Gvecs%Gvec, &
+     &     radint,orthomatrix,prefacts,this%Gvecs%orthoradint,this%Gvecs%harmonics)
+
+!                 [orthoradint2,harmonics2] = fourier_integrals.fourier_integrals(nG,nmax,lmax,alphaewald,rc,sigma,Gval,Gvec,orthomatrix)
+
+ end subroutine
+!***************************************************************************************************
+ subroutine fourier_integrals(nG,nmax,lmax,alpha,rc,sigma,Gval,Gvec,radint,orthomatrix,prefacts,orthoradint,harmonics)
+  implicit none
+
+   integer nG,nmax,lmax,n,l,iG,lm,n1,n2,im
+   real*8 radint(lmax+1,nmax),prefacts(nmax,lmax+1),normfact,G2,fourierpot
+   real*8 alpha,rc,sigma(nmax),orthomatrix(nmax,nmax),th,ph,arghyper
+   real*8 orthoradint(lmax+1,nmax,nG),Gval(nG),Gvec(nG,3)
+   complex*16 harmonics(nG,(lmax+1)*(lmax+1))
+
+   orthoradint(:,:,:) = 0.d0
+   harmonics(:,:) = (0.d0,0.d0)
+
+   ! Normalization factor for primitive radial functions
+   do n=0,nmax-1
+    normfact = dsqrt(2.d0 / (gamma(1.5d0 + n)*sigma(n+1)**(3.d0 + 2.d0*n)))
+    do l=0,lmax
+     ! Precompute common prefactors for each (n,l) pair
+     prefacts(n+1,l+1) = normfact * dsqrt(dacos(-1.d0)) * 2.d0**( (n-l-1)/2.d0) * sigma(n+1)**(3.d0 + l + n) &
+     &      * gamma(0.5d0*(3.d0+l+n)) / gamma(1.5d0 + l)
+    enddo
+   enddo
+
+   do iG=1,nG
+    G2 = Gval(iG)*Gval(iG)
+    fourierpot = dexp(-G2 / (4.d0*alpha)) / G2
+    do n=0,nmax-1
+     arghyper = -0.5d0 * G2 * (sigma(n+1)*sigma(n+1))
+     do l=0,lmax
+      ! Radial integral
+      radint(l+1,n+1) = prefacts(n+1,l+1) * fourierpot * Gval(iG)**l * &
+     &     hg(0.5d0*(3.d0+l+n),1.5d0+l,arghyper)
+     enddo
+     ! HYPERGEOMETRIC FUNCTION
+    enddo
+    ! Compute polar angles
+    th = dacos(Gvec(iG,3)/Gval(iG))
+    ph = datan2(Gvec(iG,2),Gvec(iG,1))
+    lm = 1
+    do l=0,lmax
+     do n1=0,nmax-1
+      do n2=0,nmax-1
+       ! Orthogonalize radial integrals with Loewdin
+       orthoradint(iG,l+1,n1+1) = orthoradint(iG,l+1,n1+1) + orthomatrix(n1+1,n2+1)*radint(l+1,n2+1)
+      enddo
+     enddo
+     do im=-l,l
+       harmonics(iG,lm) = dconjg(spherical_harmonic(l,im,dcos(th),ph)) * (0.d0,1.d0)**l
+       lm = lm + 1
+     enddo
+    enddo
+   enddo
+
+!
+!    for iG in xrange(1,nG):
+!        G2 = Gval[iG]**2
+!        fourierpot = np.exp(-G2/(4.0*alpha))/G2
+
+!        for n in xrange(nmax):
+!            #normfact = fourierpot * np.sqrt(2.0/(sc.gamma(1.5+n)*sigma[n]**(3.0+2.0*n)))
+!            arghyper = -0.5*G2*(sigma[n]**2)
+!            for l in xrange(lmax+1):
+!                # radial integral
+!                radint[l,n] = prefacts[n,l] * fourierpot * Gval[iG]**l * sc.hyp1f1(0.5*(3.0+l+n), 1.5+l, arghyper)
+
+!        # compute polar angles at G-vectors directions
+!        th = np.arccos(Gvec[iG,2]/Gval[iG])
+!        ph = np.arctan2(Gvec[iG,1],Gvec[iG,0])
+!        lm = 0
+!        for l in xrange(lmax+1):
+!            for n1 in xrange(nmax):
+!                for n2 in xrange(nmax):
+!                    # orthogonalize radial integrals with Loewdin
+!                    orthoradint[iG,l,n1] = orthoradint[iG,l,n1] + orthomatrix[n1,n2]*radint[l,n2]
+!            for im in xrange(2*l+1):
+!                # compute spherical harmonics at G-vector directions
+!                harmonics[iG,lm] = np.conj(sc.sph_harm(im-l,l,ph,th)) * 1.0j**l
+!                lm += 1
 
  end subroutine
 !***************************************************************************************************
@@ -276,5 +399,187 @@ module lode
 
  end subroutine
 !***************************************************************************************************
+real*8 function hg ( a, b, x)
 
+!*****************************************************************************80
+!
+!! CHGM computes the confluent hypergeometric function M(a,b,x).
+!
+!  Licensing:
+!
+!    This routine is copyrighted by Shanjie Zhang and Jianming Jin.  However, 
+!    they give permission to incorporate this routine into a user program 
+!    provided that the copyright is acknowledged.
+!
+!  Modified:
+!
+!    27 July 2012
+!
+!  Author:
+!
+!    Shanjie Zhang, Jianming Jin
+!
+!  Reference:
+!
+!    Shanjie Zhang, Jianming Jin,
+!    Computation of Special Functions,
+!    Wiley, 1996,
+!    ISBN: 0-471-11963-6,
+!    LC: QA351.C45.
+!
+!  Parameters:
+!
+!    Input, real ( kind = 8 ) A, B, parameters.
+!
+!    Input, real ( kind = 8 ) X, the argument.
+!
+!    Output, real ( kind = 8 ) HG, the value of M(a,b,x).
+!
+  implicit none
+
+  real ( kind = 8 ) a
+  real ( kind = 8 ) a0
+  real ( kind = 8 ) a1
+  real ( kind = 8 ) b
+  real ( kind = 8 ) hg1
+  real ( kind = 8 ) hg2
+  integer ( kind = 4 ) i
+  integer ( kind = 4 ) j
+  integer ( kind = 4 ) k
+  integer ( kind = 4 ) la
+  integer ( kind = 4 ) m
+  integer ( kind = 4 ) n
+  integer ( kind = 4 ) nl
+  real ( kind = 8 ) pi
+  real ( kind = 8 ) r
+  real ( kind = 8 ) r1
+  real ( kind = 8 ) r2
+  real ( kind = 8 ) rg
+  real ( kind = 8 ) sum1
+  real ( kind = 8 ) sum2
+  real ( kind = 8 ) ta
+  real ( kind = 8 ) tb
+  real ( kind = 8 ) tba
+  real ( kind = 8 ) x
+  real ( kind = 8 ) x0
+  real ( kind = 8 ) xg
+  real ( kind = 8 ) y0
+  real ( kind = 8 ) y1
+
+  pi = dacos(-1.d0)
+  a0 = a
+  a1 = a
+  x0 = x
+  hg = 0.0D+00
+
+  if ( b == 0.0D+00 .or. b == - abs ( int ( b ) ) ) then
+    hg = 1.0D+300
+  else if ( a == 0.0D+00 .or. x == 0.0D+00 ) then
+    hg = 1.0D+00
+  else if ( a == -1.0D+00 ) then
+    hg = 1.0D+00 - x / b
+  else if ( a == b ) then
+    hg = exp ( x )
+  else if ( a - b == 1.0D+00 ) then
+    hg = ( 1.0D+00 + x / b ) * exp ( x )
+  else if ( a == 1.0D+00 .and. b == 2.0D+00 ) then
+    hg = ( exp ( x ) - 1.0D+00 ) / x
+  else if ( a == int ( a ) .and. a < 0.0D+00 ) then
+    m = int ( - a )
+    r = 1.0D+00
+    hg = 1.0D+00
+    do k = 1, m
+      r = r * ( a + k - 1.0D+00 ) / k / ( b + k - 1.0D+00 ) * x
+      hg = hg + r
+    end do
+  end if
+
+  if ( hg /= 0.0D+00 ) then
+    return
+  end if
+
+  if ( x < 0.0D+00 ) then
+    a = b - a
+    a0 = a
+    x = abs ( x )
+  end if
+
+  if ( a < 2.0D+00 ) then
+    nl = 0
+  end if
+
+  if ( 2.0D+00 <= a ) then
+    nl = 1
+    la = int ( a )
+    a = a - la - 1.0D+00
+  end if
+
+  do n = 0, nl
+
+    if ( 2.0D+00 <= a0 ) then
+      a = a + 1.0D+00
+    end if
+
+    if ( x <= 30.0D+00 + abs ( b ) .or. a < 0.0D+00 ) then
+
+      hg = 1.0D+00
+      rg = 1.0D+00
+      do j = 1, 500
+        rg = rg * ( a + j - 1.0D+00 ) &
+          / ( j * ( b + j - 1.0D+00 ) ) * x
+        hg = hg + rg
+        if ( abs ( rg / hg ) < 1.0D-15 ) then
+          exit
+        end if
+      end do
+
+    else
+
+      ta = gamma(a)
+      tb = gamma(b)
+      xg = b - a
+      tba = gamma(xg)
+      sum1 = 1.0D+00
+      sum2 = 1.0D+00
+      r1 = 1.0D+00
+      r2 = 1.0D+00
+      do i = 1, 8
+        r1 = - r1 * ( a + i - 1.0D+00 ) * ( a - b + i ) / ( x * i )
+        r2 = - r2 * ( b - a + i - 1.0D+00 ) * ( a - i ) / ( x * i )
+        sum1 = sum1 + r1
+        sum2 = sum2 + r2
+      end do
+      hg1 = tb / tba * x ** ( - a ) * cos ( pi * a ) * sum1
+      hg2 = tb / ta * exp ( x ) * x ** ( a - b ) * sum2
+      hg = hg1 + hg2
+
+    end if
+
+    if ( n == 0 ) then
+      y0 = hg
+    else if ( n == 1 ) then
+      y1 = hg
+    end if
+
+  end do
+
+  if ( 2.0D+00 <= a0 ) then
+    do i = 1, la - 1
+      hg = ( ( 2.0D+00 * a - b + x ) * y1 + ( b - a ) * y0 ) / a
+      y0 = y1
+      y1 = hg
+      a = a + 1.0D+00
+    end do
+  end if
+
+  if ( x0 < 0.0D+00 ) then
+    hg = hg * exp ( x0 )
+  end if
+
+  a = a1
+  x = x0
+
+  return
+ end function
+!***************************************************************************************************
 end module
