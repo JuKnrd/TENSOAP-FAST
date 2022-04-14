@@ -17,10 +17,9 @@ module lode
   real*8 sigewald
   integer radsize,lebsize
   ! G vectors for periodic LODE
-  real*8, allocatable :: Gvec(:,:),Gval(:),G(:),Gx(:,:)
+  real*8, allocatable :: Gvec(:,:),Gval(:)
   real*8 Gcut,store_cell(3,3),icell(3,3),alphaewald
-  integer nside(3),nG,irad(3)
-  integer, allocatable :: iGvec(:,:),imGvec(:,:),iGx(:,:),iGmx(:,:)
+  integer nG
   real*8, allocatable :: orthoradint2(:,:,:)
   complex*16, allocatable :: harmonics2(:,:)
  end type LODE_Model
@@ -151,9 +150,11 @@ module lode
   implicit none
 
    type(LODE_Model) :: this
-   integer nmax,lmax,i,j
-   real*8 cell(3,3),invcell(3,3),radint(lmax+1,nmax),prefacts(nmax,lmax+1)
-   real*8 rc,sigma(nmax),orthomatrix(nmax,nmax)
+   integer nmax,lmax,i,j,numvectors
+   real*8 cell(3,3),invcell(3,3),radint(lmax+1,nmax),prefacts(nmax,lmax+1),M(3,3),detM
+   real*8 rc,sigma(nmax),orthomatrix(nmax,nmax),normcell(3,3),Gvec_new(3)
+   real*8, allocatable :: G_intermediate(:,:)
+   integer n1max,n2max,n3max,numtot,n1,n2,n3
 
    ! First, check whether we already have G-vectors allocated
    if (allocated(this%Gvec)) then
@@ -168,6 +169,78 @@ module lode
    endif
 
    write(*,*) 'HAVE TO ALLOCATE G VECTORS'
+   ! Get G vectors
+   this%Gcut = 2.d0 * dacos(-1.d0) / (2.d0 * this%sigewald)
+   ! Outer product matrix of cell vectors
+   normcell = invcell * 2.d0 * dacos(-1.d0)
+   M = matmul(normcell,transpose(normcell))
+   ! Get determinant of matrix
+   detM = M(1,1)*M(2,2)*M(3,3) + 2.d0*M(1,2)*M(2,3)*M(3,1) &
+     &     -M(1,1)*M(2,3)*M(2,3) - M(2,2)*M(1,3)*M(1,3) &
+     &     -M(3,3)*M(1,2)*M(1,2)
+   ! Maximum numbers in each direction
+   n1max = floor(dsqrt((M(2,2)*M(3,3)-M(2,3)*M(2,3))/detM)*this%Gcut)
+   n2max = floor(dsqrt((M(1,1)*M(3,3)-M(1,3)*M(1,3))/detM)*this%Gcut)
+   n3max = floor(dsqrt((M(1,1)*M(2,2)-M(1,2)*M(1,2))/detM)*this%Gcut)
+   ! Estimate for total number of G vectors
+   numtot = 1 + n3max + n2max*(2*n3max+1) + n1max*(2*n2max+1)*(2*n3max+1)
+   allocate(G_intermediate(numtot,3))
+   G_intermediate(:,:) = 0.d0
+   ! Fill intermediate set of G vectors
+   numvectors = 1
+   G_intermediate(numvectors,:) = (/0.d0,0.d0,0.d0/)
+   numvectors = numvectors + 1
+   ! Step 1: points of the form (0,0,n3>0)
+   do n3=1,n3max
+    Gvec_new(:) = G_intermediate(numvectors-1,:) + normcell(3,:)
+    if (norm2(Gvec_new).le.this%Gcut) then
+     G_intermediate(numvectors,:) = Gvec_new(:)
+     numvectors = numvectors + 1
+    endif
+   enddo
+   ! Step 2: points of the form (0,n2>0,n3)
+   do n2=1,n2max
+    ! Update current vector for new n2 value.
+    ! We subtract (n3max+1)*normcell(3,:) so that we only have to add normcell(3,:)
+    ! at each iteration to get the correct vector
+    Gvec_new(:) = n2*normcell(2,:) - (n3max+1)*normcell(3,:)
+    do n3=0,2*n3max+1
+     Gvec_new(:) = Gvec_new(:) + normcell(3,:)
+     if (norm2(Gvec_new).le.this%Gcut) then
+      G_intermediate(numvectors,:) = Gvec_new(:)
+      numvectors = numvectors + 1
+     endif
+    enddo
+   enddo
+   ! Step 3: remaining points of the form (n1>0,n2,n3)
+   do n1=1,n1max
+    do n2=0,2*n2max+1
+     ! Update current vector for new n2 value
+     ! We subtract (n3max+1)*normcell(3,:) so that we only have to add normcell(3,:)
+     ! at each iteration to get the correct vector
+     Gvec_new(:) = n1*normcell(1,:) + n2*normcell(2,:) - n2max*normcell(2,:) - (n3max+1)*normcell(3,:)
+     do n3=0,2*n3max+1
+      Gvec_new(:) = Gvec_new(:) + normcell(3,:)
+      if (norm2(Gvec_new).le.this%Gcut) then
+       G_intermediate(numvectors,:) = Gvec_new(:)
+       numvectors = numvectors + 1
+      endif
+     enddo
+    enddo
+   enddo
+   numvectors = numvectors - 1
+   ! Take only the nonzero points from this array to give Gvec
+   ! Gval contains norms
+   allocate(this%Gvec(numvectors,3),this%Gval(numvectors))
+   do i=1,numvectors
+    this%Gvec(i,:) = G_intermediate(i,:)
+    this%Gval(i) = norm2(this%Gvec(i,:))
+	write(*,*) 'GVEC',this%Gvec(i,:),this%Gval(i)
+   enddo
+
+	write(*,*) numvectors
+
+   deallocate(G_intermediate)
 
 !   ! Wave-vectors for reciprocal space calculation
 !   this%Gcut = 2.d0 * dacos(-1.d0) / (2.d0 * this%sigewald)
