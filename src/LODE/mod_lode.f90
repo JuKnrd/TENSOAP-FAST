@@ -189,8 +189,6 @@ module lode
 
    ! Get wave-vectors
   
-
-
 !                 G,Gx,iGx,iGmx,nG,irad = gvectors.ggen(invcell[0],invcell[1],invcell[2],nside,Gcut)
 
    if ((this%Gvecs%nside(1)/2 .le. this%Gvecs%irad(1)) .or. (this%Gvecs%nside(2)/2 .le. this%Gvecs%irad(2)) &
@@ -232,6 +230,11 @@ module lode
 
  end subroutine
 !***************************************************************************************************
+ subroutine ggen()
+  implicit none
+
+ end subroutine
+!***************************************************************************************************
  subroutine fourier_integrals(nG,nmax,lmax,alpha,rc,sigma,Gval,Gvec,radint,orthomatrix,prefacts,orthoradint,harmonics)
   implicit none
 
@@ -264,7 +267,6 @@ module lode
       radint(l+1,n+1) = prefacts(n+1,l+1) * fourierpot * Gval(iG)**l * &
      &     hg(0.5d0*(3.d0+l+n),1.5d0+l,arghyper)
      enddo
-     ! HYPERGEOMETRIC FUNCTION
     enddo
     ! Compute polar angles
     th = dacos(Gvec(iG,3)/Gval(iG))

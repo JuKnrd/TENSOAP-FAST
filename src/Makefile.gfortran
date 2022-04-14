@@ -12,7 +12,7 @@ LD=$(SHTOOLS_LIB) -lSHTOOLS -lm $(LAPACK_LIB) -llapack $(BLAS_LIB) -lblas
 INCLUDE=$(SHTOOLS_INCLUDE)
 SAGPR_PREFIX=/usr/local
 
-LODE=LODE/lebedev.o LODE/gausslegendre.o LODE/nearfield.o LODE/mod_lode.o
+LODE=LODE/gvectors.o LODE/lebedev.o LODE/gausslegendre.o LODE/nearfield.o LODE/mod_lode.o
 SOCK=SOCKETS/sockets.o SOCKETS/fsockets.o
 OBJ4=$(LODE) mod_sagpr.o mod_apply.o
 OBJ5=$(SOCK) mod_io.o sagpr_apply.o
