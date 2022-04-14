@@ -188,6 +188,27 @@ module lode
    enddo
 
    ! Get wave-vectors
+   allocate(this%Gvecs%G(10000000),this%Gvecs%Gx(3,10000000),this%Gvecs%iGx(3,10000000))
+   allocate(this%Gvecs%iGmx(3,10000000))
+   call ggen(this%Gvecs%icell(1,:),this%Gvecs%icell(2,:),this%Gvecs%icell(3,:),this%Gvecs%nside,this%Gvecs%Gcut, &
+     & this%Gvecs%G,this%Gvecs%Gx,this%Gvecs%iGx,this%Gvecs%iGmx,this%Gvecs%nG,this%Gvecs%irad)
+
+!G,Gx,iGx,iGmx,nG,igma)
+
+!implicit none
+!real*8:: Gcut2,ggx,ggy,ggz,gg2,pi
+!real*8, intent(in), dimension(3):: b1,b2,b3
+!integer, parameter:: ngx=99999999,nmax=200
+!integer:: i1,i2,i3,iG
+!integer,intent(out),dimension(3,10000000):: iGx,iGmx
+!real*8,intent(out),dimension(3,10000000):: Gx
+!real*8,intent(out),dimension(10000000):: G
+!integer,intent(out):: nG
+!integer,intent(out),dimension(3):: igma
+!integer,intent(in),dimension(3):: nr
+!real*8,intent(in):: Gcut
+!real*8, dimension(99999999):: wrk
+!integer, dimension(99999999):: index
   
 !                 G,Gx,iGx,iGmx,nG,irad = gvectors.ggen(invcell[0],invcell[1],invcell[2],nside,Gcut)
 
@@ -227,11 +248,6 @@ module lode
    allocate(this%Gvecs%orthoradint(lmax+1,nmax,this%Gvecs%nG),this%Gvecs%harmonics(this%Gvecs%nG,(lmax+1)*(lmax+1))) 
    call fourier_integrals(this%Gvecs%nG,nmax,lmax,alphaewald,rc,sigma,this%Gvecs%Gval,this%Gvecs%Gvec, &
      &     radint,orthomatrix,prefacts,this%Gvecs%orthoradint,this%Gvecs%harmonics)
-
- end subroutine
-!***************************************************************************************************
- subroutine ggen()
-  implicit none
 
  end subroutine
 !***************************************************************************************************
