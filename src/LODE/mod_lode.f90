@@ -13,9 +13,9 @@ module lode
 
  type G_Vectors
   ! G vectors for periodic LODE
-  real*8 Gcut,store_cell(3,3),cell(3,3),icell(3,3),alphaewald
+  real*8 Gcut,store_cell(3,3),cell(3,3),icell(3,3),alphaewald,nside(3)
   real*8, allocatable :: Gval(:),Gvec(:,:),G(:),Gx(:,:)
-  integer, allocatable :: nside(:,:,:),iGvec(:,:),imGvec(:,:)
+  integer, allocatable :: iGvec(:,:),imGvec(:,:)
   integer, allocatable :: iGx(:,:),iGmx(:,:)
   integer nG,irad(3)
   real*8, allocatable :: orthoradint(:,:,:)
@@ -179,43 +179,56 @@ module lode
    ! Wave-vectors for reciprocal space calculation
    this%Gvecs%Gcut = 2.d0 * dacos(-1.d0) / (2.d0 * this%sigewald)
    ! Allocate default for visualization grid
-   allocate(this%Gvecs%nside(256,256,256))
+   this%Gvecs%nside = (/0.d0,0.d0,0.d0/)
    ! Get inverse cell
    do i=1,3
     do j=1,3
      this%Gvecs%icell(i,j) = invcell(i,j) * 2.d0 * dacos(-1.d0)
     enddo
    enddo
+
+   ! Get wave-vectors
   
 
 
-!                 # wave-vectors for reciprocal space calculation
 !                 G,Gx,iGx,iGmx,nG,irad = gvectors.ggen(invcell[0],invcell[1],invcell[2],nside,Gcut)
-!                 if nside[0]/2 <= irad[0] or nside[1]/2 <= irad[1] or nside[2]/2 <= irad[2]:
-!                     print("ERROR: G-ellipsoid covers more points than half of the box side: decrease Gcut or use more grid points for 3D visualization")
-!                     sys.exit(0)
-!                 # G moduli of the semi-sphere x>0
-!                 Gval = np.zeros(nG,float)
-!                 Gval = G[:nG]
-!                 # G vectors of the semi-sphere x>0
-!                 Gvec = np.zeros((nG,3),float)
-!                 Gvec = Gx[:,:nG].T
-!                 # G vector indexes of the semi-sphere x>0
-!                 iGvec = np.zeros((nG,3),int)
-!                 iGvec = iGx[:,:nG].T
-!                 # G vector indexes of the semi-sphere x<0
-!                 imGvec = np.zeros((nG,3),int)
-!                 imGvec = iGmx[:,:nG].T
 
+   if ((this%Gvecs%nside(1)/2 .le. this%Gvecs%irad(1)) .or. (this%Gvecs%nside(2)/2 .le. this%Gvecs%irad(2)) &
+     &     .or. (this%Gvecs%nside(3)/2 .le. this%Gvecs%irad(3))) then
+    stop 'ERROR: G-ellipsoid covers more points than half of the box side: decrease Gcut or &
+     &use more grid points for 3D visualization'
+   endif
 
+   ! G moduli of  the semi-sphere x>0
+   allocate(this%Gvecs%Gval(this%Gvecs%nG))
+   this%Gvecs%Gval(:) = this%Gvecs%G(:)
+   ! G vectors of the semi-sphere x>0
+   allocate(this%Gvecs%Gvec(this%Gvecs%nG,3))
+   do i=1,this%Gvecs%nG
+    do j=1,3
+     this%Gvecs%Gvec(i,j) = this%Gvecs%Gx(j,i)
+    enddo
+   enddo
+   ! G vector indices of the semi-sphere x>0
+   allocate(this%Gvecs%iGvec(this%Gvecs%nG,3))
+   do i=1,this%Gvecs%nG
+    do j=1,3
+     this%Gvecs%iGvec(i,j) = this%Gvecs%iGx(j,i)
+    enddo
+   enddo
+   ! G vector indices of the semi-sphere x<0
+   allocate(this%Gvecs%imGvec(this%Gvecs%nG,3))
+   do i=1,this%Gvecs%nG
+    do j=1,3
+     this%Gvecs%imGvec(i,j) = this%Gvecs%iGmx(j,i)
+    enddo
+   enddo
 
    ! Compute Fourier integrals for the cell
    alphaewald = 0.5d0 / (this%sigewald*this%sigewald)
    allocate(this%Gvecs%orthoradint(lmax+1,nmax,this%Gvecs%nG),this%Gvecs%harmonics(this%Gvecs%nG,(lmax+1)*(lmax+1))) 
    call fourier_integrals(this%Gvecs%nG,nmax,lmax,alphaewald,rc,sigma,this%Gvecs%Gval,this%Gvecs%Gvec, &
      &     radint,orthomatrix,prefacts,this%Gvecs%orthoradint,this%Gvecs%harmonics)
-
-!                 [orthoradint2,harmonics2] = fourier_integrals.fourier_integrals(nG,nmax,lmax,alphaewald,rc,sigma,Gval,Gvec,orthomatrix)
 
  end subroutine
 !***************************************************************************************************
@@ -261,7 +274,7 @@ module lode
      do n1=0,nmax-1
       do n2=0,nmax-1
        ! Orthogonalize radial integrals with Loewdin
-       orthoradint(iG,l+1,n1+1) = orthoradint(iG,l+1,n1+1) + orthomatrix(n1+1,n2+1)*radint(l+1,n2+1)
+       orthoradint(l+1,n1+1,iG) = orthoradint(l+1,n1+1,iG) + orthomatrix(n1+1,n2+1)*radint(l+1,n2+1)
       enddo
      enddo
      do im=-l,l
@@ -270,32 +283,6 @@ module lode
      enddo
     enddo
    enddo
-
-!
-!    for iG in xrange(1,nG):
-!        G2 = Gval[iG]**2
-!        fourierpot = np.exp(-G2/(4.0*alpha))/G2
-
-!        for n in xrange(nmax):
-!            #normfact = fourierpot * np.sqrt(2.0/(sc.gamma(1.5+n)*sigma[n]**(3.0+2.0*n)))
-!            arghyper = -0.5*G2*(sigma[n]**2)
-!            for l in xrange(lmax+1):
-!                # radial integral
-!                radint[l,n] = prefacts[n,l] * fourierpot * Gval[iG]**l * sc.hyp1f1(0.5*(3.0+l+n), 1.5+l, arghyper)
-
-!        # compute polar angles at G-vectors directions
-!        th = np.arccos(Gvec[iG,2]/Gval[iG])
-!        ph = np.arctan2(Gvec[iG,1],Gvec[iG,0])
-!        lm = 0
-!        for l in xrange(lmax+1):
-!            for n1 in xrange(nmax):
-!                for n2 in xrange(nmax):
-!                    # orthogonalize radial integrals with Loewdin
-!                    orthoradint[iG,l,n1] = orthoradint[iG,l,n1] + orthomatrix[n1,n2]*radint[l,n2]
-!            for im in xrange(2*l+1):
-!                # compute spherical harmonics at G-vector directions
-!                harmonics[iG,lm] = np.conj(sc.sph_harm(im-l,l,ph,th)) * 1.0j**l
-!                lm += 1
 
  end subroutine
 !***************************************************************************************************
