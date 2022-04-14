@@ -231,7 +231,9 @@ end
 !-------------------------------------------------------------
 
 implicit real*8 (a-h,o-z)
-dimension G(nG),indx(nG)
+!dimension G(nG),indx(nG)
+real*8 G(10000000)
+integer indx(99999999)
 
 do j=1,nG
    indx(j)=j

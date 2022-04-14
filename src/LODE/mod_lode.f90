@@ -11,25 +11,18 @@ module lode
 
 !***************************************************************************************************
 
- type G_Vectors
-  ! G vectors for periodic LODE
-  real*8 Gcut,store_cell(3,3),cell(3,3),icell(3,3),alphaewald,nside(3)
-  real*8, allocatable :: Gval(:),Gvec(:,:),G(:),Gx(:,:)
-  integer, allocatable :: iGvec(:,:),imGvec(:,:)
-  integer, allocatable :: iGx(:,:),iGmx(:,:)
-  integer nG,irad(3)
-  real*8, allocatable :: orthoradint(:,:,:)
-  complex*16, allocatable :: harmonics(:,:)
- end type G_Vectors
-
-!***************************************************************************************************
-
  type LODE_Model
   ! Variables for running LODE calculations
   logical nonorm,fixed_cell
   real*8 sigewald
   integer radsize,lebsize
-  type(G_Vectors) :: Gvecs
+  ! G vectors for periodic LODE
+  real*8, allocatable :: Gvec(:,:),Gval(:),G(:),Gx(:,:)
+  real*8 Gcut,store_cell(3,3),icell(3,3),alphaewald
+  integer nside(3),nG,irad(3)
+  integer, allocatable :: iGvec(:,:),imGvec(:,:),iGx(:,:),iGmx(:,:)
+!  real*8, allocatable :: orthoradint(:,:,:)
+!  complex*16, allocatable :: harmonics(:,:)
  end type LODE_Model
 
 !***************************************************************************************************
@@ -160,13 +153,13 @@ module lode
    type(LODE_Model) :: this
    integer nmax,lmax,i,j
    real*8 cell(3,3),invcell(3,3),radint(lmax+1,nmax),prefacts(nmax,lmax+1)
-   real*8 alphaewald,rc,sigma(nmax),orthomatrix(nmax,nmax)
+   real*8 rc,sigma(nmax),orthomatrix(nmax,nmax)
 
    ! First, check whether we already have G-vectors allocated
-   if (allocated(this%Gvecs%Gvec)) then
+   if (allocated(this%Gvec)) then
     ! If the G-vectors have already been allocated, check whether the cell is the same as the previous one
     write(*,*) 'G VECTORS ALREADY ALLOCATED'
-    if (maxval(abs(cell-this%Gvecs%store_cell)).gt.1.d-8) then
+    if (maxval(abs(cell-this%store_cell)).gt.1.d-8) then
      write(*,*) 'G VECTORS MUST BE RECALCULATED'
     else
      write(*,*) 'G VECTORS ARE OK'
@@ -176,78 +169,59 @@ module lode
 
    write(*,*) 'HAVE TO ALLOCATE G VECTORS'
 
-   ! Wave-vectors for reciprocal space calculation
-   this%Gvecs%Gcut = 2.d0 * dacos(-1.d0) / (2.d0 * this%sigewald)
-   ! Allocate default for visualization grid
-   this%Gvecs%nside = (/0.d0,0.d0,0.d0/)
-   ! Get inverse cell
-   do i=1,3
-    do j=1,3
-     this%Gvecs%icell(i,j) = invcell(i,j) * 2.d0 * dacos(-1.d0)
-    enddo
-   enddo
+!   ! Wave-vectors for reciprocal space calculation
+!   this%Gcut = 2.d0 * dacos(-1.d0) / (2.d0 * this%sigewald)
+!   ! Allocate default for visualization grid
+!   this%nside = (/256,256,256/)
+!   ! Get inverse cell
+!   do i=1,3
+!    do j=1,3
+!     this%icell(i,j) = invcell(i,j) * 2.d0 * dacos(-1.d0)
+!    enddo
+!   enddo
 
    ! Get wave-vectors
-   allocate(this%Gvecs%G(10000000),this%Gvecs%Gx(3,10000000),this%Gvecs%iGx(3,10000000))
-   allocate(this%Gvecs%iGmx(3,10000000))
-   call ggen(this%Gvecs%icell(1,:),this%Gvecs%icell(2,:),this%Gvecs%icell(3,:),this%Gvecs%nside,this%Gvecs%Gcut, &
-     & this%Gvecs%G,this%Gvecs%Gx,this%Gvecs%iGx,this%Gvecs%iGmx,this%Gvecs%nG,this%Gvecs%irad)
+!   allocate(this%G(10000000),this%Gx(3,10000000),this%iGx(3,10000000))
+!   allocate(this%iGmx(3,10000000))
+!   call ggen(this%icell(1,:),this%icell(2,:),this%icell(3,:),this%nside,this%Gcut, &
+!     & this%G,this%Gx,this%iGx,this%iGmx,this%nG,this%irad)
 
-!G,Gx,iGx,iGmx,nG,igma)
+!   if ((this%nside(1)/2 .le. this%irad(1)) .or. (this%nside(2)/2 .le. this%irad(2)) &
+!     &     .or. (this%nside(3)/2 .le. this%irad(3))) then
+!    stop 'ERROR: G-ellipsoid covers more points than half of the box side: decrease Gcut or &
+!     &use more grid points for 3D visualization'
+!   endif
 
-!implicit none
-!real*8:: Gcut2,ggx,ggy,ggz,gg2,pi
-!real*8, intent(in), dimension(3):: b1,b2,b3
-!integer, parameter:: ngx=99999999,nmax=200
-!integer:: i1,i2,i3,iG
-!integer,intent(out),dimension(3,10000000):: iGx,iGmx
-!real*8,intent(out),dimension(3,10000000):: Gx
-!real*8,intent(out),dimension(10000000):: G
-!integer,intent(out):: nG
-!integer,intent(out),dimension(3):: igma
-!integer,intent(in),dimension(3):: nr
-!real*8,intent(in):: Gcut
-!real*8, dimension(99999999):: wrk
-!integer, dimension(99999999):: index
-  
-!                 G,Gx,iGx,iGmx,nG,irad = gvectors.ggen(invcell[0],invcell[1],invcell[2],nside,Gcut)
-
-   if ((this%Gvecs%nside(1)/2 .le. this%Gvecs%irad(1)) .or. (this%Gvecs%nside(2)/2 .le. this%Gvecs%irad(2)) &
-     &     .or. (this%Gvecs%nside(3)/2 .le. this%Gvecs%irad(3))) then
-    stop 'ERROR: G-ellipsoid covers more points than half of the box side: decrease Gcut or &
-     &use more grid points for 3D visualization'
-   endif
-
-   ! G moduli of  the semi-sphere x>0
-   allocate(this%Gvecs%Gval(this%Gvecs%nG))
-   this%Gvecs%Gval(:) = this%Gvecs%G(:)
-   ! G vectors of the semi-sphere x>0
-   allocate(this%Gvecs%Gvec(this%Gvecs%nG,3))
-   do i=1,this%Gvecs%nG
-    do j=1,3
-     this%Gvecs%Gvec(i,j) = this%Gvecs%Gx(j,i)
-    enddo
-   enddo
-   ! G vector indices of the semi-sphere x>0
-   allocate(this%Gvecs%iGvec(this%Gvecs%nG,3))
-   do i=1,this%Gvecs%nG
-    do j=1,3
-     this%Gvecs%iGvec(i,j) = this%Gvecs%iGx(j,i)
-    enddo
-   enddo
-   ! G vector indices of the semi-sphere x<0
-   allocate(this%Gvecs%imGvec(this%Gvecs%nG,3))
-   do i=1,this%Gvecs%nG
-    do j=1,3
-     this%Gvecs%imGvec(i,j) = this%Gvecs%iGmx(j,i)
-    enddo
-   enddo
+!   ! G moduli of  the semi-sphere x>0
+!   allocate(this%Gval(this%nG))
+!   this%Gval(:) = this%G(1:this%nG)
+!   ! G vectors of the semi-sphere x>0
+!   allocate(this%Gvec(this%nG,3))
+!   do i=1,this%nG
+!    do j=1,3
+!     this%Gvec(i,j) = this%Gx(j,i)
+!    enddo
+!   enddo
+!   ! G vector indices of the semi-sphere x>0
+!   allocate(this%iGvec(this%nG,3))
+!   do i=1,this%nG
+!    do j=1,3
+!     this%iGvec(i,j) = this%iGx(j,i)
+!    enddo
+!   enddo
+!   ! G vector indices of the semi-sphere x<0
+!   allocate(this%imGvec(this%nG,3))
+!   do i=1,this%nG
+!    do j=1,3
+!     this%imGvec(i,j) = this%iGmx(j,i)
+!    enddo
+!   enddo
 
    ! Compute Fourier integrals for the cell
-   alphaewald = 0.5d0 / (this%sigewald*this%sigewald)
-   allocate(this%Gvecs%orthoradint(lmax+1,nmax,this%Gvecs%nG),this%Gvecs%harmonics(this%Gvecs%nG,(lmax+1)*(lmax+1))) 
-   call fourier_integrals(this%Gvecs%nG,nmax,lmax,alphaewald,rc,sigma,this%Gvecs%Gval,this%Gvecs%Gvec, &
-     &     radint,orthomatrix,prefacts,this%Gvecs%orthoradint,this%Gvecs%harmonics)
+!   this%alphaewald = 0.5d0 / (this%sigewald*this%sigewald)
+!   allocate(this%orthoradint(lmax+1,nmax,this%nG),this%harmonics(this%nG,(lmax+1)*(lmax+1))) 
+!   call fourier_integrals(this%nG,nmax,lmax,this%alphaewald,rc,sigma,this%Gval,this%Gvec, &
+!     &     radint,orthomatrix,prefacts,this%orthoradint,this%harmonics)
 
  end subroutine
 !***************************************************************************************************
