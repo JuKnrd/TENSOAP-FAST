@@ -695,6 +695,11 @@ module sagpr
    endif
   endif
 
+  if (isLODE .and. periodic) then
+   ! If necessary, set up or recalculate the G-vectors
+   call get_Gvectors(LODE_params,cell)
+  endif
+
   ! Do the power spectrum computation
   do i=1,nframes
 
@@ -1051,6 +1056,11 @@ module sagpr
      enddo
     enddo
    enddo
+  endif
+
+  if (isLODE .and. periodic) then
+   ! If necessary, set up or recalculate the G-vectors
+   call get_Gvectors(LODE_params,cell)
   endif
 
   ! Do the power spectrum computation

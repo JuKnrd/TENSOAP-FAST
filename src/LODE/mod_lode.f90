@@ -9,12 +9,30 @@ module lode
      &     'Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th','Pa','U ','Np','Pu','Am','Cm','Bk','Cf', &
      &     'Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'/)
 
+!***************************************************************************************************
+
+ type G_Vectors
+  ! G vectors for periodic LODE
+  real*8 Gcut,store_cell(3,3),cell(3,3),icell(3,3),alphaewald
+  real*8, allocatable :: Gval(:),Gvec(:,:),G(:),Gx(:,:)
+  integer, allocatable :: nside(:,:,:),iGvec(:,:),imGvec(:,:)
+  integer, allocatable :: iGx(:,:),iGmx(:,:)
+  integer nG,irad(3)
+  real*8, allocatable :: orthoradint(:,:,:)
+  complex*16, allocatable :: harmonics(:,:)
+ end type G_Vectors
+
+!***************************************************************************************************
+
  type LODE_Model
   ! Variables for running LODE calculations
   logical nonorm,fixed_cell
   real*8 sigewald
   integer radsize,lebsize
+  type(G_Vectors) :: Gvecs
  end type LODE_Model
+
+!***************************************************************************************************
 
  contains
 
@@ -135,7 +153,28 @@ module lode
    deallocate(coordx_near,nneigh_near)
 
  end subroutine
+!***************************************************************************************************
+ subroutine get_Gvectors(this,cell)
+  implicit none
 
+  type(LODE_Model) :: this
+  real*8 cell(3,3)
+
+  ! First, check whether we already have G-vectors allocated
+  if (allocated(this%Gvecs%Gvec)) then
+   ! If the G-vectors have already been allocated, check whether the cell is the same as the previous one
+   write(*,*) 'G VECTORS ALREADY ALLOCATED'
+   if (maxval(abs(cell-this%Gvecs%store_cell)).gt.1.d-8) then
+    write(*,*) 'G VECTORS MUST BE RECALCULATED'
+   else
+    write(*,*) 'G VECTORS ARE OK'
+    return
+   endif
+  endif
+
+  write(*,*) 'HAVE TO ALLOCATE G VECTORS'
+
+ end subroutine
 !***************************************************************************************************
  subroutine get_lebedev_grid(lebedev_grid,grid_size)
   implicit none
