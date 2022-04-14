@@ -21,8 +21,8 @@ module lode
   real*8 Gcut,store_cell(3,3),icell(3,3),alphaewald
   integer nside(3),nG,irad(3)
   integer, allocatable :: iGvec(:,:),imGvec(:,:),iGx(:,:),iGmx(:,:)
-!  real*8, allocatable :: orthoradint(:,:,:)
-!  complex*16, allocatable :: harmonics(:,:)
+  real*8, allocatable :: orthoradint2(:,:,:)
+  complex*16, allocatable :: harmonics2(:,:)
  end type LODE_Model
 
 !***************************************************************************************************

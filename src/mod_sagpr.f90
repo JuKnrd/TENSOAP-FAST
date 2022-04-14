@@ -495,6 +495,7 @@ module sagpr
      nnmax = max(nnmax,nn)
     enddo
    enddo
+   nnmax = int(1.25d0*nnmax)
   endif
 
   ! List indices for atoms of the same species
