@@ -150,7 +150,7 @@ module lode
   implicit none
 
    type(LODE_Model) :: this
-   integer nmax,lmax,i,j,numvectors
+   integer nmax,lmax,i,j
    real*8 cell(3,3),invcell(3,3),radint(lmax+1,nmax),prefacts(nmax,lmax+1),M(3,3),detM
    real*8 rc,sigma(nmax),orthomatrix(nmax,nmax),normcell(3,3),Gvec_new(3)
    real*8, allocatable :: G_intermediate(:,:)
@@ -186,16 +186,16 @@ module lode
    numtot = 1 + n3max + n2max*(2*n3max+1) + n1max*(2*n2max+1)*(2*n3max+1)
    allocate(G_intermediate(numtot,3))
    G_intermediate(:,:) = 0.d0
+
    ! Fill intermediate set of G vectors
-   numvectors = 1
-   G_intermediate(numvectors,:) = (/0.d0,0.d0,0.d0/)
-   numvectors = numvectors + 1
+   this%nG = 1
+   G_intermediate(this%nG,:) = (/0.d0,0.d0,0.d0/)
    ! Step 1: points of the form (0,0,n3>0)
    do n3=1,n3max
-    Gvec_new(:) = G_intermediate(numvectors-1,:) + normcell(3,:)
+    Gvec_new(:) = G_intermediate(this%nG,:) + normcell(3,:)
     if (norm2(Gvec_new).le.this%Gcut) then
-     G_intermediate(numvectors,:) = Gvec_new(:)
-     numvectors = numvectors + 1
+     this%nG = this%ng + 1
+     G_intermediate(this%nG,:) = Gvec_new(:)
     endif
    enddo
    ! Step 2: points of the form (0,n2>0,n3)
@@ -207,8 +207,8 @@ module lode
     do n3=0,2*n3max+1
      Gvec_new(:) = Gvec_new(:) + normcell(3,:)
      if (norm2(Gvec_new).le.this%Gcut) then
-      G_intermediate(numvectors,:) = Gvec_new(:)
-      numvectors = numvectors + 1
+      this%nG = this%nG + 1
+      G_intermediate(this%nG,:) = Gvec_new(:)
      endif
     enddo
    enddo
@@ -222,79 +222,30 @@ module lode
      do n3=0,2*n3max+1
       Gvec_new(:) = Gvec_new(:) + normcell(3,:)
       if (norm2(Gvec_new).le.this%Gcut) then
-       G_intermediate(numvectors,:) = Gvec_new(:)
-       numvectors = numvectors + 1
+       this%nG = this%nG + 1
+       G_intermediate(this%nG,:) = Gvec_new(:)
       endif
      enddo
     enddo
    enddo
-   numvectors = numvectors - 1
    ! Take only the nonzero points from this array to give Gvec
    ! Gval contains norms
-   allocate(this%Gvec(numvectors,3),this%Gval(numvectors))
-   do i=1,numvectors
+   allocate(this%Gvec(this%nG,3),this%Gval(this%nG))
+   do i=1,this%nG
     this%Gvec(i,:) = G_intermediate(i,:)
     this%Gval(i) = norm2(this%Gvec(i,:))
 	write(*,*) 'GVEC',this%Gvec(i,:),this%Gval(i)
    enddo
 
-	write(*,*) numvectors
+	write(*,*) this%nG
 
    deallocate(G_intermediate)
 
-!   ! Wave-vectors for reciprocal space calculation
-!   this%Gcut = 2.d0 * dacos(-1.d0) / (2.d0 * this%sigewald)
-!   ! Allocate default for visualization grid
-!   this%nside = (/256,256,256/)
-!   ! Get inverse cell
-!   do i=1,3
-!    do j=1,3
-!     this%icell(i,j) = invcell(i,j) * 2.d0 * dacos(-1.d0)
-!    enddo
-!   enddo
-
-   ! Get wave-vectors
-!   allocate(this%G(10000000),this%Gx(3,10000000),this%iGx(3,10000000))
-!   allocate(this%iGmx(3,10000000))
-!   call ggen(this%icell(1,:),this%icell(2,:),this%icell(3,:),this%nside,this%Gcut, &
-!     & this%G,this%Gx,this%iGx,this%iGmx,this%nG,this%irad)
-
-!   if ((this%nside(1)/2 .le. this%irad(1)) .or. (this%nside(2)/2 .le. this%irad(2)) &
-!     &     .or. (this%nside(3)/2 .le. this%irad(3))) then
-!    stop 'ERROR: G-ellipsoid covers more points than half of the box side: decrease Gcut or &
-!     &use more grid points for 3D visualization'
-!   endif
-
-!   ! G moduli of  the semi-sphere x>0
-!   allocate(this%Gval(this%nG))
-!   this%Gval(:) = this%G(1:this%nG)
-!   ! G vectors of the semi-sphere x>0
-!   allocate(this%Gvec(this%nG,3))
-!   do i=1,this%nG
-!    do j=1,3
-!     this%Gvec(i,j) = this%Gx(j,i)
-!    enddo
-!   enddo
-!   ! G vector indices of the semi-sphere x>0
-!   allocate(this%iGvec(this%nG,3))
-!   do i=1,this%nG
-!    do j=1,3
-!     this%iGvec(i,j) = this%iGx(j,i)
-!    enddo
-!   enddo
-!   ! G vector indices of the semi-sphere x<0
-!   allocate(this%imGvec(this%nG,3))
-!   do i=1,this%nG
-!    do j=1,3
-!     this%imGvec(i,j) = this%iGmx(j,i)
-!    enddo
-!   enddo
-
    ! Compute Fourier integrals for the cell
-!   this%alphaewald = 0.5d0 / (this%sigewald*this%sigewald)
-!   allocate(this%orthoradint(lmax+1,nmax,this%nG),this%harmonics(this%nG,(lmax+1)*(lmax+1))) 
-!   call fourier_integrals(this%nG,nmax,lmax,this%alphaewald,rc,sigma,this%Gval,this%Gvec, &
-!     &     radint,orthomatrix,prefacts,this%orthoradint,this%harmonics)
+   this%alphaewald = 0.5d0 / (this%sigewald*this%sigewald)
+   allocate(this%orthoradint2(lmax+1,nmax,this%nG),this%harmonics2(this%nG,(lmax+1)*(lmax+1))) 
+   call fourier_integrals(this%nG,nmax,lmax,this%alphaewald,rc,sigma,this%Gval,this%Gvec, &
+     &     radint,orthomatrix,prefacts,this%orthoradint2,this%harmonics2)
 
  end subroutine
 !***************************************************************************************************

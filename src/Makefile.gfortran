@@ -14,7 +14,8 @@ SAGPR_PREFIX=/usr/local
 
 LODE=LODE/gvectors.o LODE/lebedev.o LODE/gausslegendre.o LODE/nearfield.o LODE/mod_lode.o
 SOCK=SOCKETS/sockets.o SOCKETS/fsockets.o
-OBJ4=$(LODE) mod_sagpr.o mod_apply.o
+SOAP=SOAPFAST/mod_sagpr.o SOAPFAST/mod_apply.o
+OBJ4=$(LODE) $(SOAP)
 OBJ5=$(SOCK) mod_io.o sagpr_apply.o
 
 all: mkbin libsoapfast sagpr_apply
@@ -43,6 +44,9 @@ SOCKETS/%.o: SOCKETS/%.f90
 
 LODE/%.o: LODE/%.f90
 	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@
+
+SOAPFAST/%.o: SOAPFAST/%.f90
+        $(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@
 
 %.o: %.f90 
 	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< 
