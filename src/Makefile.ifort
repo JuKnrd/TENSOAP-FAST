@@ -10,11 +10,12 @@ LD=$(SHTOOLS_LIB) -lSHTOOLS -lm -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
 INCLUDE=$(SHTOOLS_INCLUDE)
 SAGPR_PREFIX=/usr/local
 
-LODE=LODE/gvectors.o LODE/lebedev.o LODE/gausslegendre.o LODE/nearfield.o LODE/mod_lode.o
+LODE=LODE/lebedev.o LODE/gausslegendre.o LODE/nearfield.o LODE/mod_lode.o
 SOCK=SOCKETS/sockets.o SOCKETS/fsockets.o
 SOAP=SOAPFAST/mod_sagpr.o SOAPFAST/mod_apply.o
-OBJ4=$(LODE) $(SOAP)
-OBJ5=$(SOCK) mod_io.o sagpr_apply.o
+IMPL=APPLY/mod_io.o APPLY/sagpr_apply.o
+LIBS=$(LODE) $(SOAP)
+APPLY=$(SOCK) $(IMPL)
 
 all: mkbin libsoapfast sagpr_apply
 
@@ -27,12 +28,12 @@ mkbin:
 	@cd ../bin;if [ ! -f sagpr_split_frames ];then ln -s ../tools/sagpr_split_frames.py sagpr_split_frames;fi;cd - > /dev/null
 	@cd ../bin;if [ ! -f sagpr_apply_process ];then ln -s ../tools/sagpr_apply_process.sh sagpr_apply_process;fi;cd - > /dev/null
 
-libsoapfast: $(OBJ4)
+libsoapfast: $(LIBS)
 	@if [ ! -d ../lib ];then mkdir ../lib;fi
-	ar r ../lib/libsoapfast.a $(OBJ4)
+	ar r ../lib/libsoapfast.a $(LIBS)
 
-sagpr_apply: $(OBJ5)
-	$(FF) $(FOPTS) -o ../bin/sagpr_apply $(OBJ5) -L../lib -lsoapfast $(INCLUDE) $(LD)
+sagpr_apply: $(APPL)
+	$(FF) $(FOPTS) -o ../bin/sagpr_apply $(APPL) -L../lib -lsoapfast $(INCLUDE) $(LD)
 
 SOCKETS/%.o: SOCKETS/%.c
 	$(CC) $(COPTS) -c -o $@ $<
@@ -45,6 +46,9 @@ LODE/%.o: LODE/%.f90
 
 SOAPFAST/%.o: SOAPFAST/%.f90
         $(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@
+
+APPLY/%.o: APPLY/%.f90
+	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@
 
 %.o: %.f90 
 	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< 
