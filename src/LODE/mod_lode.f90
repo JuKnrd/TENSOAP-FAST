@@ -171,6 +171,95 @@ module lode
    write(*,*) 'HAVE TO ALLOCATE G VECTORS'
    ! Get G vectors
    this%Gcut = 2.d0 * dacos(-1.d0) / (2.d0 * this%sigewald)
+
+   call new_Gvec_generator(invcell,this%Gcut,this%nG,this%Gvec,this%Gval)
+
+!   ! Outer product matrix of cell vectors
+!   normcell = invcell * 2.d0 * dacos(-1.d0)
+!   M = matmul(normcell,transpose(normcell))
+!   ! Get determinant of matrix
+!   detM = M(1,1)*M(2,2)*M(3,3) + 2.d0*M(1,2)*M(2,3)*M(3,1) &
+!     &     -M(1,1)*M(2,3)*M(2,3) - M(2,2)*M(1,3)*M(1,3) &
+!     &     -M(3,3)*M(1,2)*M(1,2)
+!   ! Maximum numbers in each direction
+!   n1max = floor(dsqrt((M(2,2)*M(3,3)-M(2,3)*M(2,3))/detM)*this%Gcut)
+!   n2max = floor(dsqrt((M(1,1)*M(3,3)-M(1,3)*M(1,3))/detM)*this%Gcut)
+!   n3max = floor(dsqrt((M(1,1)*M(2,2)-M(1,2)*M(1,2))/detM)*this%Gcut)
+!   ! Estimate for total number of G vectors
+!   numtot = 1 + n3max + n2max*(2*n3max+1) + n1max*(2*n2max+1)*(2*n3max+1)
+!   allocate(G_intermediate(numtot,3))
+!   G_intermediate(:,:) = 0.d0
+!
+!   ! Fill intermediate set of G vectors
+!   this%nG = 1
+!   G_intermediate(this%nG,:) = (/0.d0,0.d0,0.d0/)
+!   ! Step 1: points of the form (0,0,n3>0)
+!   do n3=1,n3max
+!    Gvec_new(:) = G_intermediate(this%nG,:) + normcell(3,:)
+!    if (norm2(Gvec_new).le.this%Gcut) then
+!     this%nG = this%ng + 1
+!     G_intermediate(this%nG,:) = Gvec_new(:)
+!    endif
+!   enddo
+!   ! Step 2: points of the form (0,n2>0,n3)
+!   do n2=1,n2max
+!    ! Update current vector for new n2 value.
+!    ! We subtract (n3max+1)*normcell(3,:) so that we only have to add normcell(3,:)
+!    ! at each iteration to get the correct vector
+!    Gvec_new(:) = n2*normcell(2,:) - (n3max+1)*normcell(3,:)
+!    do n3=0,2*n3max+1
+!     Gvec_new(:) = Gvec_new(:) + normcell(3,:)
+!     if (norm2(Gvec_new).le.this%Gcut) then
+!      this%nG = this%nG + 1
+!      G_intermediate(this%nG,:) = Gvec_new(:)
+!     endif
+!    enddo
+!   enddo
+!   ! Step 3: remaining points of the form (n1>0,n2,n3)
+!   do n1=1,n1max
+!    do n2=0,2*n2max+1
+!     ! Update current vector for new n2 value
+!     ! We subtract (n3max+1)*normcell(3,:) so that we only have to add normcell(3,:)
+!     ! at each iteration to get the correct vector
+!     Gvec_new(:) = n1*normcell(1,:) + n2*normcell(2,:) - n2max*normcell(2,:) - (n3max+1)*normcell(3,:)
+!     do n3=0,2*n3max+1
+!      Gvec_new(:) = Gvec_new(:) + normcell(3,:)
+!      if (norm2(Gvec_new).le.this%Gcut) then
+!       this%nG = this%nG + 1
+!       G_intermediate(this%nG,:) = Gvec_new(:)
+!      endif
+!     enddo
+!    enddo
+!   enddo
+!   ! Take only the nonzero points from this array to give Gvec
+!   ! Gval contains norms
+!   allocate(this%Gvec(this%nG,3),this%Gval(this%nG))
+!   do i=1,this%nG
+!    this%Gvec(i,:) = G_intermediate(i,:)
+!    this%Gval(i) = norm2(this%Gvec(i,:))
+!	write(*,*) 'GVEC',this%Gvec(i,:),this%Gval(i)
+!   enddo
+!
+!	write(*,*) this%nG
+!
+!   deallocate(G_intermediate)
+
+   ! Compute Fourier integrals for the cell
+   this%alphaewald = 0.5d0 / (this%sigewald*this%sigewald)
+   allocate(this%orthoradint2(lmax+1,nmax,this%nG),this%harmonics2(this%nG,(lmax+1)*(lmax+1))) 
+   call fourier_integrals(this%nG,nmax,lmax,this%alphaewald,rc,sigma,this%Gval,this%Gvec, &
+     &     radint,orthomatrix,prefacts,this%orthoradint2,this%harmonics2)
+
+ end subroutine
+!***************************************************************************************************
+ subroutine new_Gvec_generator(invcell,Gcut,nG,Gvec,Gval)
+  implicit none
+
+   ! Gvec generator following the C code by Andrea Grisafi and Kevin Kazuki Huguenin-Dumittan
+   real*8 invcell(3,3),normcell(3,3),M(3,3),detM,Gcut,Gvec_new(3)
+   integer n1max,n2max,n3max,numtot,nG,n1,n2,n3,i
+   real*8, allocatable :: G_intermediate(:,:),Gvec(:,:),Gval(:)
+
    ! Outer product matrix of cell vectors
    normcell = invcell * 2.d0 * dacos(-1.d0)
    M = matmul(normcell,transpose(normcell))
@@ -179,23 +268,23 @@ module lode
      &     -M(1,1)*M(2,3)*M(2,3) - M(2,2)*M(1,3)*M(1,3) &
      &     -M(3,3)*M(1,2)*M(1,2)
    ! Maximum numbers in each direction
-   n1max = floor(dsqrt((M(2,2)*M(3,3)-M(2,3)*M(2,3))/detM)*this%Gcut)
-   n2max = floor(dsqrt((M(1,1)*M(3,3)-M(1,3)*M(1,3))/detM)*this%Gcut)
-   n3max = floor(dsqrt((M(1,1)*M(2,2)-M(1,2)*M(1,2))/detM)*this%Gcut)
+   n1max = floor(dsqrt((M(2,2)*M(3,3)-M(2,3)*M(2,3))/detM)*Gcut)
+   n2max = floor(dsqrt((M(1,1)*M(3,3)-M(1,3)*M(1,3))/detM)*Gcut)
+   n3max = floor(dsqrt((M(1,1)*M(2,2)-M(1,2)*M(1,2))/detM)*Gcut)
    ! Estimate for total number of G vectors
    numtot = 1 + n3max + n2max*(2*n3max+1) + n1max*(2*n2max+1)*(2*n3max+1)
    allocate(G_intermediate(numtot,3))
    G_intermediate(:,:) = 0.d0
 
    ! Fill intermediate set of G vectors
-   this%nG = 1
-   G_intermediate(this%nG,:) = (/0.d0,0.d0,0.d0/)
+   nG = 1
+   G_intermediate(nG,:) = (/0.d0,0.d0,0.d0/)
    ! Step 1: points of the form (0,0,n3>0)
    do n3=1,n3max
-    Gvec_new(:) = G_intermediate(this%nG,:) + normcell(3,:)
-    if (norm2(Gvec_new).le.this%Gcut) then
-     this%nG = this%ng + 1
-     G_intermediate(this%nG,:) = Gvec_new(:)
+    Gvec_new(:) = G_intermediate(nG,:) + normcell(3,:)
+    if (norm2(Gvec_new).le.Gcut) then
+     nG = ng + 1
+     G_intermediate(nG,:) = Gvec_new(:)
     endif
    enddo
    ! Step 2: points of the form (0,n2>0,n3)
@@ -206,9 +295,9 @@ module lode
     Gvec_new(:) = n2*normcell(2,:) - (n3max+1)*normcell(3,:)
     do n3=0,2*n3max+1
      Gvec_new(:) = Gvec_new(:) + normcell(3,:)
-     if (norm2(Gvec_new).le.this%Gcut) then
-      this%nG = this%nG + 1
-      G_intermediate(this%nG,:) = Gvec_new(:)
+     if (norm2(Gvec_new).le.Gcut) then
+      nG = nG + 1
+      G_intermediate(nG,:) = Gvec_new(:)
      endif
     enddo
    enddo
@@ -221,31 +310,25 @@ module lode
      Gvec_new(:) = n1*normcell(1,:) + n2*normcell(2,:) - n2max*normcell(2,:) - (n3max+1)*normcell(3,:)
      do n3=0,2*n3max+1
       Gvec_new(:) = Gvec_new(:) + normcell(3,:)
-      if (norm2(Gvec_new).le.this%Gcut) then
-       this%nG = this%nG + 1
-       G_intermediate(this%nG,:) = Gvec_new(:)
+      if (norm2(Gvec_new).le.Gcut) then
+       nG = nG + 1
+       G_intermediate(nG,:) = Gvec_new(:)
       endif
      enddo
     enddo
    enddo
    ! Take only the nonzero points from this array to give Gvec
    ! Gval contains norms
-   allocate(this%Gvec(this%nG,3),this%Gval(this%nG))
-   do i=1,this%nG
-    this%Gvec(i,:) = G_intermediate(i,:)
-    this%Gval(i) = norm2(this%Gvec(i,:))
-	write(*,*) 'GVEC',this%Gvec(i,:),this%Gval(i)
+   allocate(Gvec(nG,3),Gval(nG))
+   do i=1,nG
+    Gvec(i,:) = G_intermediate(i,:)
+    Gval(i) = norm2(Gvec(i,:))
+	write(*,*) 'GVEC',Gvec(i,:),Gval(i)
    enddo
 
-	write(*,*) this%nG
+	write(*,*) nG
 
    deallocate(G_intermediate)
-
-   ! Compute Fourier integrals for the cell
-   this%alphaewald = 0.5d0 / (this%sigewald*this%sigewald)
-   allocate(this%orthoradint2(lmax+1,nmax,this%nG),this%harmonics2(this%nG,(lmax+1)*(lmax+1))) 
-   call fourier_integrals(this%nG,nmax,lmax,this%alphaewald,rc,sigma,this%Gval,this%Gvec, &
-     &     radint,orthomatrix,prefacts,this%orthoradint2,this%harmonics2)
 
  end subroutine
 !***************************************************************************************************
