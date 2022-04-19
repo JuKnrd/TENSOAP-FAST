@@ -23,6 +23,7 @@ all: mkbin libsoapfast sagpr_apply
 
 mkbin:
 	@if [ ! -d ../bin ];then mkdir ../bin;fi
+	@if [ ! -d INCLUDE ];then mkdir INCLUDE;fi
 	@cd ../bin;if [ ! -f sagpr_convert ];then ln -s ../tools/sagpr_convert.py sagpr_convert;fi;cd - > /dev/null
 	@cd ../bin;if [ ! -f lode_convert ];then ln -s ../tools/lode_convert.py lode_convert;fi;cd - > /dev/null
 	@cd ../bin;if [ ! -f sagpr_split_frames ];then ln -s ../tools/sagpr_split_frames.py sagpr_split_frames;fi;cd - > /dev/null
@@ -39,19 +40,19 @@ SOCKETS/%.o: SOCKETS/%.c
 	$(CC) $(COPTS) -c -o $@ $<
 
 SOCKETS/%.o: SOCKETS/%.f90
-	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@
+	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@ -JINCLUDE -IINCLUDE
 
 LODE/%.o: LODE/%.f90
-	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@
+	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@ -JINCLUDE -IINCLUDE
 
 SOAPFAST/%.o: SOAPFAST/%.f90
-        $(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@
+        $(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@ -JINCLUDE -IINCLUDE
 
 APPLY/%.o: APPLY/%.f90
-	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@
+	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -o $@ -JINCLUDE -IINCLUDE
 
 %.o: %.f90 
-	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< 
+	$(FF) $(FOPTS) $(SHTOOLS_INCLUDE) -c $< -JINCLUDE -IINCLUDE
 
 %.o: %.f
 	$(FF) $(FOPTS) -c $<
