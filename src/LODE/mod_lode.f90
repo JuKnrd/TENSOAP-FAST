@@ -179,19 +179,6 @@ module lode
    call fourier_integrals(this%nG,nmax,lmax,this%alphaewald,rc,sigma,this%Gval,this%Gvec, &
      &     radint,orthomatrix,prefacts,this%orthoradint2,this%harmonics2)
 
-	do i=1,lmax+1
-	do j=1,nmax
-	do k=1,this%nG
-		write(*,*) 'PRINT ORTHO',this%orthoradint2(i,j,k),i,j,k,this%Gvec(k,:)
-	enddo
-	enddo
-	enddo
-	do i=1,this%nG
-	do j=1,(lmax+1)*(lmax+1)
-		write(*,*) 'PRINT HARM',this%harmonics2(i,j),i,j,this%Gvec(i,:)
-	enddo
-	enddo
-
  end subroutine
 !***************************************************************************************************
  subroutine old_Gvec_generator(invcell,Gcut,nG,Gvec,Gval)
@@ -392,6 +379,13 @@ module lode
      enddo
     enddo
    enddo
+
+ end subroutine
+!***************************************************************************************************
+ subroutine ewald_potential(omega2,natoms,nspecies,nmax,lmax,nnmax,all_indices, &
+     &     nneighmax,all_species,all_centres,rs,sg,rcut,xyz,cell,orthomatrix, &
+     &     radsize,lebsize,sigewald,Gvec,Gval,nG,orthoradint2,harmonics2,sigma)
+  implicit none
 
  end subroutine
 !***************************************************************************************************
