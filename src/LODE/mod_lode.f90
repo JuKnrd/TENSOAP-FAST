@@ -150,7 +150,7 @@ module lode
   implicit none
 
    type(LODE_Model) :: this
-   integer nmax,lmax,i,j
+   integer nmax,lmax,i,j,k
    real*8 cell(3,3),invcell(3,3),radint(lmax+1,nmax),prefacts(nmax,lmax+1),M(3,3),detM
    real*8 rc,sigma(nmax),orthomatrix(nmax,nmax),normcell(3,3),Gvec_new(3)
    real*8, allocatable :: G_intermediate(:,:)
@@ -178,6 +178,19 @@ module lode
    allocate(this%orthoradint2(lmax+1,nmax,this%nG),this%harmonics2(this%nG,(lmax+1)*(lmax+1))) 
    call fourier_integrals(this%nG,nmax,lmax,this%alphaewald,rc,sigma,this%Gval,this%Gvec, &
      &     radint,orthomatrix,prefacts,this%orthoradint2,this%harmonics2)
+
+	do i=1,lmax+1
+	do j=1,nmax
+	do k=1,this%nG
+		write(*,*) 'PRINT ORTHO',this%orthoradint2(i,j,k),i,j,k,this%Gvec(k,:)
+	enddo
+	enddo
+	enddo
+	do i=1,this%nG
+	do j=1,(lmax+1)*(lmax+1)
+		write(*,*) 'PRINT HARM',this%harmonics2(i,j),i,j,this%Gvec(i,:)
+	enddo
+	enddo
 
  end subroutine
 !***************************************************************************************************
@@ -351,7 +364,7 @@ module lode
     enddo
    enddo
 
-   do iG=1,nG
+   do iG=2,nG
     G2 = Gval(iG)*Gval(iG)
     fourierpot = dexp(-G2 / (4.d0*alpha)) / G2
     do n=0,nmax-1
