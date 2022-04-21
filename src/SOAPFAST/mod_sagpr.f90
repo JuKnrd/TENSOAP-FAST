@@ -719,7 +719,7 @@ module sagpr
      &     all_centres,LODE_params%radsize,LODE_params%lebsize)
     else
      call ewald_potential(omega2,natoms(i),nspecies,nmax,lmax,nnmax,all_indices(i,:,:), &
-     &     nneighmax(i,:),all_species,all_centres,rs,sg,rcut,xyz(i,:,:),cell(i,:,:),orthomatrix, &
+     &     nneighmax(i,:),all_species,all_centres,rs,sg,rcut,xyz(i,:,:),cell(i,:,:),invcell,orthomatrix, &
      &     LODE_params%radsize,LODE_params%lebsize,LODE_params%sigewald,LODE_params%Gvec, &
      &     LODE_params%Gval,LODE_params%nG,LODE_params%orthoradint2,LODE_params%harmonics2, &
      &     sigma,natmax,nsmax)
@@ -1091,7 +1091,7 @@ module sagpr
      &     all_centres,LODE_params%radsize,LODE_params%lebsize)
     else
      call ewald_potential(omega2,natoms(i),nspecies,nmax,lmax,nnmax,all_indices(i,:,:), &
-     &     nneighmax(i,:),all_species,all_centres,rs,sg,rcut,xyz(i,:,:),cell(i,:,:),orthomatrix, &
+     &     nneighmax(i,:),all_species,all_centres,rs,sg,rcut,xyz(i,:,:),cell(i,:,:),invcell,orthomatrix, &
      &     LODE_params%radsize,LODE_params%lebsize,LODE_params%sigewald,LODE_params%Gvec, &
      &     LODE_params%Gval,LODE_params%nG,LODE_params%orthoradint2,LODE_params%harmonics2, &
      &     sigma,natmax,nsmax)
