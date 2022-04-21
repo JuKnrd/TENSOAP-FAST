@@ -496,10 +496,8 @@ module lode
    orthoradial = matmul(orthomatrix,radial)
 
    ! Get near-field potential on atomic basis
-
-!    omega_near = nearfield_ewald.nearfield(nat,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,nnmax,alpha,coordx_near,spherical_grid,orthoradial,harmonics,integration_weights,sigewald) 
-!    omega_near = np.transpose(omega_near,(4,3,2,1,0))
-
+   call nearfield_ewald(natoms,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,nnmax,alpha,coordx_near,spherical_grid,orthoradial, &
+     &     harmonics,integration_weights,sigewald,omega)
 
  end subroutine
 !***************************************************************************************************
