@@ -447,201 +447,111 @@ module lode
   do i=1,3
    ncell(i) = nint(rc / norm2(cell(:,i)))
   enddo
-! nneighmax->nneightype
-!    # Do neighbour list
-!    nneigh_near,coordx_near = neighlist_ewald.neighlist_ewald(natmax,nat,nspecies,nnmax,coords.T,ncell,cell,invcell,rcut2,ncentype,np.array(centers,int),np.array(atom_indexes,int),np.array(all_species,int),np.array(nneightype,int))
 
-   ! Get neighbour list
-   allocate(coordx_near(natoms,nspecies,natoms,3),nneigh_near(natoms,nspecies))
-   coordx_near(:,:,:,:) = 0.d0
-   nneigh_near(:,:) = 0
-   ncentype = count(all_centres)
-   iat = 1
-   ! Loop over species to centre on
-   do icentype=1,nelements
-    if (all_centres(icentype)) then
-     ! Loop over centres of that species
-     do icen=1,nneighmax(icentype)
-      cen = all_indices(icentype,icen)
-      ! Loop over all the species to use as neighbours
-      k = 0
-      do ispe=1,nelements
-       if (all_species(ispe)) then
-        k = k + 1
-        n = 1
-        ! Loop over neighbours of that species
-        do ineigh=1,nneighmax(ispe)
-         neigh = all_indices(ispe,ineigh)
-         rv = xyz(neigh,:) - xyz(cen,:)
-         sv = matmul(invcell,rv)
-         do i=1,3
-          sv(i) = sv(i) - nint(sv(i))
-         enddo
-         rcv = matmul(cell,sv)
-         ! Replicate cell
-         do ia=-ncell(1),ncell(1)
-          do ib=-ncell(2),ncell(2)
-           do ic=-ncell(3),ncell(3)
-            xcv(1) = rcv(1) + ia*cell(1,1) + ib*cell(1,2) + ic*cell(1,3)
-            xcv(2) = rcv(2) + ia*cell(2,1) + ib*cell(2,2) + ic*cell(2,3)
-            xcv(3) = rcv(3) + ia*cell(3,1) + ib*cell(3,2) + ic*cell(3,3)
-            r2 = xcv(1)*xcv(1) + xcv(2)*xcv(2) + xcv(3)*xcv(3)
-            if (r2.le.rcut2) then
-             coordx_near(iat,k,n,:) = xcv
-             nneigh_near(iat,k) = nneigh_near(iat,k) + 1
-             n = n + 1
-            endif
-           enddo
+  ! Get neighbour list
+  allocate(coordx_near(natoms,nspecies,natoms,3),nneigh_near(natoms,nspecies))
+  coordx_near(:,:,:,:) = 0.d0
+  nneigh_near(:,:) = 0
+  ncentype = count(all_centres)
+  iat = 1
+  ! Loop over species to centre on
+  do icentype=1,nelements
+   if (all_centres(icentype)) then
+    ! Loop over centres of that species
+    do icen=1,nneighmax(icentype)
+     cen = all_indices(icentype,icen)
+     ! Loop over all the species to use as neighbours
+     k = 0
+     do ispe=1,nelements
+      if (all_species(ispe)) then
+       k = k + 1
+       n = 1
+       ! Loop over neighbours of that species
+       do ineigh=1,nneighmax(ispe)
+        neigh = all_indices(ispe,ineigh)
+        rv = xyz(neigh,:) - xyz(cen,:)
+        sv = matmul(invcell,rv)
+        do i=1,3
+         sv(i) = sv(i) - nint(sv(i))
+        enddo
+        rcv = matmul(cell,sv)
+        ! Replicate cell
+        do ia=-ncell(1),ncell(1)
+         do ib=-ncell(2),ncell(2)
+          do ic=-ncell(3),ncell(3)
+           xcv(1) = rcv(1) + ia*cell(1,1) + ib*cell(1,2) + ic*cell(1,3)
+           xcv(2) = rcv(2) + ia*cell(2,1) + ib*cell(2,2) + ic*cell(2,3)
+           xcv(3) = rcv(3) + ia*cell(3,1) + ib*cell(3,2) + ic*cell(3,3)
+           r2 = xcv(1)*xcv(1) + xcv(2)*xcv(2) + xcv(3)*xcv(3)
+           if (r2.le.rcut2) then
+            coordx_near(iat,k,n,:) = xcv
+            nneigh_near(iat,k) = nneigh_near(iat,k) + 1
+            n = n + 1
+           endif
           enddo
          enddo
         enddo
-       endif
-      enddo
-      iat = iat + 1
+       enddo
+      endif
      enddo
-    endif
-   enddo
-
-	do i=1,natoms
-	do j=1,nspecies
-	do k=1,natoms
-	do l=1,3
-	write(*,*) 'COORDX_NEAR',coordx_near(i,j,k,l)
-	enddo
-	enddo
-	enddo
-	enddo
-
-	do i=1,natoms
-	do j=1,nspecies
-	write(*,*) 'NNEIGH_NEAR',nneigh_near(i,j)
-	enddo
-	enddo
-
-!iat = 1
-!do icentype=1,ncentype
-!   centype = centers(icentype) + 1
-!   do icen=1,nneightype(centype)
-!      cen = atomidx(centype,icen) + 1
-!      do ispe=1,nspecies
-!         spe = allspe(ispe) + 1
-!         n = 1
-!         do ineigh=1,nneightype(spe)
-!            neigh = atomidx(spe,ineigh) + 1
-!            rx = coords(1,neigh) - coords(1,cen)
-!            ry = coords(2,neigh) - coords(2,cen)
-!            rz = coords(3,neigh) - coords(3,cen)
-!            sx = invcell(1,1)*rx + invcell(1,2)*ry + invcell(1,3)*rz
-!            sy = invcell(2,1)*rx + invcell(2,2)*ry + invcell(2,3)*rz
-!            sz = invcell(3,1)*rx + invcell(3,2)*ry + invcell(3,3)*rz
-!            sx = sx - 1.d0*anint(sx)
-!            sy = sy - 1.d0*anint(sy)
-!            sz = sz - 1.d0*anint(sz)
-!            rcx = cell(1,1)*sx + cell(1,2)*sy + cell(1,3)*sz
-!            rcy = cell(2,1)*sx + cell(2,2)*sy + cell(2,3)*sz
-!            rcz = cell(3,1)*sx + cell(3,2)*sy + cell(3,3)*sz
-!            ! replicate cell
-!            do ia=1,2*ncell(1)+1
-!               do ib=1,2*ncell(2)+1
-!                  do ic=1,2*ncell(3)+1
-!                     x = rcx + (ia-ncell(1)-1)*cell(1,1) + (ib-ncell(2)-1)*cell(1,2) + (ic-ncell(3)-1)*cell(1,3)
-!                     y = rcy + (ia-ncell(1)-1)*cell(2,1) + (ib-ncell(2)-1)*cell(2,2) + (ic-ncell(3)-1)*cell(2,3)
-!                     z = rcz + (ia-ncell(1)-1)*cell(3,1) + (ib-ncell(2)-1)*cell(3,2) + (ic-ncell(3)-1)*cell(3,3)
-!                     r2 = x**2 + y**2 + z**2
-!                     if (r2.le.rcut2) then
-!                        coordx(1,n,ispe,iat) = x
-!                        coordx(2,n,ispe,iat) = y
-!                        coordx(3,n,ispe,iat) = z
-!                        neighx(iat,ispe) = neighx(iat,ispe) + 1
-!                        n = n + 1
-!                     endif
-!                  end do
-!               end do
-!            end do
-!         end do
-!      end do
-!      iat = iat + 1
-!   end do
-!end do
-
-
-!   ! Loop over species to centre on
-!   do icentype=1,nelements
-!    if (all_centres(icentype)) then
-!     ! Loop over centres of that species
-!     do icen=1,nneighmax(icentype)
-!      cen = all_indices(icentype,icen)
-!      ! Loop over all the species to use as neighbours
-!      k = 0
-!      do ispe=1,nelements
-!       if (all_species(ispe)) then
-!        k = k + 1
-!        ! Loop over neighbours of that species
-!        do ineigh=1,nneighmax(ispe)
-!         neigh = all_indices(ispe,ineigh)
-!         coordx_near(iat,k,ineigh,:) = xyz(neigh,:) - xyz(cen,:)
-!         nneigh_near(iat,k) = nneigh_near(iat,k) + 1
-!        enddo
-!       endif
-!      enddo
-!      iat = iat + 1
-!     enddo
-!    endif
-!   enddo
-
-   ! Atomic grid for potential
-   allocate(gauss_points(radsize),gauss_weights(radsize))
-   call gaulegf(0.d0,2.d0*rc,gauss_points,gauss_weights,radsize)
-
-   ! Get Lebedev grid
-   allocate(lebedev_grid(4,lebsize))
-   lebedev_grid(:,:) = 0.d0
-   call get_lebedev_grid(lebedev_grid,lebsize)
-
-   ! Get spherical grid and integration weights
-   allocate(spherical_grid(lebsize*radsize,3),integration_weights(lebsize*radsize))
-   spherical_grid(:,:) = 0.d0
-   integration_weights(:) = 0.d0
-   igrid = 1
-   do ir=1,radsize
-    r = gauss_points(ir)
-    do ileb=1,lebsize
-     spherical_grid(igrid,:) = r * lebedev_grid(1:3,ileb)
-     integration_weights(igrid) = 4.d0 * dacos(-1.d0) * r * r * lebedev_grid(4,ileb) * gauss_weights(ir)
-     igrid = igrid + 1
+     iat = iat + 1
     enddo
-   enddo
+   endif
+  enddo
 
-   ! Get polar coordinates on atomic grid
-   allocate(lr(lebsize*radsize),lth(lebsize*radsize),lph(lebsize*radsize))
-   lr(:) = 0.d0
-   do i=1,lebsize*radsize
-    lr(i) = dsqrt(dot_product(spherical_grid(i,:),spherical_grid(i,:)))
-    lth(i) = dacos(spherical_grid(i,3)/lr(i))
-    lph(i) = datan2(spherical_grid(i,2),spherical_grid(i,1))
-   enddo
+  ! Atomic grid for potential
+  allocate(gauss_points(radsize),gauss_weights(radsize))
+  call gaulegf(0.d0,2.d0*rc,gauss_points,gauss_weights,radsize)
 
-   ! Get spherical harmonics array
-   allocate(harmonics((lmax+1)*(lmax+1),lebsize*radsize))
-   harmonics(:,:) = (0.d0,0.d0)
-   lm = 1
-   do l=0,lmax
-    do im=-l,l
-     do i=1,lebsize*radsize
-      harmonics(lm,i) = dconjg(spherical_harmonic(l,im,dcos(lth(i)),lph(i)))
-     enddo
-     lm = lm + 1
+  ! Get Lebedev grid
+  allocate(lebedev_grid(4,lebsize))
+  lebedev_grid(:,:) = 0.d0
+  call get_lebedev_grid(lebedev_grid,lebsize)
+
+  ! Get spherical grid and integration weights
+  allocate(spherical_grid(lebsize*radsize,3),integration_weights(lebsize*radsize))
+  spherical_grid(:,:) = 0.d0
+  integration_weights(:) = 0.d0
+  igrid = 1
+  do ir=1,radsize
+   r = gauss_points(ir)
+   do ileb=1,lebsize
+    spherical_grid(igrid,:) = r * lebedev_grid(1:3,ileb)
+    integration_weights(igrid) = 4.d0 * dacos(-1.d0) * r * r * lebedev_grid(4,ileb) * gauss_weights(ir)
+    igrid = igrid + 1
+   enddo
+  enddo
+
+  ! Get polar coordinates on atomic grid
+  allocate(lr(lebsize*radsize),lth(lebsize*radsize),lph(lebsize*radsize))
+  lr(:) = 0.d0
+  do i=1,lebsize*radsize
+   lr(i) = dsqrt(dot_product(spherical_grid(i,:),spherical_grid(i,:)))
+   lth(i) = dacos(spherical_grid(i,3)/lr(i))
+   lph(i) = datan2(spherical_grid(i,2),spherical_grid(i,1))
+  enddo
+
+  ! Get spherical harmonics array
+  allocate(harmonics((lmax+1)*(lmax+1),lebsize*radsize))
+  harmonics(:,:) = (0.d0,0.d0)
+  lm = 1
+  do l=0,lmax
+   do im=-l,l
+    do i=1,lebsize*radsize
+     harmonics(lm,i) = dconjg(spherical_harmonic(l,im,dcos(lth(i)),lph(i)))
     enddo
+    lm = lm + 1
    enddo
+  enddo
 
-   ! Get orthoradial array
-   allocate(radial(nmax,lebsize*radsize))
-   call radial_1D_mesh(radial,sigma,nmax,lr,lebsize*radsize)
-   allocate(orthoradial(nmax,lebsize*radsize))
-   orthoradial = matmul(orthomatrix,radial)
+  ! Get orthoradial array
+  allocate(radial(nmax,lebsize*radsize))
+  call radial_1D_mesh(radial,sigma,nmax,lr,lebsize*radsize)
+  allocate(orthoradial(nmax,lebsize*radsize))
+  orthoradial = matmul(orthomatrix,radial)
 
-   ! Get near-field potential on atomic basis
-   call nearfield_ewald(natoms,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,nnmax,alpha,coordx_near,spherical_grid,orthoradial, &
+  ! Get near-field potential on atomic basis
+  call nearfield_ewald(natoms,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,nnmax,alpha,coordx_near,spherical_grid,orthoradial, &
      &     harmonics,integration_weights,sigewald,omega)
 
  end subroutine

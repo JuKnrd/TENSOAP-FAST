@@ -61,15 +61,50 @@ integer:: ngrid,lmax,nmax,nat,nspecies,neighmax
 real*8:: alpha,potential,r,sigewald,alphaewald
 integer,dimension(nat,nspecies)::nneigh
 !real*8,dimension(3,neighmax,nspecies,nat):: coords
-real*8,dimension(nat,nspecies,neighmax,3):: coords
+real*8,dimension(nat,nspecies,nat,3):: coords
 real*8,dimension(nmax,ngrid):: orthorad
 real*8,dimension(ngrid):: weights 
 real*8,dimension(ngrid,3):: sgrid 
 complex*16,dimension((lmax+1)*(lmax+1),ngrid):: harmonic 
 !complex*16,dimension(2*lmax+1,lmax+1,nmax,nspecies,nat):: omega
 complex*16,dimension(nat,nspecies,nmax,lmax+1,2*lmax+1):: omega
+integer i,j,k
 
 alphaewald = 1.d0/(2.d0*sigewald**2)
+
+	do i=1,nat
+	do j=1,nspecies
+	write(*,*) 'CHECK NNEIGH',nneigh(i,j)
+	enddo
+	enddo
+	do i=1,nat
+	do j=1,nspecies
+	do k=1,nat
+	do l=1,3
+	write(*,*) 'CHECK COORDS',coords(i,j,k,l)
+	enddo
+	enddo
+	enddo
+	enddo
+	do i=1,nmax
+	do j=1,ngrid
+	write(*,*) 'CHECK ORTHORAD',orthorad(i,j)
+	enddo
+	enddo
+	do i=1,ngrid
+	write(*,*) 'CHECK WEIGHTS',weights(i)
+	enddo
+	do i=1,ngrid
+	do j=1,3
+	write(*,*) 'CHECK SGRID',sgrid(i,j)
+	enddo
+	enddo
+	do i=1,(lmax+1)*(lmax+1)
+	do j=1,ngrid
+	write(*,*) 'CHECK HARMONIC',harmonic(i,j)
+	enddo
+	enddo
+	write(*,*) nat,nspecies,neighmax
 
 omega = dcmplx(0.d0,0.d0)
 !$OMP PARALLEL DEFAULT(private) &
