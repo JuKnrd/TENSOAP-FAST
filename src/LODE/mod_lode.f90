@@ -384,8 +384,17 @@ module lode
 !***************************************************************************************************
  subroutine ewald_potential(omega2,natoms,nspecies,nmax,lmax,nnmax,all_indices, &
      &     nneighmax,all_species,all_centres,rs,sg,rcut,xyz,cell,orthomatrix, &
-     &     radsize,lebsize,sigewald,Gvec,Gval,nG,orthoradint2,harmonics2,sigma)
+     &     radsize,lebsize,sigewald,Gvec,Gval,nG,orthoradint,harmonics,sigma,natmax,nsmax)
   implicit none
+
+   integer natoms,nmax,lmax,radsize,lebsize,nG,nspecies,natmax,nnmax,nsmax
+   integer all_indices(nsmax,natmax),nneighmax(nsmax)
+   real*8 Gvec(nG,3),Gval(nG),cell(3,3),xyz(natmax,3),sigewald
+   real*8 sigma(nmax),orthomatrix(nmax,nmax),rs(3)
+   complex*16 omega2(natoms,nspecies,nmax,lmax+1,2*lmax+1)
+   logical all_species(nelements),all_centres(nelements)
+   real*8 orthoradint(lmax+1,nmax,nG),sg,rcut
+   complex*16 harmonics(nG,(lmax+1)*(lmax+1))
 
  end subroutine
 !***************************************************************************************************
