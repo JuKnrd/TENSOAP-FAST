@@ -388,7 +388,7 @@ module lode
   implicit none
 
    integer natoms,nmax,lmax,radsize,lebsize,nG,nspecies,natmax,nnmax,nsmax
-   integer all_indices(nsmax,natmax),nneighmax(nsmax)
+   integer all_indices(nsmax,natmax),nneighmax(nsmax),i,j,k,l,m
    real*8 Gvec(nG,3),Gval(nG),cell(3,3),invcell(3,3),xyz(natmax,3),sigewald
    real*8 sigma(nmax),orthomatrix(nmax,nmax),rs(3)
    complex*16 omega2(natoms,nspecies,nmax,lmax+1,2*lmax+1)
@@ -405,6 +405,19 @@ module lode
    ! Sum the two
    omega2 = omega2_r + omega2_k
 
+	write(*,*) shape(omega2_r)
+	do i=1,64
+	do j=1,2
+	do k=1,8
+	do l=1,5
+	do m=1,9
+		write(*,*) 'DIRECT',real(omega2_r(i,j,k,l,m)),aimag(omega2_r(i,j,k,l,m)),i,j,k,l,m
+	enddo
+	enddo
+	enddo
+	enddo
+	enddo
+
  end subroutine
 !***************************************************************************************************
  subroutine direct_ewald(omega,natoms,nspecies,nmax,lmax,nnmax,all_indices,nneighmax, &
@@ -413,7 +426,7 @@ module lode
   implicit none
 
    integer natoms,nmax,lmax,nnmax,radsize,lebsize,nspecies,natmax,nsmax,ncentype
-   integer all_indices(nsmax,natmax),nneighmax(nsmax),ncell(3),i,l,lm,im,igrid,ileb,ir
+   integer all_indices(nsmax,natmax),nneighmax(nsmax),ncell(3),i,l,lm,im,igrid,ileb,ir,j
    complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
    logical all_species(nelements),all_centres(nelements)
    real*8 sg,rcut,cell(3,3),invcell(3,3),xyz(natmax,3),sigewald,sigma(nmax),r,rv(3),sv(3),rcv(3),xcv(3),r2
@@ -432,7 +445,7 @@ module lode
   rcut2 = rc*rc
 
   do i=1,3
-   ncell(i) = nint(rcut / norm2(cell(:,i)))
+   ncell(i) = nint(rc / norm2(cell(:,i)))
   enddo
 ! nneighmax->nneightype
 !    # Do neighbour list
@@ -462,7 +475,7 @@ module lode
          rv = xyz(neigh,:) - xyz(cen,:)
          sv = matmul(invcell,rv)
          do i=1,3
-          sv(i) = sv(i) - anint(sv(i))
+          sv(i) = sv(i) - nint(sv(i))
          enddo
          rcv = matmul(cell,sv)
          ! Replicate cell
@@ -474,7 +487,7 @@ module lode
             xcv(3) = rcv(3) + ia*cell(3,1) + ib*cell(3,2) + ic*cell(3,3)
             r2 = xcv(1)*xcv(1) + xcv(2)*xcv(2) + xcv(3)*xcv(3)
             if (r2.le.rcut2) then
-             coordx_near(iat,k,ineigh,:) = xcv
+             coordx_near(iat,k,n,:) = xcv
              nneigh_near(iat,k) = nneigh_near(iat,k) + 1
              n = n + 1
             endif
@@ -488,6 +501,22 @@ module lode
      enddo
     endif
    enddo
+
+	do i=1,natoms
+	do j=1,nspecies
+	do k=1,natoms
+	do l=1,3
+	write(*,*) 'COORDX_NEAR',coordx_near(i,j,k,l)
+	enddo
+	enddo
+	enddo
+	enddo
+
+	do i=1,natoms
+	do j=1,nspecies
+	write(*,*) 'NNEIGH_NEAR',nneigh_near(i,j)
+	enddo
+	enddo
 
 !iat = 1
 !do icentype=1,ncentype

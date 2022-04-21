@@ -60,7 +60,8 @@ integer:: igrid,iat,jat,ispe,n,l,im,lm
 integer:: ngrid,lmax,nmax,nat,nspecies,neighmax
 real*8:: alpha,potential,r,sigewald,alphaewald
 integer,dimension(nat,nspecies)::nneigh
-real*8,dimension(3,neighmax,nspecies,nat):: coords
+!real*8,dimension(3,neighmax,nspecies,nat):: coords
+real*8,dimension(nat,nspecies,neighmax,3):: coords
 real*8,dimension(nmax,ngrid):: orthorad
 real*8,dimension(ngrid):: weights 
 real*8,dimension(ngrid,3):: sgrid 
@@ -79,9 +80,12 @@ do iat=1,nat
       do igrid=1,ngrid
          potential = 0.d0
          do jat=1,nneigh(iat,ispe)
-            r = dsqrt((sgrid(igrid,1)-coords(1,jat,ispe,iat))**2 &
-                     +(sgrid(igrid,2)-coords(2,jat,ispe,iat))**2 &
-                     +(sgrid(igrid,3)-coords(3,jat,ispe,iat))**2)
+!            r = dsqrt((sgrid(igrid,1)-coords(1,jat,ispe,iat))**2 &
+!                     +(sgrid(igrid,2)-coords(2,jat,ispe,iat))**2 &
+!                     +(sgrid(igrid,3)-coords(3,jat,ispe,iat))**2)
+            r = dsqrt((sgrid(igrid,1)-coords(iat,ispe,jat,1))**2 &
+                     +(sgrid(igrid,2)-coords(iat,ispe,jat,2))**2 &
+                     +(sgrid(igrid,3)-coords(iat,ispe,jat,3))**2)
             potential = potential + ( erf(dsqrt(alpha)*r) - erf(dsqrt(alphaewald)*r) ) / r
          enddo
          do n=1,nmax
