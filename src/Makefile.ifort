@@ -10,7 +10,7 @@ LD=$(SHTOOLS_LIB) -lSHTOOLS -lm -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
 INCLUDE=$(SHTOOLS_INCLUDE)
 SAGPR_PREFIX=/usr/local
 
-LODE=LODE/lebedev.o LODE/gausslegendre.o LODE/nearfield.o LODE/mod_lode.o
+LODE=LODE/lebedev.o LODE/gausslegendre.o LODE/nearfield.o LODE/reciprocal_utils.o LODE/mod_lode.o
 SOCK=SOCKETS/sockets.o SOCKETS/fsockets.o
 SOAP=SOAPFAST/mod_sagpr.o SOAPFAST/mod_apply.o
 IMPL=APPLY/mod_io.o APPLY/sagpr_apply.o
