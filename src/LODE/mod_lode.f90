@@ -405,19 +405,6 @@ module lode
    ! Sum the two
    omega2 = omega2_r + omega2_k
 
-	write(*,*) shape(omega2_r)
-	do i=1,64
-	do j=1,2
-	do k=1,8
-	do l=1,5
-	do m=1,9
-		write(*,*) 'DIRECT',real(omega2_r(i,j,k,l,m)),aimag(omega2_r(i,j,k,l,m)),i,j,k,l,m
-	enddo
-	enddo
-	enddo
-	enddo
-	enddo
-
  end subroutine
 !***************************************************************************************************
  subroutine direct_ewald(omega,natoms,nspecies,nmax,lmax,nnmax,all_indices,nneighmax, &
@@ -558,6 +545,7 @@ module lode
 !***************************************************************************************************
  subroutine reciprocal_ewald()
   implicit none
+
  end subroutine
 !***************************************************************************************************
  subroutine get_lebedev_grid(lebedev_grid,grid_size)
