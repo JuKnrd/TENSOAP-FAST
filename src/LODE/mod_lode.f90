@@ -395,7 +395,89 @@ module lode
    logical all_species(nelements),all_centres(nelements)
    real*8 orthoradint(lmax+1,nmax,nG),sg,rcut
    complex*16 harmonics(nG,(lmax+1)*(lmax+1))
+   complex*16 omega2_r(natoms,nspecies,nmax,lmax+1,2*lmax+1),omega2_k(natoms,nspecies,nmax,lmax+1,2*lmax+1)
 
+   ! Get real-space contribution to omega2
+   call direct_ewald(omega2_r,natoms,nspecies,nmax,lmax,nnmax,all_indices,nneighmax, &
+     &     natmax,nsmax,sg,rcut,xyz,cell,sigma,orthomatrix,all_species,all_centres,radsize,lebsize,sigewald)
+   ! Get reciprocal-space contribution to omega2
+   omega2_k(:,:,:,:,:) = (0.d0,0.d0)
+   ! Sum the two
+   omega2 = omega2_r + omega2_k
+
+ end subroutine
+!***************************************************************************************************
+ subroutine direct_ewald(omega,natoms,nspecies,nmax,lmax,nnmax,all_indices,nneighmax, &
+     &     natmax,nsmax,sg,rcut,xyz,cell,sigma,orthomatrix,all_species,all_centres, &
+     &     radsize,lebsize,sigewald)
+  implicit none
+
+   integer natoms,nmax,lmax,nnmax,radsize,lebsize,nspecies,natmax,nsmax
+   integer all_indices(nsmax,natmax),nneighmax(nsmax),ncell(3)
+   complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
+   logical all_species(nelements),all_centres(nelements)
+   real*8 sg,rcut,cell(3,3),xyz(natmax,3),sigewald,sigma(nmax)
+   real*8 orthomatrix(nmax,nmax),alpha,rcut2
+
+  ! Real-space contribution to omega
+  omega(:,:,:,:,:) = (0.d0,0.d0)
+
+  alpha = 0.5d0 / (sg*sg)
+  rcut2 = (rcut + 4.d0*sigewald)**2
+
+! nneighmax->nneightype
+!
+!    ncentype = len(centers)
+!
+!    ncell = np.zeros(3,int)
+!    ncell[0] = int(np.round(rcut/np.linalg.norm(cell[:,0])))
+!    ncell[1] = int(np.round(rcut/np.linalg.norm(cell[:,1])))
+!    ncell[2] = int(np.round(rcut/np.linalg.norm(cell[:,2])))
+!
+!    invcell = np.linalg.inv(cell)
+!
+!    natmax = len(atom_indexes[0])
+!
+!    # Do neighbour list
+!    nneigh_near,coordx_near = neighlist_ewald.neighlist_ewald(natmax,nat,nspecies,nnmax,coords.T,ncell,cell,invcell,rcut2,ncentype,np.array(centers,int),np.array(atom_indexes,int),np.array(all_species,int),np.array(nneightype,int))
+!
+!    # Define atomic grid for potential 
+!    gauss_points,gauss_weights = gausslegendre.gauss_legendre.gaulegf(x1=0.0,x2=rcut*2.0,n=radsize)
+!    lebedev_grid = ld(lebsize)
+!    spherical_grid = np.zeros((lebsize*radsize,3),float)
+!    integration_weights = np.zeros((lebsize*radsize),float)
+!    igrid = 0
+!    for ir in range(radsize):
+!        r = gauss_points[ir]
+!        for ileb in range(lebsize):
+!            spherical_grid[igrid] = r * lebedev_grid[ileb][:3]
+!            integration_weights[igrid] = 4.0*np.pi * r**2 * lebedev_grid[ileb][3] * gauss_weights[ir] 
+!            igrid += 1
+!
+!    # Get basis functions for potential projection 
+!    lr = np.sqrt(np.sum(spherical_grid**2,axis=1))
+!    lth = np.arccos(spherical_grid[:,2]/lr)
+!    lph = np.arctan2(spherical_grid[:,1],spherical_grid[:,0])
+!
+!    harmonics = np.zeros(((lmax+1)**2,lebsize*radsize),complex) 
+!    lm = 0
+!    for l in range(lmax+1):
+!        for im in range(2*l+1):
+!            harmonics[lm,:] = np.conj(sc.sph_harm(im-l,l,lph[:],lth[:])) 
+!            lm += 1
+!
+!    radial = radial_1D_mesh(sigma,nmax,lr,lebsize*radsize)
+!    orthoradial = np.dot(orthomatrix,radial)
+!
+!    # compute near-field potential and project it onto the atomic basis
+!    omega_near = nearfield_ewald.nearfield(nat,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,nnmax,alpha,coordx_near,spherical_grid,orthoradial,harmonics,integration_weights,sigewald) 
+!    omega_near = np.transpose(omega_near,(4,3,2,1,0))
+
+
+ end subroutine
+!***************************************************************************************************
+ subroutine reciprocal_ewald()
+  implicit none
  end subroutine
 !***************************************************************************************************
  subroutine get_lebedev_grid(lebedev_grid,grid_size)
