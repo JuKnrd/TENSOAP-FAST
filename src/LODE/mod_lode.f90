@@ -401,7 +401,9 @@ module lode
    call direct_ewald(omega2_r,natoms,nspecies,nmax,lmax,nnmax,all_indices,nneighmax, &
      &     natmax,nsmax,sg,rcut,xyz,cell,invcell,sigma,orthomatrix,all_species,all_centres,radsize,lebsize,sigewald)
    ! Get reciprocal-space contribution to omega2
-   omega2_k(:,:,:,:,:) = (0.d0,0.d0)
+   call reciprocal_ewald(omega2_k,natoms,nspecies,nmax,lmax,nnmax,all_indices,nneighmax, &
+     &     all_centres,all_species,cell,invcell,rcut,xyz,sigma,sg,orthomatrix,Gvec,Gval, &
+     &     nG,nsmax,natmax,orthoradint,harmonics)
    ! Sum the two
    omega2 = omega2_r + omega2_k
 
@@ -543,10 +545,24 @@ module lode
 
  end subroutine
 !***************************************************************************************************
- subroutine reciprocal_ewald()
+ subroutine reciprocal_ewald(omega,natoms,nspecies,nmax,lmax,nnmax,all_indices,nneighmax, &
+     &     all_centres,all_species,cell,invcell,rcut,xyz,sigma,sg,orthomatrix,Gvec,Gval,nG, &
+     &     nsmax,natmax,orthoradint,harmonics)
   implicit none
 
-!def fourier_ewald_fixed(nat,nnmax,nspecies,lmax,centers,all_species,nneighmax,atom_indexes,cell,rcut,coords,all_radial,sigma,sg,nmax,orthomatrix,nside,iGx,imGx,Gval,Gvec,nG,orthoradint,harmonics):
+   integer nmaxlmax,nmax,lmax,natoms,nG,nsmax,nnmax,natmax,nspecies
+   integer all_indices(nsmax,natmax),nneighmax(nsmax)
+   complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
+   logical all_species(nelements),all_centres(nelements)
+   real*8 cell(3,3),invcell(3,3),Gvec(nG,3),Gval(nG),rc,sg,xyz(natmax,3)
+   real*8 orthomatrix(nmax,nmax),sigma(nmax)
+   real*8 orthoradint(lmax+1,nmax,nG),rcut
+   complex*16 harmonics(nG,(lmax+1)*(lmax+1))
+
+  ! Reciprocal-space contribution to omega
+  omega(:,:,:,:,:) = (0.d0,0.d0)
+
+!def fourier_ewald_fixed(nside,iGx,imGx):
 !    """return projections of the non-local field on basis functions"""
 !
 !    volume = np.linalg.det(cell)
