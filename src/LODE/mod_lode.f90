@@ -72,11 +72,9 @@ module lode
        if (all_species(ispe)) then
         k = k + 1
         ! Loop over neighbours of that species
-!        n_near = 1
         do ineigh=1,nneighmax(ispe)
          neigh = all_indices(ispe,ineigh)
          coordx_near(iat,k,ineigh,:) = xyz(neigh,:) - xyz(cen,:)
-!         n_near = n_near + 1
          nneigh_near(iat,k) = nneigh_near(iat,k) + 1
         enddo
        endif
@@ -550,24 +548,55 @@ module lode
      &     nsmax,natmax,orthoradint,harmonics)
   implicit none
 
-   integer nmaxlmax,nmax,lmax,natoms,nG,nsmax,nnmax,natmax,nspecies
-   integer all_indices(nsmax,natmax),nneighmax(nsmax)
+   integer nmaxlmax,nmax,lmax,natoms,nG,nsmax,nnmax,natmax,nspecies,cen,icentype,ineigh,neigh
+   integer all_indices(nsmax,natmax),nneighmax(nsmax),ncentype,ispe,iat,icen,k
    complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
    logical all_species(nelements),all_centres(nelements)
    real*8 cell(3,3),invcell(3,3),Gvec(nG,3),Gval(nG),rc,sg,xyz(natmax,3)
-   real*8 orthomatrix(nmax,nmax),sigma(nmax)
+   real*8 orthomatrix(nmax,nmax),sigma(nmax),alpha,volume
    real*8 orthoradint(lmax+1,nmax,nG),rcut
    complex*16 harmonics(nG,(lmax+1)*(lmax+1))
+   real*8, allocatable :: coordx_near(:,:,:,:)
+   integer, allocatable :: nneigh_near(:,:)
+   complex*16 phase(2,nspecies,natoms,nG)
 
-  ! Reciprocal-space contribution to omega
-  omega(:,:,:,:,:) = (0.d0,0.d0)
+   ! Reciprocal-space contribution to omega
+   omega(:,:,:,:,:) = (0.d0,0.d0)
 
-!def fourier_ewald_fixed(nside,iGx,imGx):
-!    """return projections of the non-local field on basis functions"""
-!
-!    volume = np.linalg.det(cell)
-!
-!    alpha = 1.0/(2.0*sg**2)
+   volume = det(cell)
+
+   alpha = 0.5d0 / (sg*sg)
+
+   ! Process coordinates
+   allocate(coordx_near(natoms,nspecies,natoms,3),nneigh_near(natoms,nspecies))
+   coordx_near(:,:,:,:) = 0.d0
+   nneigh_near(:,:) = 0
+   ncentype = count(all_centres)
+   iat = 1
+   ! Loop over species to centre on
+   do icentype=1,nelements
+    if (all_centres(icentype)) then
+     ! Loop over centres of that species
+     do icen=1,nneighmax(icentype)
+      cen = all_indices(icentype,icen)
+      ! Loop over all species to use as neighbours
+      k = 0
+      do ispe=1,nelements
+       if (all_species(ispe)) then
+        k = k + 1
+        ! Loop over neighbours of that specie
+        do ineigh=1,nneighmax(ispe)
+         neigh = all_indices(ispe,ineigh)
+         coordx_near(iat,k,ineigh,:) = xyz(neigh,:) - xyz(cen,:)
+         nneigh_near(iat,k) = nneigh_near(iat,k) + 1
+        enddo
+       endif
+      enddo
+      iat = iat + 1
+     enddo
+    endif
+   enddo
+
 !
 !    # process coordinates 
 !    coordx = np.zeros((nat,nspecies,nat,3), dtype=float)
@@ -602,6 +631,15 @@ module lode
 !    omega *= 16.0*np.pi**2/volume 
 !
 !    return omega
+
+   ! Combine phase factors
+   call phasecomb(natoms,nspecies,nneigh_near,nG,coordx_near,transpose(Gvec))
+
+	write(*,*) 'HERE'
+
+   ! Contraction over G-vectors
+
+   omega(:,:,:,:,:) = omega(:,:,:,:,:) * 16.d0 * dacos(-1.d0)**2 / volume
 
  end subroutine
 !***************************************************************************************************
@@ -886,6 +924,17 @@ real*8 function hg ( a, b, x)
   x = x0
 
   return
+ end function
+!***************************************************************************************************
+ real*8 function det(cell)
+  implicit none
+
+   integer i
+   real*8 cell(3,3)
+
+   det = cell(1,1)*cell(2,2)*cell(3,3) - cell(1,1)*cell(2,3)*cell(3,2) - cell(2,1)*cell(1,2)*cell(3,3) + &
+     &     cell(1,2)*cell(2,3)*cell(3,1) + cell(1,3)*cell(2,1)*cell(3,2) - cell(1,3)*cell(2,2)*cell(3,1)
+
  end function
 !***************************************************************************************************
 end module
