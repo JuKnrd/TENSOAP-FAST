@@ -633,9 +633,7 @@ module lode
 !    return omega
 
    ! Combine phase factors
-   call phasecomb(natoms,nspecies,nneigh_near,nG,coordx_near,transpose(Gvec))
-
-	write(*,*) 'HERE'
+   call phasecomb(natoms,nspecies,nneigh_near,nG,coordx_near,transpose(Gvec),phase)
 
    ! Contraction over G-vectors
 

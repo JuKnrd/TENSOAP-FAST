@@ -12,15 +12,8 @@ real*8,dimension(3,nG):: Gvec
 real*8,dimension(nat,nspecies,nat,3):: coords 
 complex*16,dimension(2,nspecies,nat,nG):: phase
 
-!f2py intent(in) nat,nspecies,nneigh,nG,coords,Gvec
-!f2py intent(out) phase 
-!f2py depend(nat) coords,phase,nneigh
-!f2py depend(nspecies) coords,phase,nneigh
-!f2py depend(nG) Gvec,phase
-
 pi=4.d0*atan(1.d0)
-
-phase = dcmplx(0.d0,0.d0)
+phase(:,:,:,:) = dcmplx(0.d0,0.d0)
 !$OMP PARALLEL DEFAULT(private) &
 !$OMP SHARED(phase,Gvec,coords,nneigh,nG,nspecies,nat)
 !$OMP DO SCHEDULE(dynamic)
