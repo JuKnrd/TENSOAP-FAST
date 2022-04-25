@@ -636,7 +636,7 @@ module lode
    call phasecomb(natoms,nspecies,nneigh_near,nG,coordx_near,transpose(Gvec),phase)
 
    ! Contraction over G-vectors
-
+   call gcontra(natoms,nspecies,nmax,lmax,nG,orthoradint,transpose(harmonics),2.d0*phase,omega)
    omega(:,:,:,:,:) = omega(:,:,:,:,:) * 16.d0 * dacos(-1.d0)**2 / volume
 
  end subroutine
