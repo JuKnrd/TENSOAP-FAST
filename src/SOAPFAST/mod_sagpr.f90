@@ -723,11 +723,6 @@ module sagpr
      &     LODE_params%radsize,LODE_params%lebsize,LODE_params%sigewald,LODE_params%Gvec, &
      &     LODE_params%Gval,LODE_params%nG,LODE_params%orthoradint2,LODE_params%harmonics2, &
      &     sigma,natmax,nsmax)
-
-!                         # fourier contribution of Ewald potential projections
-!                         omega2_fourier = fourier_ewald_fixed.fourier_ewald_fixed(nside,iGvec,imGvec)
-
-     stop 'PERIODIC LODE NOT YET IMPLEMENTED!'
     endif
    endif
 
@@ -1095,7 +1090,6 @@ module sagpr
      &     LODE_params%radsize,LODE_params%lebsize,LODE_params%sigewald,LODE_params%Gvec, &
      &     LODE_params%Gval,LODE_params%nG,LODE_params%orthoradint2,LODE_params%harmonics2, &
      &     sigma,natmax,nsmax)
-     stop 'PERIODIC LODE NOT YET IMPLEMENTED!'
     endif
    endif
 

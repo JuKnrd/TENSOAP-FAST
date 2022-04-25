@@ -157,17 +157,17 @@ module lode
    ! First, check whether we already have G-vectors allocated
    if (allocated(this%Gvec)) then
     ! If the G-vectors have already been allocated, check whether the cell is the same as the previous one
-    write(*,*) 'G VECTORS ALREADY ALLOCATED'
     if (maxval(abs(cell-this%store_cell)).gt.1.d-8) then
-     write(*,*) 'G VECTORS MUST BE RECALCULATED'
+     ! Deallocate the variables we will be recalculating
+     deallocate(this%Gvec,this%Gval,this%orthoradint2,this%harmonics2)
     else
-     write(*,*) 'G VECTORS ARE OK'
+     ! We can reuse the G-vectors from the previous step
      return
     endif
    endif
 
-   write(*,*) 'HAVE TO ALLOCATE G VECTORS'
    ! Get G vectors
+   this%store_cell = cell
    this%Gcut = 2.d0 * dacos(-1.d0) / (2.d0 * this%sigewald)
    call old_Gvec_generator(invcell,this%Gcut,this%nG,this%Gvec,this%Gval)
 
