@@ -442,7 +442,7 @@ module sagpr
   integer, allocatable, intent(inout) :: components(:,:)
   real*8, allocatable, intent(inout) :: w3j(:,:,:,:)
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l,mu,nu
-  integer llmax,ps_shape(4),m,n,nn,jmin,jmax,im,ia,ib,mm
+  integer llmax,ps_shape(4),m,n,nn,jmin,jmax,im,ia,ib,mm,q
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
   complex*16 sparsification(2,ncut,ncut)
   real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax),inner
@@ -460,8 +460,8 @@ module sagpr
   integer, allocatable :: index_list(:)
   complex*16, allocatable :: om(:,:),ch(:,:)
   real*8, allocatable :: ww(:,:)
-  integer cr,ts,tf
-  real*8 rate,dr(3),invcell(3,3),sv(3)
+  integer cr,ts,tf,ipv(3)
+  real*8 rate,dr(3),invcell(3,3),sv(3),delr,rc
   logical all_species(nelements),all_centres(nelements),isLODE
   type(LODE_Model), intent(in) :: LODE_params
 
@@ -474,11 +474,15 @@ module sagpr
   else
    nnmax = 0
    do i=1,nframes
+    ! Extra contribution due to LODE?
+    delr = 0.d0
+    if (isLODE) delr = 4.d0*LODE_params%sigewald
+    rc = rcut + delr
     ! Invert unit cell
     invcell(:,:) = cell(i,:,:)
     lwork = 1000
-    call DGETRF(3,3,invcell,3,ipiv,info)
-    call DGETRI(3,invcell,3,ipiv,work,lwork,info)
+    call DGETRF(3,3,invcell,3,ipv,info)
+    call DGETRI(3,invcell,3,ipv,work,lwork,info)
     do j=1,natmax
      nn = 0
      do k=1,natmax
@@ -489,12 +493,14 @@ module sagpr
         sv(l) = sv(l) - nint(sv(l))
        enddo
        dr = matmul(cell(i,:,:),sv)
-       if (dr(1)*dr(1) + dr(2)*dr(2) + dr(3)*dr(3) .le. rcut*rcut) nn = nn + 1
+       if (dr(1)*dr(1) + dr(2)*dr(2) + dr(3)*dr(3) .le. rc*rc) nn = nn + 1
       endif
      enddo
      nnmax = max(nnmax,nn)
     enddo
    enddo
+   nnmax = int(1.25d0*nnmax)
+   if (isLODE) nnmax = int(1.5d0*nnmax)
   endif
 
   ! List indices for atoms of the same species
@@ -695,6 +701,11 @@ module sagpr
    endif
   endif
 
+  if (isLODE .and. periodic) then
+   ! If necessary, set up or recalculate the G-vectors
+   call get_Gvectors(LODE_params,cell,invcell,nmax,lmax,rcut,sigma,orthomatrix)
+  endif
+
   ! Do the power spectrum computation
   do i=1,nframes
 
@@ -712,7 +723,11 @@ module sagpr
      &     nneighmax(i,:),natmax,nsmax,sg,rcut,xyz(i,:,:),sigma,orthomatrix,all_species, &
      &     all_centres,LODE_params%radsize,LODE_params%lebsize)
     else
-     stop 'PERIODIC LODE NOT YET IMPLEMENTED!'
+     call ewald_potential(omega2,natoms(i),nspecies,nmax,lmax,nnmax,all_indices(i,:,:), &
+     &     nneighmax(i,:),all_species,all_centres,rs,sg,rcut,xyz(i,:,:),cell(i,:,:),invcell,orthomatrix, &
+     &     LODE_params%radsize,LODE_params%lebsize,LODE_params%sigewald,LODE_params%Gvec, &
+     &     LODE_params%Gval,LODE_params%nG,LODE_params%orthoradint2,LODE_params%harmonics2, &
+     &     sigma,natmax,nsmax)
     endif
    endif
 
@@ -882,13 +897,13 @@ module sagpr
   logical periodic,mult_by_A
   integer, allocatable :: all_indices(:,:,:),nneighmax(:,:),ncen(:)
   integer, parameter :: lwmax = 10000
-  integer info,lwork,work(lwmax)
+  integer info,lwork,work(lwmax),ipv(3)
   complex*16, allocatable :: omega1(:,:,:,:,:),omega2(:,:,:,:,:),harmonic(:,:,:,:,:),omegatrue(:,:,:,:,:)
   complex*16, allocatable :: omegatrue2(:,:,:,:,:),ps_row(:,:,:)
   complex*16, allocatable :: ot1(:,:),ot2(:,:)
   real*8, allocatable :: orthoradint(:,:,:,:,:),tmp_3j(:)
   integer, allocatable :: index_list(:)
-  real*8 dr(3),sv(3),invcell(3,3)
+  real*8 dr(3),sv(3),invcell(3,3),delr,rc
   logical all_species(nelements),all_centres(nelements),isLODE
   type(LODE_Model), intent(in) :: LODE_params
 
@@ -900,11 +915,15 @@ module sagpr
   else
    nnmax = 0
    do i=1,nframes
+    ! Extra contribution due to LODE?
+    delr = 0.d0
+    if (isLODE) delr = 4.d0*LODE_params%sigewald
+    rc = rcut + delr
     ! Invert unit cell
     invcell(:,:) = cell(i,:,:)
     lwork = 1000
-    call DGETRF(3,3,invcell,3,ipiv,info)
-    call DGETRI(3,invcell,3,ipiv,work,lwork,info)
+    call DGETRF(3,3,invcell,3,ipv,info)
+    call DGETRI(3,invcell,3,ipv,work,lwork,info)
     do j=1,natmax
      nn = 0
      do k=1,natmax
@@ -915,12 +934,14 @@ module sagpr
         sv(l) = sv(l) - nint(sv(l))
        enddo
        dr = matmul(cell(i,:,:),sv)
-       if (dr(1)*dr(1) + dr(2)*dr(2) + dr(3)*dr(3) .le. rcut*rcut) nn = nn + 1
+       if (dr(1)*dr(1) + dr(2)*dr(2) + dr(3)*dr(3) .le. rc*rc) nn = nn + 1
       endif
      enddo
      nnmax = max(nnmax,nn)
     enddo
    enddo
+   nnmax = int(1.25d0*nnmax)
+   if (isLODE) nnmax = int(1.5d0*nnmax)
   endif
 
   ! List indices for atoms of the same species
@@ -1053,6 +1074,11 @@ module sagpr
    enddo
   endif
 
+  if (isLODE .and. periodic) then
+   ! If necessary, set up or recalculate the G-vectors
+   call get_Gvectors(LODE_params,cell,invcell,nmax,lmax,rcut,sigma,orthomatrix)
+  endif
+
   ! Do the power spectrum computation
   do i=1,nframes
 
@@ -1070,7 +1096,11 @@ module sagpr
      &     nneighmax(i,:),natmax,nsmax,sg,rcut,xyz(i,:,:),sigma,orthomatrix,all_species, &
      &     all_centres,LODE_params%radsize,LODE_params%lebsize)
     else
-     stop 'PERIODIC LODE NOT YET IMPLEMENTED!'
+     call ewald_potential(omega2,natoms(i),nspecies,nmax,lmax,nnmax,all_indices(i,:,:), &
+     &     nneighmax(i,:),all_species,all_centres,rs,sg,rcut,xyz(i,:,:),cell(i,:,:),invcell,orthomatrix, &
+     &     LODE_params%radsize,LODE_params%lebsize,LODE_params%sigewald,LODE_params%Gvec, &
+     &     LODE_params%Gval,LODE_params%nG,LODE_params%orthoradint2,LODE_params%harmonics2, &
+     &     sigma,natmax,nsmax)
     endif
    endif
 
@@ -1516,192 +1546,6 @@ module sagpr
 !   enddo
 !
 ! end function
-
-!***************************************************************************************************
-
- real*8 function hg ( a, b, x)
-
-!*****************************************************************************80
-!
-!! CHGM computes the confluent hypergeometric function M(a,b,x).
-!
-!  Licensing:
-!
-!    This routine is copyrighted by Shanjie Zhang and Jianming Jin.  However, 
-!    they give permission to incorporate this routine into a user program 
-!    provided that the copyright is acknowledged.
-!
-!  Modified:
-!
-!    27 July 2012
-!
-!  Author:
-!
-!    Shanjie Zhang, Jianming Jin
-!
-!  Reference:
-!
-!    Shanjie Zhang, Jianming Jin,
-!    Computation of Special Functions,
-!    Wiley, 1996,
-!    ISBN: 0-471-11963-6,
-!    LC: QA351.C45.
-!
-!  Parameters:
-!
-!    Input, real ( kind = 8 ) A, B, parameters.
-!
-!    Input, real ( kind = 8 ) X, the argument.
-!
-!    Output, real ( kind = 8 ) HG, the value of M(a,b,x).
-!
-  implicit none
-
-  real ( kind = 8 ) a
-  real ( kind = 8 ) a0
-  real ( kind = 8 ) a1
-  real ( kind = 8 ) b
-  real ( kind = 8 ) hg1
-  real ( kind = 8 ) hg2
-  integer ( kind = 4 ) i
-  integer ( kind = 4 ) j
-  integer ( kind = 4 ) k
-  integer ( kind = 4 ) la
-  integer ( kind = 4 ) m
-  integer ( kind = 4 ) n
-  integer ( kind = 4 ) nl
-  real ( kind = 8 ) pi
-  real ( kind = 8 ) r
-  real ( kind = 8 ) r1
-  real ( kind = 8 ) r2
-  real ( kind = 8 ) rg
-  real ( kind = 8 ) sum1
-  real ( kind = 8 ) sum2
-  real ( kind = 8 ) ta
-  real ( kind = 8 ) tb
-  real ( kind = 8 ) tba
-  real ( kind = 8 ) x
-  real ( kind = 8 ) x0
-  real ( kind = 8 ) xg
-  real ( kind = 8 ) y0
-  real ( kind = 8 ) y1
-
-  pi = dacos(-1.d0)
-  a0 = a
-  a1 = a
-  x0 = x
-  hg = 0.0D+00
-
-  if ( b == 0.0D+00 .or. b == - abs ( int ( b ) ) ) then
-    hg = 1.0D+300
-  else if ( a == 0.0D+00 .or. x == 0.0D+00 ) then
-    hg = 1.0D+00
-  else if ( a == -1.0D+00 ) then
-    hg = 1.0D+00 - x / b
-  else if ( a == b ) then
-    hg = exp ( x )
-  else if ( a - b == 1.0D+00 ) then
-    hg = ( 1.0D+00 + x / b ) * exp ( x )
-  else if ( a == 1.0D+00 .and. b == 2.0D+00 ) then
-    hg = ( exp ( x ) - 1.0D+00 ) / x
-  else if ( a == int ( a ) .and. a < 0.0D+00 ) then
-    m = int ( - a )
-    r = 1.0D+00
-    hg = 1.0D+00
-    do k = 1, m
-      r = r * ( a + k - 1.0D+00 ) / k / ( b + k - 1.0D+00 ) * x
-      hg = hg + r
-    end do
-  end if
-
-  if ( hg /= 0.0D+00 ) then
-    return
-  end if
-
-  if ( x < 0.0D+00 ) then
-    a = b - a
-    a0 = a
-    x = abs ( x )
-  end if
-
-  if ( a < 2.0D+00 ) then
-    nl = 0
-  end if
-
-  if ( 2.0D+00 <= a ) then
-    nl = 1
-    la = int ( a )
-    a = a - la - 1.0D+00
-  end if
-
-  do n = 0, nl
-
-    if ( 2.0D+00 <= a0 ) then
-      a = a + 1.0D+00
-    end if
-
-    if ( x <= 30.0D+00 + abs ( b ) .or. a < 0.0D+00 ) then
-
-      hg = 1.0D+00
-      rg = 1.0D+00
-      do j = 1, 500
-        rg = rg * ( a + j - 1.0D+00 ) &
-          / ( j * ( b + j - 1.0D+00 ) ) * x
-        hg = hg + rg
-        if ( abs ( rg / hg ) < 1.0D-15 ) then
-          exit
-        end if
-      end do
-
-    else
-
-      ta = gamma(a)
-      tb = gamma(b)
-      xg = b - a
-      tba = gamma(xg)
-      sum1 = 1.0D+00
-      sum2 = 1.0D+00
-      r1 = 1.0D+00
-      r2 = 1.0D+00
-      do i = 1, 8
-        r1 = - r1 * ( a + i - 1.0D+00 ) * ( a - b + i ) / ( x * i )
-        r2 = - r2 * ( b - a + i - 1.0D+00 ) * ( a - i ) / ( x * i )
-        sum1 = sum1 + r1
-        sum2 = sum2 + r2
-      end do
-      hg1 = tb / tba * x ** ( - a ) * cos ( pi * a ) * sum1
-      hg2 = tb / ta * exp ( x ) * x ** ( a - b ) * sum2
-      hg = hg1 + hg2
-
-    end if
-
-    if ( n == 0 ) then
-      y0 = hg
-    else if ( n == 1 ) then
-      y1 = hg
-    end if
-
-  end do
-
-  if ( 2.0D+00 <= a0 ) then
-    do i = 1, la - 1
-      hg = ( ( 2.0D+00 * a - b + x ) * y1 + ( b - a ) * y0 ) / a
-      y0 = y1
-      y1 = hg
-      a = a + 1.0D+00
-    end do
-  end if
-
-  if ( x0 < 0.0D+00 ) then
-    hg = hg * exp ( x0 )
-  end if
-
-  a = a1
-  x = x0
-
-  return
- end function
-
 
 !***************************************************************************************************
 

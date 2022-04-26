@@ -9,12 +9,22 @@ module lode
      &     'Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn','Fr','Ra','Ac','Th','Pa','U ','Np','Pu','Am','Cm','Bk','Cf', &
      &     'Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'/)
 
+!***************************************************************************************************
+
  type LODE_Model
   ! Variables for running LODE calculations
   logical nonorm,fixed_cell
   real*8 sigewald
   integer radsize,lebsize
+  ! G vectors for periodic LODE
+  real*8, allocatable :: Gvec(:,:),Gval(:)
+  real*8 Gcut,store_cell(3,3),icell(3,3),alphaewald
+  integer nG
+  real*8, allocatable :: orthoradint2(:,:,:)
+  complex*16, allocatable :: harmonics2(:,:)
  end type LODE_Model
+
+!***************************************************************************************************
 
  contains
 
@@ -42,8 +52,6 @@ module lode
    real*8 rate
    logical all_species(nelements),all_centres(nelements)
 
-	integer a,b,c,d
-
    alpha = 0.5d0 / (sg*sg)
 
    ! Process coordinates
@@ -64,16 +72,9 @@ module lode
        if (all_species(ispe)) then
         k = k + 1
         ! Loop over neighbours of that species
-        n_near = 1
         do ineigh=1,nneighmax(ispe)
          neigh = all_indices(ispe,ineigh)
-         rx = xyz(neigh,1) - xyz(cen,1)
-         ry = xyz(neigh,2) - xyz(cen,2)
-         rz = xyz(neigh,3) - xyz(cen,3)
-         coordx_near(iat,k,n_near,1) = rx
-         coordx_near(iat,k,n_near,2) = ry
-         coordx_near(iat,k,n_near,3) = rz
-         n_near = n_near + 1
+         coordx_near(iat,k,ineigh,:) = xyz(neigh,:) - xyz(cen,:)
          nneigh_near(iat,k) = nneigh_near(iat,k) + 1
         enddo
        endif
@@ -82,34 +83,6 @@ module lode
      enddo
     endif
    enddo
-!
-!    # process coordinates 
-!    coordx_near = np.zeros((nat,nspecies,nat,3), dtype=float)
-!    nneigh_near = np.zeros((nat,nspecies),int)
-!    iat = 0
-!    ncentype = len(centers)
-!    # loop over species to center on
-!    for icentype in range(ncentype):
-!        centype = centers[icentype]
-!        # loop over centers of that species
-!        for icen in range(nneighmax[centype]):
-!            cen = atom_indexes[centype,icen]
-!            # loop over all the species to use as neighbours
-!            for ispe in range(nspecies):
-!                spe = all_species[ispe]
-!                # loop over neighbours of that species
-!                n_near = 0
-!                for ineigh in range(nneighmax[spe]):
-!                    neigh = atom_indexes[spe,ineigh]
-!                    rx = coords[neigh,0] - coords[cen,0]
-!                    ry = coords[neigh,1] - coords[cen,1]
-!                    rz = coords[neigh,2] - coords[cen,2]
-!                    coordx_near[iat,ispe,n_near,0] = rx
-!                    coordx_near[iat,ispe,n_near,1] = ry
-!                    coordx_near[iat,ispe,n_near,2] = rz
-!                    n_near += 1
-!                    nneigh_near[iat,ispe] += 1
-!            iat = iat + 1
 
    ! Atomic grid for potential
    allocate(gauss_points(radsize),gauss_weights(radsize))
@@ -164,24 +137,474 @@ module lode
 
    ! Compute near-field potential and project it onto the atomic basis
    call nearfield(natoms,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,alpha,coordx_near,spherical_grid,orthoradial, &
-     &     harmonics,integration_weights,omega_near)
-   do i=1,natoms
-    do j=1,nspecies
-     do k=1,nmax
-      do l=1,lmax+1
-       do m=1,2*lmax+1
-        omega(i,j,k,l,m) = omega_near(m,l,k,j,i)
-       enddo
-      enddo
-     enddo
-    enddo
-   enddo
+     &     harmonics,integration_weights,omega)
 
    deallocate(lebedev_grid,spherical_grid,gauss_points,gauss_weights,lr,lth,lph,harmonics,radial,orthoradial)
    deallocate(coordx_near,nneigh_near)
 
  end subroutine
+!***************************************************************************************************
+ subroutine get_Gvectors(this,cell,invcell,nmax,lmax,rc,sigma,orthomatrix)
+  implicit none
 
+   type(LODE_Model) :: this
+   integer nmax,lmax,i,j,k
+   real*8 cell(3,3),invcell(3,3),radint(lmax+1,nmax),prefacts(nmax,lmax+1),M(3,3),detM
+   real*8 rc,sigma(nmax),orthomatrix(nmax,nmax),normcell(3,3),Gvec_new(3)
+   real*8, allocatable :: G_intermediate(:,:)
+   integer n1max,n2max,n3max,numtot,n1,n2,n3
+
+   ! First, check whether we already have G-vectors allocated
+   if (allocated(this%Gvec)) then
+    ! If the G-vectors have already been allocated, check whether the cell is the same as the previous one
+    if (maxval(abs(cell-this%store_cell)).gt.1.d-8) then
+     ! Deallocate the variables we will be recalculating
+     deallocate(this%Gvec,this%Gval,this%orthoradint2,this%harmonics2)
+    else
+     ! We can reuse the G-vectors from the previous step
+     return
+    endif
+   endif
+
+   ! Get G vectors
+   this%store_cell = cell
+   this%Gcut = 2.d0 * dacos(-1.d0) / (2.d0 * this%sigewald)
+   call old_Gvec_generator(invcell,this%Gcut,this%nG,this%Gvec,this%Gval)
+
+   ! Compute Fourier integrals for the cell
+   this%alphaewald = 0.5d0 / (this%sigewald*this%sigewald)
+   allocate(this%orthoradint2(lmax+1,nmax,this%nG),this%harmonics2(this%nG,(lmax+1)*(lmax+1))) 
+   call fourier_integrals(this%nG,nmax,lmax,this%alphaewald,rc,sigma,this%Gval,this%Gvec, &
+     &     radint,orthomatrix,prefacts,this%orthoradint2,this%harmonics2)
+
+ end subroutine
+!***************************************************************************************************
+ subroutine old_Gvec_generator(invcell,Gcut,nG,Gvec,Gval)
+  implicit none
+
+   ! Gvec generator following the version in TENSOAP
+   real*8 invcell(3,3),normcell(3,3),M(3,3),detM,Gcut,Gvec_new(3),Gcut2
+   integer n1max,n2max,n3max,numtot,nG,n1,n2,n3,i
+   real*8, allocatable :: G_intermediate(:,:),Gvec(:,:),Gval(:)
+
+   ! Outer product matrix of cell vectors
+   normcell = invcell * 2.d0 * dacos(-1.d0)
+   M = matmul(normcell,transpose(normcell))
+   ! Get determinant of matrix
+   detM = M(1,1)*M(2,2)*M(3,3) + 2.d0*M(1,2)*M(2,3)*M(3,1) &
+     &     -M(1,1)*M(2,3)*M(2,3) - M(2,2)*M(1,3)*M(1,3) &
+     &     -M(3,3)*M(1,2)*M(1,2)
+   ! Maximum numbers in each direction
+   n1max = floor(dsqrt((M(2,2)*M(3,3)-M(2,3)*M(2,3))/detM)*Gcut)
+   n2max = floor(dsqrt((M(1,1)*M(3,3)-M(1,3)*M(1,3))/detM)*Gcut)
+   n3max = floor(dsqrt((M(1,1)*M(2,2)-M(1,2)*M(1,2))/detM)*Gcut)
+   ! Estimate for total number of G vectors
+   numtot = 1 + n3max + n2max*(2*n3max+1) + n1max*(2*n2max+1)*(2*n3max+1)
+   allocate(G_intermediate(numtot,3))
+   G_intermediate(:,:) = 0.d0
+
+   ! Fill intermediate set of G vectors
+   nG = 1
+   G_intermediate(nG,:) = (/0.d0,0.d0,0.d0/)
+   Gcut2 = Gcut*Gcut
+   ! Step 1: points of the form (0,0,n3>0)
+   do n3=1,n3max
+    Gvec_new(:) = n3 * normcell(3,:)
+    if (Gvec_new(1)*Gvec_new(1) + Gvec_new(2)*Gvec_new(2) + Gvec_new(3)*Gvec_new(3) .lt. Gcut*Gcut) then
+     nG = ng + 1
+     G_intermediate(nG,:) = Gvec_new(:)
+    endif
+   enddo
+   ! Step 2: points of the form (0,n2>0,n3)
+   do n2=1,n2max
+    do n3=-n3max,n3max
+     Gvec_new(:) = n2 * normcell(2,:) + n3*normcell(3,:)
+     if (Gvec_new(1)*Gvec_new(1) + Gvec_new(2)*Gvec_new(2) + Gvec_new(3)*Gvec_new(3) .lt. Gcut*Gcut) then
+      nG = nG + 1
+      G_intermediate(nG,:) = Gvec_new(:)
+     endif
+    enddo
+   enddo
+   ! Step 3: remaining points of the form (n1>0,n2,n3)
+   do n1=1,n1max
+    do n2=-n2max,n2max
+     do n3=-n3max,n3max
+      Gvec_new(:) = n1*normcell(1,:) + n2*normcell(2,:) + n3*normcell(3,:)
+      if (Gvec_new(1)*Gvec_new(1) + Gvec_new(2)*Gvec_new(2) + Gvec_new(3)*Gvec_new(3) .lt. Gcut*Gcut) then
+       nG = nG + 1
+       G_intermediate(nG,:) = Gvec_new(:)
+      endif
+     enddo
+    enddo
+   enddo
+   ! Take only the nonzero points from this array to give Gvec
+   ! Gval contains norms
+   allocate(Gvec(nG,3),Gval(nG))
+   do i=1,nG
+    Gvec(i,:) = G_intermediate(i,:)
+    Gval(i) = norm2(Gvec(i,:))
+   enddo
+
+   deallocate(G_intermediate)
+
+ end subroutine
+!***************************************************************************************************
+ subroutine new_Gvec_generator(invcell,Gcut,nG,Gvec,Gval)
+  implicit none
+
+   ! Gvec generator following the C code by Andrea Grisafi and Kevin Kazuki Huguenin-Dumittan
+   real*8 invcell(3,3),normcell(3,3),M(3,3),detM,Gcut,Gvec_new(3)
+   integer n1max,n2max,n3max,numtot,nG,n1,n2,n3,i
+   real*8, allocatable :: G_intermediate(:,:),Gvec(:,:),Gval(:)
+
+   ! Outer product matrix of cell vectors
+   normcell = invcell * 2.d0 * dacos(-1.d0)
+   M = matmul(normcell,transpose(normcell))
+   ! Get determinant of matrix
+   detM = M(1,1)*M(2,2)*M(3,3) + 2.d0*M(1,2)*M(2,3)*M(3,1) &
+     &     -M(1,1)*M(2,3)*M(2,3) - M(2,2)*M(1,3)*M(1,3) &
+     &     -M(3,3)*M(1,2)*M(1,2)
+   ! Maximum numbers in each direction
+   n1max = floor(dsqrt((M(2,2)*M(3,3)-M(2,3)*M(2,3))/detM)*Gcut)
+   n2max = floor(dsqrt((M(1,1)*M(3,3)-M(1,3)*M(1,3))/detM)*Gcut)
+   n3max = floor(dsqrt((M(1,1)*M(2,2)-M(1,2)*M(1,2))/detM)*Gcut)
+   ! Estimate for total number of G vectors
+   numtot = 1 + n3max + n2max*(2*n3max+1) + n1max*(2*n2max+1)*(2*n3max+1)
+   allocate(G_intermediate(numtot,3))
+   G_intermediate(:,:) = 0.d0
+
+   ! Fill intermediate set of G vectors
+   nG = 1
+   G_intermediate(nG,:) = (/0.d0,0.d0,0.d0/)
+   Gvec_new(:) = (/0.d0,0.d0,0.d0/)
+   ! Step 1: points of the form (0,0,n3>0)
+   do n3=1,n3max
+    Gvec_new(:) = Gvec_new(:) + normcell(3,:)
+    if (norm2(Gvec_new).le.Gcut) then
+     nG = ng + 1
+     G_intermediate(nG,:) = Gvec_new(:)
+    endif
+   enddo
+   ! Step 2: points of the form (0,n2>0,n3)
+   do n2=1,n2max
+    ! Update current vector for new n2 value.
+    ! We subtract (n3max+1)*normcell(3,:) so that we only have to add normcell(3,:)
+    ! at each iteration to get the correct vector
+    Gvec_new(:) = n2*normcell(2,:) - (n3max+1)*normcell(3,:)
+    do n3=0,2*n3max+1
+     Gvec_new(:) = Gvec_new(:) + normcell(3,:)
+     if (norm2(Gvec_new).le.Gcut) then
+      nG = nG + 1
+      G_intermediate(nG,:) = Gvec_new(:)
+     endif
+    enddo
+   enddo
+   ! Step 3: remaining points of the form (n1>0,n2,n3)
+   do n1=1,n1max
+    do n2=0,2*n2max+1
+     ! Update current vector for new n2 value
+     ! We subtract (n3max+1)*normcell(3,:) so that we only have to add normcell(3,:)
+     ! at each iteration to get the correct vector
+     Gvec_new(:) = n1*normcell(1,:) + n2*normcell(2,:) - n2max*normcell(2,:) - (n3max+1)*normcell(3,:)
+     do n3=0,2*n3max+1
+      Gvec_new(:) = Gvec_new(:) + normcell(3,:)
+      if (norm2(Gvec_new).le.Gcut) then
+       nG = nG + 1
+       G_intermediate(nG,:) = Gvec_new(:)
+      endif
+     enddo
+    enddo
+   enddo
+   ! Take only the nonzero points from this array to give Gvec
+   ! Gval contains norms
+   allocate(Gvec(nG,3),Gval(nG))
+   do i=1,nG
+    Gvec(i,:) = G_intermediate(i,:)
+    Gval(i) = norm2(Gvec(i,:))
+   enddo
+
+   deallocate(G_intermediate)
+
+ end subroutine
+!***************************************************************************************************
+ subroutine fourier_integrals(nG,nmax,lmax,alpha,rc,sigma,Gval,Gvec,radint,orthomatrix,prefacts,orthoradint,harmonics)
+  implicit none
+
+   integer nG,nmax,lmax,n,l,iG,lm,n1,n2,im
+   real*8 radint(lmax+1,nmax),prefacts(nmax,lmax+1),normfact,G2,fourierpot
+   real*8 alpha,rc,sigma(nmax),orthomatrix(nmax,nmax),th,ph,arghyper
+   real*8 orthoradint(lmax+1,nmax,nG),Gval(nG),Gvec(nG,3)
+   complex*16 harmonics(nG,(lmax+1)*(lmax+1))
+
+   orthoradint(:,:,:) = 0.d0
+   harmonics(:,:) = (0.d0,0.d0)
+
+   ! Normalization factor for primitive radial functions
+   do n=0,nmax-1
+    normfact = dsqrt(2.d0 / (gamma(1.5d0 + n)*sigma(n+1)**(3.d0 + 2.d0*n)))
+    do l=0,lmax
+     ! Precompute common prefactors for each (n,l) pair
+     prefacts(n+1,l+1) = normfact * dsqrt(dacos(-1.d0)) * 2.d0**( (n-l-1)/2.d0) * sigma(n+1)**(3.d0 + l + n) &
+     &      * gamma(0.5d0*(3.d0+l+n)) / gamma(1.5d0 + l)
+    enddo
+   enddo
+
+   do iG=2,nG
+    G2 = Gval(iG)*Gval(iG)
+    fourierpot = dexp(-G2 / (4.d0*alpha)) / G2
+    do n=0,nmax-1
+     arghyper = -0.5d0 * G2 * (sigma(n+1)*sigma(n+1))
+     do l=0,lmax
+      ! Radial integral
+      radint(l+1,n+1) = prefacts(n+1,l+1) * fourierpot * Gval(iG)**l * &
+     &     hg(0.5d0*(3.d0+l+n),1.5d0+l,arghyper)
+     enddo
+    enddo
+    ! Compute polar angles
+    th = dacos(Gvec(iG,3)/Gval(iG))
+    ph = datan2(Gvec(iG,2),Gvec(iG,1))
+    lm = 1
+    do l=0,lmax
+     do n1=0,nmax-1
+      do n2=0,nmax-1
+       ! Orthogonalize radial integrals with Loewdin
+       orthoradint(l+1,n1+1,iG) = orthoradint(l+1,n1+1,iG) + orthomatrix(n1+1,n2+1)*radint(l+1,n2+1)
+      enddo
+     enddo
+     do im=-l,l
+       harmonics(iG,lm) = dconjg(spherical_harmonic(l,im,dcos(th),ph)) * (0.d0,1.d0)**l
+       lm = lm + 1
+     enddo
+    enddo
+   enddo
+
+ end subroutine
+!***************************************************************************************************
+ subroutine ewald_potential(omega2,natoms,nspecies,nmax,lmax,nnmax,all_indices, &
+     &     nneighmax,all_species,all_centres,rs,sg,rcut,xyz,cell,invcell,orthomatrix, &
+     &     radsize,lebsize,sigewald,Gvec,Gval,nG,orthoradint,harmonics,sigma,natmax,nsmax)
+  implicit none
+
+   integer natoms,nmax,lmax,radsize,lebsize,nG,nspecies,natmax,nnmax,nsmax
+   integer all_indices(nsmax,natmax),nneighmax(nsmax),i,j,k,l,m,q
+   real*8 Gvec(nG,3),Gval(nG),cell(3,3),invcell(3,3),xyz(natmax,3),sigewald
+   real*8 sigma(nmax),orthomatrix(nmax,nmax),rs(3)
+   complex*16 omega2(natoms,nspecies,nmax,lmax+1,2*lmax+1)
+   logical all_species(nelements),all_centres(nelements)
+   real*8 orthoradint(lmax+1,nmax,nG),sg,rcut
+   complex*16 harmonics(nG,(lmax+1)*(lmax+1))
+   complex*16 omega2_r(natoms,nspecies,nmax,lmax+1,2*lmax+1),omega2_k(natoms,nspecies,nmax,lmax+1,2*lmax+1)
+
+   ! Get real-space contribution to omega2
+   call direct_ewald(omega2_r,natoms,nspecies,nmax,lmax,nnmax,all_indices,nneighmax, &
+     &     natmax,nsmax,sg,rcut,xyz,cell,invcell,sigma,orthomatrix,all_species,all_centres,radsize,lebsize,sigewald)
+   ! Get reciprocal-space contribution to omega2
+   call reciprocal_ewald(omega2_k,natoms,nspecies,nmax,lmax,nnmax,all_indices,nneighmax, &
+     &     all_centres,all_species,cell,invcell,rcut,xyz,sigma,sg,orthomatrix,Gvec,Gval, &
+     &     nG,nsmax,natmax,orthoradint,harmonics)
+   ! Sum the two
+   omega2 = omega2_r + omega2_k
+
+ end subroutine
+!***************************************************************************************************
+ subroutine direct_ewald(omega,natoms,nspecies,nmax,lmax,nnmax,all_indices,nneighmax, &
+     &     natmax,nsmax,sg,rcut,xyz,cell,invcell,sigma,orthomatrix,all_species,all_centres, &
+     &     radsize,lebsize,sigewald)
+  implicit none
+
+   integer natoms,nmax,lmax,nnmax,radsize,lebsize,nspecies,natmax,nsmax,ncentype
+   integer all_indices(nsmax,natmax),nneighmax(nsmax),ncell(3),i,l,lm,im,igrid,ileb,ir,j,q,m
+   complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
+   logical all_species(nelements),all_centres(nelements)
+   real*8 sg,rcut,cell(3,3),invcell(3,3),xyz(natmax,3),sigewald,sigma(nmax),r,rv(3),sv(3),rcv(3),xcv(3),r2
+   real*8 orthomatrix(nmax,nmax),alpha,rcut2,rc
+   real*8, allocatable :: integration_weights(:),gauss_points(:),gauss_weights(:),lr(:),lth(:),lph(:),radial(:,:)
+   real*8, allocatable :: orthoradial(:,:),lebedev_grid(:,:),spherical_grid(:,:),coordx_near(:,:,:,:)
+   complex*16, allocatable :: harmonics(:,:)
+   integer, allocatable :: nneigh_near(:,:)
+   integer cen,iat,icen,icentype,ineigh,ispe,k,neigh,n,ia,ib,ic
+
+  ! Real-space contribution to omega
+  omega(:,:,:,:,:) = (0.d0,0.d0)
+
+  alpha = 0.5d0 / (sg*sg)
+  rc = rcut + 4.d0*sigewald
+  rcut2 = rc*rc
+
+  do i=1,3
+   ncell(i) = nint(rc / norm2(cell(:,i)))
+  enddo
+
+  ! Get neighbour list
+  allocate(coordx_near(natoms,nspecies,nnmax,3),nneigh_near(natoms,nspecies))
+  coordx_near(:,:,:,:) = 0.d0
+  nneigh_near(:,:) = 0
+  ncentype = count(all_centres)
+  iat = 1
+  ! Loop over species to centre on
+  do icentype=1,nelements
+   if (all_centres(icentype)) then
+    ! Loop over centres of that species
+    do icen=1,nneighmax(icentype)
+     cen = all_indices(icentype,icen)
+     ! Loop over all the species to use as neighbours
+     k = 0
+     do ispe=1,nelements
+      if (all_species(ispe)) then
+       k = k + 1
+       n = 1
+       ! Loop over neighbours of that species
+       do ineigh=1,nneighmax(ispe)
+        neigh = all_indices(ispe,ineigh)
+        rv = xyz(neigh,:) - xyz(cen,:)
+        sv = matmul(invcell,rv)
+        do i=1,3
+         sv(i) = sv(i) - nint(sv(i))
+        enddo
+        rcv = matmul(cell,sv)
+        ! Replicate cell
+        do ia=-ncell(1),ncell(1)
+         do ib=-ncell(2),ncell(2)
+          do ic=-ncell(3),ncell(3)
+           xcv(1) = rcv(1) + ia*cell(1,1) + ib*cell(1,2) + ic*cell(1,3)
+           xcv(2) = rcv(2) + ia*cell(2,1) + ib*cell(2,2) + ic*cell(2,3)
+           xcv(3) = rcv(3) + ia*cell(3,1) + ib*cell(3,2) + ic*cell(3,3)
+           r2 = xcv(1)*xcv(1) + xcv(2)*xcv(2) + xcv(3)*xcv(3)
+           if (r2.le.rcut2) then
+            coordx_near(iat,k,n,:) = xcv
+            nneigh_near(iat,k) = nneigh_near(iat,k) + 1
+            n = n + 1
+           endif
+          enddo
+         enddo
+        enddo
+       enddo
+      endif
+     enddo
+     iat = iat + 1
+    enddo
+   endif
+  enddo
+
+  ! Atomic grid for potential
+  allocate(gauss_points(radsize),gauss_weights(radsize))
+  call gaulegf(0.d0,2.d0*rc,gauss_points,gauss_weights,radsize)
+
+  ! Get Lebedev grid
+  allocate(lebedev_grid(4,lebsize))
+  lebedev_grid(:,:) = 0.d0
+  call get_lebedev_grid(lebedev_grid,lebsize)
+
+  ! Get spherical grid and integration weights
+  allocate(spherical_grid(lebsize*radsize,3),integration_weights(lebsize*radsize))
+  spherical_grid(:,:) = 0.d0
+  integration_weights(:) = 0.d0
+  igrid = 1
+  do ir=1,radsize
+   r = gauss_points(ir)
+   do ileb=1,lebsize
+    spherical_grid(igrid,:) = r * lebedev_grid(1:3,ileb)
+    integration_weights(igrid) = 4.d0 * dacos(-1.d0) * r * r * lebedev_grid(4,ileb) * gauss_weights(ir)
+    igrid = igrid + 1
+   enddo
+  enddo
+
+  ! Get polar coordinates on atomic grid
+  allocate(lr(lebsize*radsize),lth(lebsize*radsize),lph(lebsize*radsize))
+  lr(:) = 0.d0
+  do i=1,lebsize*radsize
+   lr(i) = dsqrt(dot_product(spherical_grid(i,:),spherical_grid(i,:)))
+   lth(i) = dacos(spherical_grid(i,3)/lr(i))
+   lph(i) = datan2(spherical_grid(i,2),spherical_grid(i,1))
+  enddo
+
+  ! Get spherical harmonics array
+  allocate(harmonics((lmax+1)*(lmax+1),lebsize*radsize))
+  harmonics(:,:) = (0.d0,0.d0)
+  lm = 1
+  do l=0,lmax
+   do im=-l,l
+    do i=1,lebsize*radsize
+     harmonics(lm,i) = dconjg(spherical_harmonic(l,im,dcos(lth(i)),lph(i)))
+    enddo
+    lm = lm + 1
+   enddo
+  enddo
+
+  ! Get orthoradial array
+  allocate(radial(nmax,lebsize*radsize))
+  call radial_1D_mesh(radial,sigma,nmax,lr,lebsize*radsize)
+  allocate(orthoradial(nmax,lebsize*radsize))
+  orthoradial = matmul(orthomatrix,radial)
+
+  ! Get near-field potential on atomic basis
+  call nearfield_ewald(natoms,nspecies,nmax,lmax,lebsize*radsize,nneigh_near,nnmax,alpha,coordx_near,spherical_grid,orthoradial, &
+     &     harmonics,integration_weights,sigewald,omega)
+
+ end subroutine
+!***************************************************************************************************
+ subroutine reciprocal_ewald(omega,natoms,nspecies,nmax,lmax,nnmax,all_indices,nneighmax, &
+     &     all_centres,all_species,cell,invcell,rcut,xyz,sigma,sg,orthomatrix,Gvec,Gval,nG, &
+     &     nsmax,natmax,orthoradint,harmonics)
+  implicit none
+
+   integer nmaxlmax,nmax,lmax,natoms,nG,nsmax,nnmax,natmax,nspecies,cen,icentype,ineigh,neigh
+   integer all_indices(nsmax,natmax),nneighmax(nsmax),ncentype,ispe,iat,icen,k
+   complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
+   logical all_species(nelements),all_centres(nelements)
+   real*8 cell(3,3),invcell(3,3),Gvec(nG,3),Gval(nG),rc,sg,xyz(natmax,3)
+   real*8 orthomatrix(nmax,nmax),sigma(nmax),alpha,volume
+   real*8 orthoradint(lmax+1,nmax,nG),rcut
+   complex*16 harmonics(nG,(lmax+1)*(lmax+1))
+   real*8, allocatable :: coordx_near(:,:,:,:)
+   integer, allocatable :: nneigh_near(:,:)
+   complex*16 phase(2,nspecies,natoms,nG)
+
+   ! Reciprocal-space contribution to omega
+   omega(:,:,:,:,:) = (0.d0,0.d0)
+
+   volume = det(cell)
+
+   alpha = 0.5d0 / (sg*sg)
+
+   ! Process coordinates
+   allocate(coordx_near(natoms,nspecies,natoms,3),nneigh_near(natoms,nspecies))
+   coordx_near(:,:,:,:) = 0.d0
+   nneigh_near(:,:) = 0
+   ncentype = count(all_centres)
+   iat = 1
+   ! Loop over species to centre on
+   do icentype=1,nelements
+    if (all_centres(icentype)) then
+     ! Loop over centres of that species
+     do icen=1,nneighmax(icentype)
+      cen = all_indices(icentype,icen)
+      ! Loop over all species to use as neighbours
+      k = 0
+      do ispe=1,nelements
+       if (all_species(ispe)) then
+        k = k + 1
+        ! Loop over neighbours of that specie
+        do ineigh=1,nneighmax(ispe)
+         neigh = all_indices(ispe,ineigh)
+         coordx_near(iat,k,ineigh,:) = xyz(neigh,:) - xyz(cen,:)
+         nneigh_near(iat,k) = nneigh_near(iat,k) + 1
+        enddo
+       endif
+      enddo
+      iat = iat + 1
+     enddo
+    endif
+   enddo
+
+   ! Combine phase factors
+   call phasecomb(natoms,nspecies,nneigh_near,nG,coordx_near,transpose(Gvec),phase)
+
+   ! Contraction over G-vectors
+   call gcontra(natoms,nspecies,nmax,lmax,nG,orthoradint,transpose(harmonics),2.d0*phase,omega)
+   omega(:,:,:,:,:) = omega(:,:,:,:,:) * 16.d0 * dacos(-1.d0)**2 / volume
+
+ end subroutine
 !***************************************************************************************************
  subroutine get_lebedev_grid(lebedev_grid,grid_size)
   implicit none
@@ -283,5 +706,198 @@ module lode
 
  end subroutine
 !***************************************************************************************************
+real*8 function hg ( a, b, x)
 
+!*****************************************************************************80
+!
+!! CHGM computes the confluent hypergeometric function M(a,b,x).
+!
+!  Licensing:
+!
+!    This routine is copyrighted by Shanjie Zhang and Jianming Jin.  However, 
+!    they give permission to incorporate this routine into a user program 
+!    provided that the copyright is acknowledged.
+!
+!  Modified:
+!
+!    27 July 2012
+!
+!  Author:
+!
+!    Shanjie Zhang, Jianming Jin
+!
+!  Reference:
+!
+!    Shanjie Zhang, Jianming Jin,
+!    Computation of Special Functions,
+!    Wiley, 1996,
+!    ISBN: 0-471-11963-6,
+!    LC: QA351.C45.
+!
+!  Parameters:
+!
+!    Input, real ( kind = 8 ) A, B, parameters.
+!
+!    Input, real ( kind = 8 ) X, the argument.
+!
+!    Output, real ( kind = 8 ) HG, the value of M(a,b,x).
+!
+  implicit none
+
+  real ( kind = 8 ) a
+  real ( kind = 8 ) a0
+  real ( kind = 8 ) a1
+  real ( kind = 8 ) b
+  real ( kind = 8 ) hg1
+  real ( kind = 8 ) hg2
+  integer ( kind = 4 ) i
+  integer ( kind = 4 ) j
+  integer ( kind = 4 ) k
+  integer ( kind = 4 ) la
+  integer ( kind = 4 ) m
+  integer ( kind = 4 ) n
+  integer ( kind = 4 ) nl
+  real ( kind = 8 ) pi
+  real ( kind = 8 ) r
+  real ( kind = 8 ) r1
+  real ( kind = 8 ) r2
+  real ( kind = 8 ) rg
+  real ( kind = 8 ) sum1
+  real ( kind = 8 ) sum2
+  real ( kind = 8 ) ta
+  real ( kind = 8 ) tb
+  real ( kind = 8 ) tba
+  real ( kind = 8 ) x
+  real ( kind = 8 ) x0
+  real ( kind = 8 ) xg
+  real ( kind = 8 ) y0
+  real ( kind = 8 ) y1
+
+  pi = dacos(-1.d0)
+  a0 = a
+  a1 = a
+  x0 = x
+  hg = 0.0D+00
+
+  if ( b == 0.0D+00 .or. b == - abs ( int ( b ) ) ) then
+    hg = 1.0D+300
+  else if ( a == 0.0D+00 .or. x == 0.0D+00 ) then
+    hg = 1.0D+00
+  else if ( a == -1.0D+00 ) then
+    hg = 1.0D+00 - x / b
+  else if ( a == b ) then
+    hg = exp ( x )
+  else if ( a - b == 1.0D+00 ) then
+    hg = ( 1.0D+00 + x / b ) * exp ( x )
+  else if ( a == 1.0D+00 .and. b == 2.0D+00 ) then
+    hg = ( exp ( x ) - 1.0D+00 ) / x
+  else if ( a == int ( a ) .and. a < 0.0D+00 ) then
+    m = int ( - a )
+    r = 1.0D+00
+    hg = 1.0D+00
+    do k = 1, m
+      r = r * ( a + k - 1.0D+00 ) / k / ( b + k - 1.0D+00 ) * x
+      hg = hg + r
+    end do
+  end if
+
+  if ( hg /= 0.0D+00 ) then
+    return
+  end if
+
+  if ( x < 0.0D+00 ) then
+    a = b - a
+    a0 = a
+    x = abs ( x )
+  end if
+
+  if ( a < 2.0D+00 ) then
+    nl = 0
+  end if
+
+  if ( 2.0D+00 <= a ) then
+    nl = 1
+    la = int ( a )
+    a = a - la - 1.0D+00
+  end if
+
+  do n = 0, nl
+
+    if ( 2.0D+00 <= a0 ) then
+      a = a + 1.0D+00
+    end if
+
+    if ( x <= 30.0D+00 + abs ( b ) .or. a < 0.0D+00 ) then
+
+      hg = 1.0D+00
+      rg = 1.0D+00
+      do j = 1, 500
+        rg = rg * ( a + j - 1.0D+00 ) &
+          / ( j * ( b + j - 1.0D+00 ) ) * x
+        hg = hg + rg
+        if ( abs ( rg / hg ) < 1.0D-15 ) then
+          exit
+        end if
+      end do
+
+    else
+
+      ta = gamma(a)
+      tb = gamma(b)
+      xg = b - a
+      tba = gamma(xg)
+      sum1 = 1.0D+00
+      sum2 = 1.0D+00
+      r1 = 1.0D+00
+      r2 = 1.0D+00
+      do i = 1, 8
+        r1 = - r1 * ( a + i - 1.0D+00 ) * ( a - b + i ) / ( x * i )
+        r2 = - r2 * ( b - a + i - 1.0D+00 ) * ( a - i ) / ( x * i )
+        sum1 = sum1 + r1
+        sum2 = sum2 + r2
+      end do
+      hg1 = tb / tba * x ** ( - a ) * cos ( pi * a ) * sum1
+      hg2 = tb / ta * exp ( x ) * x ** ( a - b ) * sum2
+      hg = hg1 + hg2
+
+    end if
+
+    if ( n == 0 ) then
+      y0 = hg
+    else if ( n == 1 ) then
+      y1 = hg
+    end if
+
+  end do
+
+  if ( 2.0D+00 <= a0 ) then
+    do i = 1, la - 1
+      hg = ( ( 2.0D+00 * a - b + x ) * y1 + ( b - a ) * y0 ) / a
+      y0 = y1
+      y1 = hg
+      a = a + 1.0D+00
+    end do
+  end if
+
+  if ( x0 < 0.0D+00 ) then
+    hg = hg * exp ( x0 )
+  end if
+
+  a = a1
+  x = x0
+
+  return
+ end function
+!***************************************************************************************************
+ real*8 function det(cell)
+  implicit none
+
+   integer i
+   real*8 cell(3,3)
+
+   det = cell(1,1)*cell(2,2)*cell(3,3) - cell(1,1)*cell(2,3)*cell(3,2) - cell(2,1)*cell(1,2)*cell(3,3) + &
+     &     cell(1,2)*cell(2,3)*cell(3,1) + cell(1,3)*cell(2,1)*cell(3,2) - cell(1,3)*cell(2,2)*cell(3,1)
+
+ end function
+!***************************************************************************************************
 end module

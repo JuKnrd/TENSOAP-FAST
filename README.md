@@ -28,6 +28,10 @@ To use this model, `sagpr_apply` is called as `/path/to/TENSOAP-FAST/bin/sagpr_a
 
 In the `examples` subfolder are a few examples that show how different modes of the code work, including sockets, committee models and long-range descriptors. It is recommended that the first-time user begins with the tutorial example, which goes through the process of creating a model with the TENSOAP code, converting it to be used by TENSOAP-FAST and applying the model.
 
+# Authors
+
+David Wilkins, Andrea Grisafi, Yair Litman
+
 # Maintenance
 
 Please contact d.wilkins@qub.ac.uk with any problems.
