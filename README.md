@@ -30,7 +30,7 @@ In the `examples` subfolder are a few examples that show how different modes of 
 
 # Authors
 
-David Wilkins, Andrea Grisafi
+David Wilkins, Andrea Grisafi, Yair Litman
 
 # Maintenance
 
