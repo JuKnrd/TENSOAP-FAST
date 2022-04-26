@@ -60,7 +60,7 @@ integer:: igrid,iat,jat,ispe,n,l,im,lm
 integer:: ngrid,lmax,nmax,nat,nspecies,neighmax
 real*8:: alpha,potential,r,sigewald,alphaewald
 integer,dimension(nat,nspecies)::nneigh
-real*8,dimension(nat,nspecies,nat,3):: coords
+real*8,dimension(nat,nspecies,neighmax,3):: coords
 real*8,dimension(nmax,ngrid):: orthorad
 real*8,dimension(ngrid):: weights 
 real*8,dimension(ngrid,3):: sgrid 

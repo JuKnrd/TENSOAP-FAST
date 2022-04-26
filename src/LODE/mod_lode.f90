@@ -436,7 +436,7 @@ module lode
   enddo
 
   ! Get neighbour list
-  allocate(coordx_near(natoms,nspecies,natoms,3),nneigh_near(natoms,nspecies))
+  allocate(coordx_near(natoms,nspecies,nnmax,3),nneigh_near(natoms,nspecies))
   coordx_near(:,:,:,:) = 0.d0
   nneigh_near(:,:) = 0
   ncentype = count(all_centres)

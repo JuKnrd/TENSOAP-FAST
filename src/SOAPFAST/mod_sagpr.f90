@@ -460,8 +460,8 @@ module sagpr
   integer, allocatable :: index_list(:)
   complex*16, allocatable :: om(:,:),ch(:,:)
   real*8, allocatable :: ww(:,:)
-  integer cr,ts,tf
-  real*8 rate,dr(3),invcell(3,3),sv(3)
+  integer cr,ts,tf,ipv(3)
+  real*8 rate,dr(3),invcell(3,3),sv(3),delr,rc
   logical all_species(nelements),all_centres(nelements),isLODE
   type(LODE_Model), intent(in) :: LODE_params
 
@@ -474,11 +474,15 @@ module sagpr
   else
    nnmax = 0
    do i=1,nframes
+    ! Extra contribution due to LODE?
+    delr = 0.d0
+    if (isLODE) delr = 4.d0*LODE_params%sigewald
+    rc = rcut + delr
     ! Invert unit cell
     invcell(:,:) = cell(i,:,:)
     lwork = 1000
-    call DGETRF(3,3,invcell,3,ipiv,info)
-    call DGETRI(3,invcell,3,ipiv,work,lwork,info)
+    call DGETRF(3,3,invcell,3,ipv,info)
+    call DGETRI(3,invcell,3,ipv,work,lwork,info)
     do j=1,natmax
      nn = 0
      do k=1,natmax
@@ -489,7 +493,7 @@ module sagpr
         sv(l) = sv(l) - nint(sv(l))
        enddo
        dr = matmul(cell(i,:,:),sv)
-       if (dr(1)*dr(1) + dr(2)*dr(2) + dr(3)*dr(3) .le. rcut*rcut) nn = nn + 1
+       if (dr(1)*dr(1) + dr(2)*dr(2) + dr(3)*dr(3) .le. rc*rc) nn = nn + 1
       endif
      enddo
      nnmax = max(nnmax,nn)
