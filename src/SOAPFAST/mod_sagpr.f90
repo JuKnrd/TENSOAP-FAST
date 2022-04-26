@@ -442,7 +442,7 @@ module sagpr
   integer, allocatable, intent(inout) :: components(:,:)
   real*8, allocatable, intent(inout) :: w3j(:,:,:,:)
   integer nframes,natmax,lm,nmax,lmax,ncut,degen,featsize,nnmax,nsmax,ispe,i,j,k,nspecies,n1,n2,l1,l2,l,mu,nu
-  integer llmax,ps_shape(4),m,n,nn,jmin,jmax,im,ia,ib,mm
+  integer llmax,ps_shape(4),m,n,nn,jmin,jmax,im,ia,ib,mm,q
   real*8 xyz(nframes,natmax,3),rs(3),rcut,sg,cell(nframes,3,3)
   complex*16 sparsification(2,ncut,ncut)
   real*8 sigma(nmax),overlap(nmax,nmax),eigenval(nmax),diagsqrt(nmax,nmax),orthomatrix(nmax,nmax),inner
@@ -500,6 +500,7 @@ module sagpr
     enddo
    enddo
    nnmax = int(1.25d0*nnmax)
+   if (isLODE) nnmax = int(1.5d0*nnmax)
   endif
 
   ! List indices for atoms of the same species

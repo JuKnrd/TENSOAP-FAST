@@ -386,7 +386,7 @@ module lode
   implicit none
 
    integer natoms,nmax,lmax,radsize,lebsize,nG,nspecies,natmax,nnmax,nsmax
-   integer all_indices(nsmax,natmax),nneighmax(nsmax),i,j,k,l,m
+   integer all_indices(nsmax,natmax),nneighmax(nsmax),i,j,k,l,m,q
    real*8 Gvec(nG,3),Gval(nG),cell(3,3),invcell(3,3),xyz(natmax,3),sigewald
    real*8 sigma(nmax),orthomatrix(nmax,nmax),rs(3)
    complex*16 omega2(natoms,nspecies,nmax,lmax+1,2*lmax+1)
@@ -413,7 +413,7 @@ module lode
   implicit none
 
    integer natoms,nmax,lmax,nnmax,radsize,lebsize,nspecies,natmax,nsmax,ncentype
-   integer all_indices(nsmax,natmax),nneighmax(nsmax),ncell(3),i,l,lm,im,igrid,ileb,ir,j
+   integer all_indices(nsmax,natmax),nneighmax(nsmax),ncell(3),i,l,lm,im,igrid,ileb,ir,j,q,m
    complex*16 omega(natoms,nspecies,nmax,lmax+1,2*lmax+1)
    logical all_species(nelements),all_centres(nelements)
    real*8 sg,rcut,cell(3,3),invcell(3,3),xyz(natmax,3),sigewald,sigma(nmax),r,rv(3),sv(3),rcv(3),xcv(3),r2

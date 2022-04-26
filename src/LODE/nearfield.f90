@@ -66,6 +66,7 @@ real*8,dimension(ngrid):: weights
 real*8,dimension(ngrid,3):: sgrid 
 complex*16,dimension((lmax+1)*(lmax+1),ngrid):: harmonic 
 complex*16,dimension(nat,nspecies,nmax,lmax+1,2*lmax+1):: omega
+integer i,j
 
 alphaewald = 1.d0/(2.d0*sigewald**2)
 
