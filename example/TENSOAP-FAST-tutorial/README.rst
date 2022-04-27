@@ -11,7 +11,7 @@ Firstly, a model for the dipole moments of water monomers is created. SFT is a v
 
   $ source ${SFT}/env.sh
 
-Firstly, we split the data set into a testing and a training set, and calculate the lambda-SOAP (lambda=1) power spectrum for the training set.
+We split the data set into a testing and a training set, and calculate the lambda-SOAP (lambda=1) power spectrum for the training set.
 
 ::
 
@@ -51,7 +51,7 @@ Using the first two matrices, an SA-GPR model is trained (using the Moore-Penros
 
   $ sagpr_train -f train.xyz -p mu -r 1 -sf K_NM.npy K_MM.npy -reg 1e-10 -sel 0 800 -m pinv
 
-The file `weights_1.npy` contains the weight vector. We can make predictions for the training set with:
+The file `weights_1.npy` contains the weight vector. We can make predictions for the testing set with:
 
 ::
 
