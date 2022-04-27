@@ -1368,7 +1368,6 @@ module sagpr
    endif
 
    call system_clock(tf)
-!   write(*,'(A,F6.3,A)') ' got harmonic in ',(tf-ts)/rate,' s'
    call system_clock(ts)
 
    ! Get radial integral
@@ -1394,7 +1393,6 @@ module sagpr
    !$OMP END PARALLEL DO
 
    call system_clock(tf)
-!   write(*,'(A,F6.3,A)') ' got radint in ',(tf-ts)/rate,' s'
    call system_clock(ts)
 
    ! Get orthoradint
@@ -1411,7 +1409,6 @@ module sagpr
    !$OMP END PARALLEL DO
 
    call system_clock(tf)
-!   write(*,'(A,F6.3,A)') ' got orthoradint in ',(tf-ts)/rate,' s'
    call system_clock(ts)
 
    ! Get omega
@@ -1431,7 +1428,6 @@ module sagpr
    !$OMP END PARALLEL DO
 
    call system_clock(tf)
-!   write(*,'(A,F6.3,A)') ' got omega in ',(tf-ts)/rate,' s'
 
    deallocate(radint,efact,length,nneigh)
 
@@ -1479,77 +1475,6 @@ module sagpr
     complex_to_real_matrix(:,:) = dconjg(complex_to_real_matrix(:,:))
 
  end function
-
-!***************************************************************************************************
-
-! complex*16 function spherical_harmonic(l,m,costheta,phi)
-!  implicit none
-!
-!   integer l,m,mm
-!   real*8 costheta,phi
-!   complex*16 rawfactor
-!
-!   mm = abs(m)
-!   rawfactor = ((1.d0,0.d0)*cos(m*phi) + (0.d0,1.d0)*sin(m*phi)) * plgndr(l,abs(m),costheta)
-!   spherical_harmonic = rawfactor * dsqrt( ((2*l + 1) / (4.d0*dacos(-1.d0)) * fact(l-mm)/fact(l+mm)))
-!   if (m.lt.0) spherical_harmonic = spherical_harmonic * (-1.d0)**m
-!
-! end function
-
-!***************************************************************************************************
-
-! real*8 function plgndr(l,m,x)
-!  implicit none
-!
-!   ! Subroutine from Numerical Recipes in Fortran
-!
-!   integer l,m
-!   real*8 x
-!   integer i,ll
-!   real*8 fact,pll,pmm,pmmp1,somx2
-!   if (m.lt.0.or.m.gt.l.or.abs(x).gt.1) stop 'ERROR: bad arguments in plgndr!'
-!   pmm = 1.d0
-!   if (m.gt.0) then
-!    somx2 = sqrt((1.d0-x)*(1.d0+x))
-!    fact = 1.d0
-!    do i=1,m
-!     pmm = -pmm*fact*somx2
-!     fact = fact + 2.d0
-!    enddo
-!   endif
-!   if (l.eq.m) then
-!    plgndr=pmm
-!   else
-!    pmmp1 = x*(2*m+1)*pmm
-!    if (l.eq.m+1) then
-!     plgndr = pmmp1
-!    else
-!     do ll=m+2,l 
-!      pll=(x*(2*ll-1)*pmmp1-(ll+m-1)*pmm)/(ll-m)
-!      pmm = pmmp1
-!      pmmp1 = pll
-!     enddo
-!     plgndr = pll
-!    endif
-!   endif
-
-!   return
-! end function
-
-!***************************************************************************************************
-
-! real*8 function fact(n)
-!  implicit none
-!
-!   integer n,i
-!
-!   if (n.lt.0) stop 'ERROR: positive number required for factorial!'
-!   fact = 1.d0
-!   do i=2,n
-!    fact = fact * i
-!   enddo
-!
-! end function
 
 !***************************************************************************************************
 
