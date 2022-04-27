@@ -7,4 +7,4 @@ bin/
 install/
 lib/
 src/Makefile
-tests/noupload-*
+noupload-*

@@ -815,12 +815,14 @@ module sagpr
   if (lm.eq.0) then
    ! Scalar
    PS(:,:,:,:) = real(PS(:,:,:,:))
-   do i=1,nframes
-    do j=1,natoms(i)
-     inner = dot_product(PS(i,j,1,:),PS(i,j,1,:))
-     PS(i,j,1,:) = PS(i,j,1,:) / dsqrt(inner)
+   if (.not.(isLODE .and. LODE_params%nonorm)) then
+    do i=1,nframes
+     do j=1,natoms(i)
+      inner = dot_product(PS(i,j,1,:),PS(i,j,1,:))
+      PS(i,j,1,:) = PS(i,j,1,:) / dsqrt(inner)
+     enddo
     enddo
-   enddo
+   endif
   else
    ! Spherical
    ! Get complex to real transformation
@@ -834,18 +836,20 @@ module sagpr
      enddo
     enddo
    enddo
-   do i=1,nframes
-    do j=1,natoms(i)
-     inner = 0.d0
-     do mu=1,degen
-      do nu=1,degen
-       inner_mu(mu,nu) = dot_product(PS(i,j,mu,:),PS(i,j,nu,:))
-       inner = inner + abs(inner_mu(mu,nu))
+   if (.not.(isLODE .and. LODE_params%nonorm)) then
+    do i=1,nframes
+     do j=1,natoms(i)
+      inner = 0.d0
+      do mu=1,degen
+       do nu=1,degen
+        inner_mu(mu,nu) = dot_product(PS(i,j,mu,:),PS(i,j,nu,:))
+        inner = inner + abs(inner_mu(mu,nu))
+       enddo
       enddo
+      PS(i,j,:,:) = PS(i,j,:,:) / dsqrt(norm2(real(inner_mu)))
      enddo
-     PS(i,j,:,:) = PS(i,j,:,:) / dsqrt(norm2(real(inner_mu)))
     enddo
-   enddo
+   endif
    deallocate(CC,inner_mu)
   endif
 
