@@ -1,0 +1,27 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, 
+conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal}] </properties>
+    <trajectory filename='mu' stride='1'> extras </trajectory>
+  </output>
+  <total_steps>50</total_steps>
+  <prng>
+    <seed>32342</seed>
+  </prng>
+  <ffsocket mode='unix' pbc='false' name='sagpr'> <address>sagpr</address> <port>31401</port> <latency>0.02</latency> <timeout>400</timeout> </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='pdb'> init.pdb </file>
+      <velocities mode='thermal' units='kelvin'> 298 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='sagpr'/>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>298</temperature>
+    </ensemble>
+    <motion mode='replay'>
+     <file mode='xyz'>simulation.pos_0.xyz</file>
+    </motion>
+  </system>
+</simulation>
