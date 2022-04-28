@@ -130,7 +130,9 @@ else
         if [ ${nerr} -eq 0 ];then
                 echo "...MKL found"
         else
-                echo "ERROR: no MKL found"
+                echo "ERROR: Problem with MKL"
+		echo "We get the following when trying to use it"
+                ifort -mkl test.f90 -lmkl_intel_lp64 -lmkl_sequential -lmkl_core 
                 exit
         fi
         echo
