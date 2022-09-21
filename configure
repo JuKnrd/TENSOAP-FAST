@@ -85,7 +85,7 @@ if [ "${compiler}" == "gfortran" ];then
 	if [ "${SAGPR_PREFIX}" != "" ];then
 		export USE_PREFIX=${SAGPR_PREFIX}
 	else
-		export USR_PREFIX=/usr/local
+		export USE_PREFIX=/usr/local
 	fi
 	
 	if [ ${OWN_BLAS} -eq 1 ];then
