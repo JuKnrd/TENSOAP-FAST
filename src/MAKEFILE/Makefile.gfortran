@@ -30,6 +30,7 @@ mkbin:
 	@cd ../bin;if [ ! -f lode_convert ];then ln -s ../tools/lode_convert.py lode_convert;fi;cd - > /dev/null
 	@cd ../bin;if [ ! -f sagpr_split_frames ];then ln -s ../tools/sagpr_split_frames.py sagpr_split_frames;fi;cd - > /dev/null
 	@cd ../bin;if [ ! -f sagpr_apply_process ];then ln -s ../tools/sagpr_apply_process.sh sagpr_apply_process;fi;cd - > /dev/null
+	@cd ../bin;if [ ! -f sagpr_apply_wannier ];then ln -s ../tools/wannier/get_wannier.sh sagpr_apply_wannier;fi;cd - > /dev/null
 
 libsoapfast: $(LIBS)
 	@if [ ! -d ../lib ];then mkdir ../lib;fi
