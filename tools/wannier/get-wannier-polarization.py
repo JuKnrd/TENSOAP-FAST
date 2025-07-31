@@ -45,34 +45,6 @@ for i in range(len(frames)):
       pol -= 4.8032047 * 2 * frames[i].info["n_wannier"] * (frames[i][j].position + frames[i].arrays["wannier_dist"][j])
   pol -= np.dot(qpol,np.round(np.dot(np.linalg.inv(qpol),pol),0))
   frames[i].info["mu"] = pol
-  print(pol)
-  print(frames[i].info["mu"],i,frames[i].get_cell())
 
 # Write output
 write(args.output,frames)
-
-sys.exit(0)
-
-
-for i in range(len(frames)):
-  xyz = frames[i]
-  cl  = xyz.get_cell().T
-  qp  = 4.8032047 * cl
-  icl = np.linalg.inv(cl)
-  iqp = np.linalg.inv(qp)
-  # Check that total charge is correct
-  q = sum([charges[xyz[j].symbol] - 2*nwannier[xyz[j].symbol] for j in range(len(xyz))])
-  if (q!=args.totalcharge):
-    print("ERROR! q = ",q)
-#    sys.exit(0)
-  # Get polarizaztion
-  pol = np.zeros(3,dtype=float)
-  for j in range(len(xyz)):
-    pol += (charges[xyz[j].symbol] - 2*nwannier[xyz[j].symbol]) * xyz[j].position
-    pol -= 2*xyz.arrays["wannier_dist"][j]
-  pol *= 4.8032047
-  xyz.info["unwrapped_mu"] = pol
-  pol = MIC(pol,qp,iqp)
-  xyz.info["mu"] = pol
-  frames[i] = xyz
-  
