@@ -42,7 +42,7 @@ for i in range(len(frames)):
   pol = np.sum([frames[i][j].position*charges[frames[i][j].symbol] for j in range(len(frames[i]))],axis=0) * 4.8032047
   for j in range(len(frames[i])):
     if (frames[i][j].symbol in args.elements):
-      pol -= 4.8032047 * 2 * frames[i].info["n_wannier"] * (frames[i][j].position + frames[i].arrays["wannier_dist"][j])
+      pol -= 4.8032047 * 2 * nwannier[frames[i][j].symbol] * (frames[i][j].position + frames[i].arrays["wannier_dist"][j])
   pol -= np.dot(qpol,np.round(np.dot(np.linalg.inv(qpol),pol),0))
   frames[i].info["mu"] = pol
 
